@@ -1,0 +1,41 @@
+---
+-   name: Check if the rancher-agent is running
+    command: docker ps -a
+    register: containers
+
+-   name: Get kubernetes_environment_id
+    local_action: slurp src="tmp/kubernetes_environment.id"
+    register: project_id
+    when: "{{ 'rancher-agent' not in containers.stdout }}"
+# -   debug: msg="kubernetes_environment_id is {{ project_id['content'] | b64decode | replace('\n', '') }}"
+#     when: "{{ 'rancher-agent' not in containers.stdout }}"
+
+# -   debug: msg="http://{{ master }}:8080/v1/registrationtokens?projectId={{ project_id['content'] | b64decode | replace('\n', '') }}"
+-   name: Return the registration token URL of Rancher server
+    action: uri
+        method=POST
+        status_code=201
+        url="http://{{ master }}:8080/v1/registrationtokens?projectId={{ project_id['content'] | b64decode | replace('\n', '') }}" return_content=yes
+    register: rancher_token_url
+    when: "{{ 'rancher-agent' not in containers.stdout }}"
+# -   debug: msg="rancher_token_url is {{ rancher_token_url.json['links']['self'] }}"
+#     when: "{{ 'rancher-agent' not in containers.stdout }}"
+
+-   name: Return the registration URL of Rancher server
+    action: uri
+        method=GET
+        url={{ rancher_token_url.json['links']['self'] }} return_content=yes
+    register: rancher_token
+    when: "{{ 'rancher-agent' not in containers.stdout }}"
+# -   debug: msg="rancher_token is {{ rancher_token.json['registrationUrl'] }}"
+#     when: "{{ 'rancher-agent' not in containers.stdout }}"
+
+-   name: Register the Host machine with the Rancher server orig
+    docker:
+        image: rancher/agent:v1.2.0
+        privileged: yes
+        detach: True
+        volumes: /var/run/docker.sock:/var/run/docker.sock
+        command: "{{ rancher_token.json['registrationUrl'] }}"
+        state: started
+    when: "{{ 'rancher-agent' not in containers.stdout }}"

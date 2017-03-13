@@ -1,0 +1,69 @@
+---
+-   name: Check if master container is running
+    command: docker ps -a
+    register: containers
+
+-   name: Start master containers
+    docker_container:
+        name: master
+        image: rancher/server:stable
+        published_ports: 8080:8080
+        restart_policy: unless-stopped
+        state: started
+    when: "{{ 'master' not in containers.stdout }}"
+-   name: Wait for the Rancher servers to start
+    action: command docker logs master
+    register: rancher_logs
+    until: rancher_logs.stdout.find("Listening on") != -1
+    retries: 30
+    delay: 10
+    when: "{{ 'master' not in containers.stdout }}"
+-   debug: msg="You can connect to rancher server http://{{ ansible_default_ipv4.address }}:8080"
+    when: "{{ 'master' not in containers.stdout }}"
+
+-   pause:
+        seconds: 15
+        prompt: "Waiting for Rancher to be fully up before continueing to build Kubernetes environment..."
+    when: "{{ 'master' not in containers.stdout }}"
+
+-   name: Get Kubernetes Template ID
+    action: uri
+        method=GET
+        url="http://{{ master }}:8080/v2-beta/projectTemplates?name=kubernetes"
+    register: kubernetes_template_id
+    run_once: true
+    delegate_to: "{{ master }}"
+# -   debug: msg="kubernetes_template_id is {{ kubernetes_template_id.json.data[0].id }}"
+
+# -   local_action: shell cat tmp/kubernetes_environment.id
+#     register: previous_kubernetes_env_id
+# -   debug: msg="Previous Kubernetes Envirnoment ID is {{ previous_kubernetes_env_id.stdout }}"
+
+# -   name: Check if previous Kubernetes environment still exists
+#     action: uri
+#         method=GET
+#         url="http://{{ master }}:8080/v2-beta/projects/{{ previous_kubernetes_env_id.stdout }}"
+#         status_code=200
+#     register: previous_kubernetes_env_status
+#     when: previous_kubernetes_env_id.stdout != ""
+# -   debug: msg="Kubernetes Environment with id {{ previous_kubernetes_env_id.stdout }} is {{ previous_kubernetes_env_status.json.state }}"
+#     when: previous_kubernetes_env_id.stdout != ""
+
+-   name: Create Kubernetes Environment
+    uri:
+        method: POST
+        url: "http://{{ master }}:8080/v2-beta/projects"
+        HEADER_Accept: "application/json"
+        HEADER_Content-Type: "application/json"
+        body_format: json
+        body: ' { "description":"{{ kubernetes_description }}", "name":"{{ kubernetes_name }}", "projectTemplateId":"{{ kubernetes_template_id.json.data[0].id }}", "allowSystemRole":false, "members":[], "virtualMachine":false, "servicesPortRange":null, "projectLinks":[]}'
+        return_content: yes
+        status_code: 201
+    register: kubernetes_environment_id
+    run_once: true
+    delegate_to: "{{ master }}"
+    # when: previous_kubernetes_env_id.stdout == "" or previous_kubernetes_env_status.json.state != "active"
+
+-   name: Store kubernetes_environment_id
+    local_action: shell echo {{ kubernetes_environment_id.json.id }} > tmp/kubernetes_environment.id
+#     when: previous_kubernetes_env_id.stdout == "" or previous_kubernetes_env_status.json.state != "active"

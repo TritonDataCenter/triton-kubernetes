@@ -1,0 +1,54 @@
+---
+-   name: Check if docker is installed
+    shell: echo $(docker --version | grep 1.12.6)
+    register: docker_installed
+-   name: Update all packages to the latest version
+    apt:
+        upgrade: dist
+        update_cache: yes
+        cache_valid_time: 86400
+    when: docker_installed.stdout.find('Docker version')
+-   name: Install docker pre-reqs
+    apt: name={{ item.name }}
+    with_items:
+    -   { name: 'linux-headers-generic' }
+    -   { name: 'build-essential' }
+    # -   { name: 'spl-dkms' }
+    # -   { name: 'zfs-dkms' }
+    -   { name: 'zfs' }
+    # -   { name: 'lxc' }
+    # -   { name: 'aufs-tools' }
+    # -   { name: 'cgroup-lite' }
+    # -   { name: 'apparmor' }
+    # -   { name: 'nfs-common' }
+    # -   { name: 'dnsmasq*' }
+    -   { name: 'python-pip' }
+    when: docker_installed.stdout.find('Docker version')
+-   name: Install docker-py
+    pip:
+        name: docker-py
+    when: docker_installed.stdout.find('Docker version')
+-   name: Install docker repo pre-reqs
+    apt: name={{ item.name }} install_recommends=no
+    with_items:
+    -   { name: 'apt-transport-https' }
+    -   { name: 'ca-certificates' }
+    -   { name: 'curl' }
+    -   { name: 'software-properties-common' }
+    when: docker_installed.stdout.find('Docker version')
+-   name: Add docker's official key
+    apt_key:
+        id: 58118E89F3A912897C070ADBF76221572C52609D
+        keyserver: p80.pool.sks-keyservers.net
+        state: present
+    when: docker_installed.stdout.find('Docker version')
+-   name: Add docker repo
+    apt_repository:
+        repo: deb https://apt.dockerproject.org/repo ubuntu-xenial main
+        state: present
+    when: docker_installed.stdout.find('Docker version')
+-   name: Update repositories cache and install docker-engine package version 1.12.6-0~ubuntu-xenial
+    apt:
+        name: docker-engine=1.12.6-0~ubuntu-xenial
+        update_cache: yes
+    when: docker_installed.stdout.find('Docker version')

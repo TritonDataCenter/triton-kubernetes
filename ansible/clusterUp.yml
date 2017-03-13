@@ -1,0 +1,26 @@
+---
+-   name: Setup docker-engine on all hosts (masters/hosts)
+    hosts: all
+    remote_user: root
+    roles:
+    -   dockersetup
+
+-   name: Set up Rancher Master and Kubernetes Environment
+    hosts: MASTER
+    remote_user: root
+    vars:
+        playbook_dir: $(pwd)
+    vars_files:
+    -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
+    roles:
+    -   ranchermaster
+
+-   name: Add hosts to Kubernetes Environment
+    hosts: HOST
+    remote_user: root
+    vars:
+        playbook_dir: $(pwd)
+    vars_files:
+    -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
+    roles:
+    -   rancherhost
