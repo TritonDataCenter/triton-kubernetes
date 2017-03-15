@@ -134,7 +134,7 @@ function createAnsibleConfigs {
     echo "kubernetes_name: \"$(echo $KUBERNETES_NAME | sed 's/"//g')\"" >> ansible/roles/ranchermaster/vars/vars.yml
     echo "kubernetes_description: \"$(echo $KUBERNETES_DESCRIPTION | sed 's/"//g')\"" >> ansible/roles/ranchermaster/vars/vars.yml
     cd ansible
-    sed -i.tmp -e "s;private_key_file = .*$;private_key_file = $SDC_KEY;g" ansible.cfg
+    sed -i.tmp -e "s;private_key_file = .*$;private_key_file = $(echo $SDC_KEY | sed 's/"//g');g" ansible.cfg
     cd ..
     rm ansible/ansible.cfg.tmp 2>&1 >> /dev/null
 
