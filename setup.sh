@@ -1,42 +1,13 @@
 #!/bin/bash
 
 main() {
-
     if [[ ! -z "$1" && $1 == "-c" ]]; then
-        echo "Clearing settings...."
-        rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.tfstate terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
-
-        sed -i.tmp -e "s~private_key_file = .*$~private_key_file = ~g" ansible/ansible.cfg
-        rm -f  ansible/hosts ansible/*retry ansible/ansible.cfg.tmp 2>&1 >> /dev/null
-
-        rm -rf ~/.ssh/known_hosts tmp/* containers.json 2>&1 >> /dev/null
-
-        # blank out config
-        echo "SDC_URL=" > config
-        echo "SDC_ACCOUNT=" >> config
-        echo "SDC_KEY_ID=" >> config
-        echo "SDC_KEY=" >> config
-        echo "" >> config
-        echo "RANCHER_MASTER_HOSTNAME=" >> config
-        echo "RANCHER_MASTER_NETWORKS=" >> config
-        echo "KUBERNETES_NAME=" >> config
-        echo "KUBERNETES_DESCRIPTION=" >> config
-        echo "KUBERNETES_NODE_HOSTNAME_BEGINSWITH=" >> config
-        echo "KUBERNETES_NUMBER_OF_NODES=" >> config
-        echo "KUBERNETES_NODE_NETWORKS=" >> config
-        echo "HOST_PACKAGE=" >> config
-        echo "" >> config
-        echo "ANSIBLE_HOST_KEY_CHECKING=False" >> config
-
-        triton instance delete $(triton instances -oname | grep -v "^NAME$") 2> /dev/null
-
-        echo "    All clear!"
-        exit 0
+        cleanRunner
     fi
 
-    # SET default
+    # SET default variables
     setVarDefaults
-    # SET configuration from current triton profile
+    # SET configuration from current triton profile (triton account information)
     setConfigFromTritonENV
     # GET updated configuration from user
     getConfigFromUser
@@ -50,19 +21,18 @@ main() {
     echo "################################################################################"
     echo "### Starting terraform tasks..."
     echo "################################################################################"
-    sleep 3
+    sleep 2
     runTerraformTasks
     echo "################################################################################"
     echo "### Creating ansible configs..."
     echo "################################################################################"
-    sleep 3
+    sleep 2
     createAnsibleConfigs
     echo "################################################################################"
     echo "### Running ansible tasks..."
     echo "################################################################################"
-    sleep 3
+    sleep 2
     runAnsible
-
 
     echo ""
     echo "Congradulations, your Kubernetes cluster setup has been complete."
@@ -101,7 +71,6 @@ main() {
 function getArgument {
     # $1 message
     # $2 default
-    # $3... are options
     while true; do
         if [ -z ${2+x} ]; then
             read -p "$1 " theargument
@@ -158,7 +127,6 @@ function runTerraformTasks {
 
         cd terraform
         echo "Starting terraform tasks"
-        # sleep 3
         terraform get
         terraform apply
         echo "    terraform tasks completed"
@@ -292,7 +260,7 @@ function getConfigFromUser {
     done
     KUBERNETES_NODE_HOSTNAME_BEGINSWITH=$tmp_ValidatedInput
     echo "---------------"
-    # HARD LIMIT: 1-9 nodes allowed only since this is setup has no HA
+    # HARD LIMIT: 1-9 nodes allowed only since this setup has no HA
     gotValidInput=false
     while ! $gotValidInput; do
         tmp_ValidatedInput=$(getArgument "How many nodes should this Kubernetes cluster have:" "$(echo $KUBERNETES_NUMBER_OF_NODES | sed 's/"//g')")
@@ -305,7 +273,7 @@ function getConfigFromUser {
     KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
     echo "---------------"
     echo "From the networks below:"
-    # get networks for the current triton profile to prompt
+    # get networks from the current triton profile to prompt
     local networks=$(triton networks -oname,id | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
     # print options and find location for "Joyent-SDC-Public"
     local publicNetworkLocation=1
@@ -314,7 +282,7 @@ function getConfigFromUser {
     for network in $networks; do
         tmp=$((tmp + 1))
         echo -e "$tmp.\t$(echo $network | sed 's/=/  /g')"
-        # get default location of public network into publicNetworkLocation variable
+        # get default location of public network
         if [[ "$network" == "Joyent-SDC-Public="* ]]; then
             publicNetworkLocation=$tmp
         fi
@@ -409,7 +377,7 @@ function getConfigFromUser {
     for package in $packages; do
         tmp=$((tmp + 1))
         echo -e "$tmp.\t$(echo $package | sed 's/=/  /g')"
-        # get default location of package into packageLocation variable
+        # get default location of package
         if [[ "$package" == "k4-highcpu-kvm-7.75G="* ]]; then
             packageLocation=$tmp
         fi
@@ -484,11 +452,17 @@ function verifyConfig {
     done
 }
 function cleanRunner {
+    echo "Clearing settings...."
     while true; do
-    echo "WARNING: You are about to destroy the following KVMs associated with Rancher cluster:"
-    cat terraform/masters.ip 2> /dev/null
-    cat terraform/hosts.ip 2> /dev/null
-    read -p "Do you wish to destroy the KVMs and reset configuration (yes | no)? " yn
+        if [ -e terraform/masters.ip ]; then
+            echo "WARNING: You are about to destroy the following KVMs associated with Rancher cluster:"
+            cat terraform/masters.ip 2> /dev/null
+            cat terraform/hosts.ip 2> /dev/null
+
+            read -p "Do you wish to destroy the KVMs and reset configuration (yes | no)? " yn
+        else
+            read -p "Do you wish to reset configuration (yes | no)? " yn
+        fi
     case $yn in
         yes )
             if [ -e terraform/rancher.tf ]; then
@@ -498,13 +472,32 @@ function cleanRunner {
                 terraform destroy -force 2>&1 >> ../terraform.log
                 echo -ne "\r    images destroyed                   "
                 cd ..
-            else
-                echo "    no KVMs found"
             fi
-            rm -rf terraform/.terraform terraform/rancher.tf terraform/terraform.tfstate* terraform/hosts.ip terraform/masters.ip ansible/hosts ansible/*.retry ansible/tmp/* ansible/roles/rancherhost/vars/vars.yml ansible/roles/ranchermaster/vars/vars.yml
-            touch ansible/roles/ranchermaster/vars/vars.yml
-            echo -e "\n    reset complete"
-            break;;
+            rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.tfstate terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
+
+            sed -i.tmp -e "s~private_key_file = .*$~private_key_file = ~g" ansible/ansible.cfg
+            rm -f  ansible/hosts ansible/*retry ansible/ansible.cfg.tmp 2>&1 >> /dev/null
+
+            rm -rf ~/.ssh/known_hosts tmp/* containers.json 2>&1 >> /dev/null
+
+            # blank out config
+            echo "SDC_URL=" > config
+            echo "SDC_ACCOUNT=" >> config
+            echo "SDC_KEY_ID=" >> config
+            echo "SDC_KEY=" >> config
+            echo "" >> config
+            echo "RANCHER_MASTER_HOSTNAME=" >> config
+            echo "RANCHER_MASTER_NETWORKS=" >> config
+            echo "KUBERNETES_NAME=" >> config
+            echo "KUBERNETES_DESCRIPTION=" >> config
+            echo "KUBERNETES_NODE_HOSTNAME_BEGINSWITH=" >> config
+            echo "KUBERNETES_NUMBER_OF_NODES=" >> config
+            echo "KUBERNETES_NODE_NETWORKS=" >> config
+            echo "HOST_PACKAGE=" >> config
+            echo "" >> config
+            echo "ANSIBLE_HOST_KEY_CHECKING=False" >> config
+            echo "    All clear!"
+            exit 1;;
         no ) exit;;
         * ) echo "Please answer yes or no.";;
     esac
