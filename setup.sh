@@ -424,7 +424,7 @@ function getConfigFromUser {
     # get input for package and validate to make sure the input provided is within the limit (number of packages)
     gotValidInput=false
     while ! $gotValidInput; do
-        tmp_HOST_PACKAGE=$(getArgument "What KVM package should the master and nodes run on, provide comma separated values:" "$(echo $HOST_PACKAGE | sed 's/"//g')")
+        tmp_HOST_PACKAGE=$(getArgument "What KVM package should the master and nodes run on:" "$(echo $HOST_PACKAGE | sed 's/"//g')")
 
         # if valid input was given, move forward, else quit
         if [[ $(echo $tmp_HOST_PACKAGE | grep '^[1-9][0-9]*$' 2> /dev/null) ]]; then
