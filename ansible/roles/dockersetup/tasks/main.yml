@@ -13,15 +13,7 @@
     with_items:
     -   { name: 'linux-headers-generic' }
     -   { name: 'build-essential' }
-    # -   { name: 'spl-dkms' }
-    # -   { name: 'zfs-dkms' }
     -   { name: 'zfs' }
-    # -   { name: 'lxc' }
-    # -   { name: 'aufs-tools' }
-    # -   { name: 'cgroup-lite' }
-    # -   { name: 'apparmor' }
-    # -   { name: 'nfs-common' }
-    # -   { name: 'dnsmasq*' }
     -   { name: 'python-pip' }
     when: docker_installed.stdout.find('Docker version')
 -   name: Install docker-py

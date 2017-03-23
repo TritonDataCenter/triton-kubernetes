@@ -33,21 +33,6 @@
     register: kubernetes_template_id
     run_once: true
     delegate_to: "{{ master }}"
-# -   debug: msg="kubernetes_template_id is {{ kubernetes_template_id.json.data[0].id }}"
-
-# -   local_action: shell cat tmp/kubernetes_environment.id
-#     register: previous_kubernetes_env_id
-# -   debug: msg="Previous Kubernetes Envirnoment ID is {{ previous_kubernetes_env_id.stdout }}"
-
-# -   name: Check if previous Kubernetes environment still exists
-#     action: uri
-#         method=GET
-#         url="http://{{ master }}:8080/v2-beta/projects/{{ previous_kubernetes_env_id.stdout }}"
-#         status_code=200
-#     register: previous_kubernetes_env_status
-#     when: previous_kubernetes_env_id.stdout != ""
-# -   debug: msg="Kubernetes Environment with id {{ previous_kubernetes_env_id.stdout }} is {{ previous_kubernetes_env_status.json.state }}"
-#     when: previous_kubernetes_env_id.stdout != ""
 
 -   name: Create Kubernetes Environment
     uri:
@@ -62,8 +47,6 @@
     register: kubernetes_environment_id
     run_once: true
     delegate_to: "{{ master }}"
-    # when: previous_kubernetes_env_id.stdout == "" or previous_kubernetes_env_status.json.state != "active"
 
 -   name: Store kubernetes_environment_id
     local_action: shell echo {{ kubernetes_environment_id.json.id }} > tmp/kubernetes_environment.id
-#     when: previous_kubernetes_env_id.stdout == "" or previous_kubernetes_env_status.json.state != "active"

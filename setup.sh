@@ -5,6 +5,12 @@ main() {
         cleanRunner
     fi
 
+    if [ -e terraform/rancher.tf ]; then
+        echo "error: configuration for a previous run has been found"
+        echo "    clean the configuration (./setup -c)"
+        exit
+    fi
+
     # SET default variables
     setVarDefaults
     # SET configuration from current triton profile (triton account information)
@@ -224,6 +230,11 @@ function setVarDefaults {
     fi
 }
 function getConfigFromUser {
+    # get networks from the current triton profile to prompt
+    local networks=$(triton networks -oname,id | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
+    # get packages for the current triton profile to prompt
+    local packages=$(triton packages -oname,id | grep "\-kvm-" | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
+
     local tmp=0
     local gotValidInput=false
     local tmp_ValidatedInput
@@ -273,8 +284,6 @@ function getConfigFromUser {
     KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
     echo "---------------"
     echo "From the networks below:"
-    # get networks from the current triton profile to prompt
-    local networks=$(triton networks -oname,id | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
     # print options and find location for "Joyent-SDC-Public"
     local publicNetworkLocation=1
     local countNetwork
@@ -368,8 +377,6 @@ function getConfigFromUser {
     done
     echo "---------------"
     echo "From the packages below:"
-    # get packages for the current triton profile to prompt
-    local packages=$(triton packages -oname,id | grep "\-kvm-" | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
     # print options and find location for "k4-highcpu-kvm-7.75G"
     local packageLocation=1
     local countPackages
@@ -469,10 +476,9 @@ function cleanRunner {
                 cd terraform
                 echo "    destroying images..."
                 terraform destroy -force 2> /dev/null
-                echo "    images destroyed                   "
                 cd ..
             fi
-            rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.tfstate terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
+            rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.* terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
 
             sed -i.tmp -e "s~private_key_file = .*$~private_key_file = ~g" ansible/ansible.cfg
             rm -f  ansible/hosts ansible/*retry ansible/ansible.cfg.tmp 2>&1 >> /dev/null
