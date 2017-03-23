@@ -468,9 +468,8 @@ function cleanRunner {
             if [ -e terraform/rancher.tf ]; then
                 cd terraform
                 echo "    destroying images..."
-                echo -ne "\r    printing to terraform.log"
-                terraform destroy -force 2>&1 >> ../terraform.log
-                echo -ne "\r    images destroyed                   "
+                terraform destroy -force 2> /dev/null
+                echo "    images destroyed                   "
                 cd ..
             fi
             rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.tfstate terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
