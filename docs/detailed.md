@@ -1,3 +1,26 @@
+# TABLE OF CONTENT
+* [Architecture](detailed.md#architecture)
+* [Pre-Reqs](detailed.md#pre-reqs)
+* [Create a cluster](detailed.md#create-a-cluster)
+* [Components](detailed.md#components)
+   * [Triton CLI](detailed.md#triton-cli)
+      * [Install Triton CLI](detailed.md#install-triton-cli)
+      * [Create Profile](detailed.md#create-profile)
+   * [Terraform](detailed.md#terraform)
+      * [Install Terraform](detailed.md#install-terraform)
+   * [Ansible Config Generation](detailed.md#ansible-config-generation)
+   * [Ansible](detailed.md#ansible)
+      * [Install Ansible](detailed.md#install-ansible)
+   * [End Message](detailed.md#end-message)
+      * [Rancher Dashboard](detailed.md#rancher-dashboard)
+      * [Infrastructure Containers](detailed.md#infrastructure-containers)
+      * [Kubernetes Dashboard](detailed.md#kubernetes-dashboard)
+      * [Kubernetes CLI](detailed.md#kubernetes-cli)
+* [Manual Setup](detailed.md#manual-setup)
+   * [Provision KVMs](detailed.md#provision-kvms)
+   * [Allow root access to all KVMs:](detailed.md#allow-root-access-to-all-kvms)
+   * [Install pre-reqs and docker-engine package on all KVMs:](detailed.md#install-pre-reqs-and-docker-engine-package-on-all-kvms)
+   * [Start Rancher and setup Kubernetes environment and nodes](detailed.md#start-rancher-and-setup-kubernetes-environment-and-nodes)
 # k8sontriton
 This tutorial explains how to automate running a Kubernetes cluster on Joyent Cloud using Rancher.  
 We are using triton+Terraform+Ansible to automate Kubernetes setup. Terraform is used to provision the KVMs while Ansible roles have been created to install pre-reqs and docker-engine, Rancher server with a kubernetes environment, and connect nodes to it.
@@ -245,7 +268,7 @@ This URL provides a list of containers and their status for the created Kubernet
 ![Infrastructure Containers](img/infrastructure-containers.png "Infrastructure Containers")
 #### Kubernetes Dashboard
 This is the URL for kubernetes dashboard which can be used to deploy modify and remove kubernetes services/deployments.
-![Kubernetes Dashboard](img/Kubernetes-dashboard.png "Kubernetes Dashboard")
+![Kubernetes Dashboard](img/kubernetes-dashboard.png "Kubernetes Dashboard")
 #### Kubernetes CLI
 Kubernetes environments on Rancher provide a kubectl CLI config file which can be placed in ~/.kube/config file to connect the local kubectl CLI to the environment.
 ![Kubernetes CLI](img/kubernetes-cli.png "Kubernetes CLI")
