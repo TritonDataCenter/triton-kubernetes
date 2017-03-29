@@ -29,8 +29,12 @@ The following pre-reqs are to be set up on the machine performing the Kubernetes
    OSX comes with python 2.7, but if you are on windows or linux, make sure you have [python](https://www.python.org/downloads/) installed on your system.
 
 ### Starting Kubernetes Cluster
-Download the k8sontriton package and run `setup.sh`.
-
+Download the k8sontriton package and run `setup.sh`:
+```bash
+git clone https://github.com/fayazg/k8sontriton.git
+cd k8sontriton
+./setup.sh
+```
 Follow the on screen instructions answering questions about the cluster. You can use the default by pressing “Enter”/”Return” key.
 
 #### CLI Questions
@@ -56,4 +60,4 @@ What KVM package should the master and nodes run on: (14b6fade-d0f8-11e5-85c5-4f
 This will provide a Kubernetes environment on triton that will be set up as below:
 ![1x2 architecture](docs/img/20170323b-Triton-Kubernetes.jpg)
 
-<sub>For a more detailed guide and how the automation works, click [here](docs/detailed.md).</sub>
+For a more detailed guide and how the automation works, click [here](docs/detailed.md).
