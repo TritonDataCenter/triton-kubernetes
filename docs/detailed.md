@@ -59,9 +59,6 @@ The following pre-reqs are to be set up on the machine running Triton K8s Superv
 
    There are [multiple ways to install ansible](http://docs.ansible.com/ansible/intro_installation.html) depending on your operating system. Simplest way to do this is by using `pip` command (python package manager).
    `sudo pip install ansible`
-1. Python v2.x
-
-   OSX comes with python 2.7, but if you are on windows or linux, make sure you have [python](https://www.python.org/downloads/) installed on your system.
 
 ## Create a Kubernetes cluster
 Triton K8s Supervisor uses [triton](#triton-cli), [terraform](#terraform) and [ansible](#ansible) to set up and interact with Kubernetes cluster.
