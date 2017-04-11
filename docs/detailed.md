@@ -65,9 +65,9 @@ Triton K8s Supervisor uses [triton](#triton-cli), [terraform](#terraform) and [a
 
 To start setting up a cluster, first we need to confirm that the [pre-reqs](#pre-reqs) are met. Then download the package, start `setup.sh` and answer the questions prompted. Default values will be shown in parentheses and if no input is provided, defaults will be used.
 ```
-$ git clone https://github.com/fayazg/k8sontriton.git
-Cloning into 'k8sontriton'...
-$ cd k8sontriton
+$ git clone https://github.com/fayazg/tritonK8ssupervisor.git
+Cloning into 'tritonK8ssupervisor'...
+$ cd tritonK8ssupervisor
 $ ./setup.sh
 Name your Kubernetes environment: (k8s dev)
 ```

@@ -1,4 +1,4 @@
-# k8sontriton
+# tritonK8ssupervisor
 
 ## Quick Start Guide
 In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
@@ -27,10 +27,10 @@ The following pre-reqs are to be set up on the machine performing the Kubernetes
    `sudo pip install ansible`
 
 ### Starting Kubernetes Cluster
-Download the k8sontriton package and run `setup.sh`:
+Download the tritonK8ssupervisor package and run `setup.sh`:
 ```bash
-git clone https://github.com/fayazg/k8sontriton.git
-cd k8sontriton
+git clone https://github.com/fayazg/tritonK8ssupervisor.git
+cd tritonK8ssupervisor 
 ./setup.sh
 ```
 Follow the on screen instructions answering questions about the cluster. You can use the default by pressing “Enter”/”Return” key.

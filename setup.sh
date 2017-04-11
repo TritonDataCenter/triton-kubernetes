@@ -42,9 +42,7 @@ main() {
 
     echo ""
     echo "Congradulations, your Kubernetes cluster setup has been complete."
-    echo "----> Rancher dashboard is at http://$(cat terraform/masters.ip):8080"
     echo ""
-
     echo "It will take a few minutes for all the Kubernetes process to start up before you can access Kubernetes Dashboard"
     echo "----> To check what processes/containers are coming up, go to http://$(cat terraform/masters.ip):8080/env/$(cat ansible/tmp/kubernetes_environment.id)/infra/containers"
     echo "    once all these containers are up, you should be able to access Kubernetes by its dashboard or using CLI"
@@ -55,7 +53,7 @@ main() {
     KUBERNETES_DASHBOARD_UP=
     while [ ! $KUBERNETES_DASHBOARD_UP ]; do
         echo -ne "."
-        sleep 2
+        sleep 5
         if [ $(curl -s http://$(cat terraform/masters.ip):8080/r/projects/$(cat ansible/tmp/kubernetes_environment.id)/kubernetes-dashboard:9090/ | grep -i kubernetes | wc -l) -ne 0 ]; then
             KUBERNETES_DASHBOARD_UP=true
         fi
@@ -216,7 +214,7 @@ function setVarDefaults {
         KUBERNETES_DESCRIPTION=$KUBERNETES_NAME
         RANCHER_MASTER_HOSTNAME="kubemaster"
         KUBERNETES_NODE_HOSTNAME_BEGINSWITH="kubenode"
-        KUBERNETES_NUMBER_OF_NODES=2
+        KUBERNETES_NUMBER_OF_NODES=1
         RANCHER_MASTER_NETWORKS=
         KUBERNETES_NODE_NETWORKS=
         HOST_PACKAGE=
@@ -471,12 +469,15 @@ function cleanRunner {
                 terraform destroy -force 2> /dev/null
                 cd ..
             fi
+            for host_key in $(cat terraform/hosts.ip terraform/masters.ip); do
+                ssh-keygen -R $host_key 2>&1 >> /dev/null
+            done
             rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.* terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
 
             sed -i.tmp -e "s~private_key_file = .*$~private_key_file = ~g" ansible/ansible.cfg
             rm -f  ansible/hosts ansible/*retry ansible/ansible.cfg.tmp 2>&1 >> /dev/null
 
-            rm -rf ~/.ssh/known_hosts tmp/* containers.json 2>&1 >> /dev/null
+            rm -rf tmp/* 2>&1 >> /dev/null
 
             # blank out config
             echo "SDC_URL=" > config
