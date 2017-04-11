@@ -1,61 +1,127 @@
-# tritonK8ssupervisor
-
 ## Quick Start Guide
 In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
 
 ### Pre-Reqs
-The following pre-reqs are to be set up on the machine performing the Kubernetes set up.
-1. [Install and set up triton CLI and a profile](https://docs.joyent.com/public-cloud/api-access/cloudapi)  
-   Install [nodejs](https://nodejs.org/en/download/) and run `npm install -g triton`.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Terraform**, **Ansible**, and the **Kubernetes CLI**.
 
-   Triton CLI needs to be configured with a profile because we will be using it and its configuration information to set up our Kubernetes cluster.
+[Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
-   To setup triton CLI, you need to [create an account](https://sso.joyent.com/signup) with Joyent, [add your billing information](https://my.joyent.com/main/#!/account/payment) and [ssh key](https://my.joyent.com/main/#!/account) to your account.  
-   For more information on how to create an account, billing and ssh key information, look at the [Getting started](https://docs.joyent.com/public-cloud/getting-started) page.
+[Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned. We use Terraform to provision virtual machines, set up root access, and install `python`.
 
-   Note: The data center that will be used must have KVM images available for provisioning.
-1. [Install terraform](https://www.terraform.io/intro/getting-started/install.html)  
-   Terraform is an infrastructure building, changing and versioning tool. It will be used to provision KVMs for the Kubernetes cluster.
+[Ansible](http://docs.ansible.com/ansible/intro_installation.html) is an IT automation tool that enables app deployment, configuration management and orchestration. We are using Ansible to install pre-reqs (including supported version of docker-engine), create Kubernetes environment and set up Kubernetes cluster.
 
-   Terraform can be installed by getting the appropriate [package](https://releases.hashicorp.com/terraform/0.8.5/terraform_0.8.5_darwin_amd64.zip) for your system which includes a single binary program terraform. Place this binary in a directory that is on the `PATH`.
+#### Install Triton
 
-   Note: Supported version of terraform is needed ([4.15](https://releases.hashicorp.com/terraform/0.8.5/terraform_0.8.5_darwin_amd64.zip))
-1. Install Ansible  
-   [Ansible](http://docs.ansible.com/ansible/index.html) is and IT automation tool we are using to set up the Kubernetes cluster on JoyentCloud KVMs.
+In order to install Triton, first you must have a [Triton account](https://sso.joyent.com/signup). As a new user you will recieve a $250 credit to enable you to give Triton and Kubernetes a test run, but it's important to [add your billing information](https://my.joyent.com/main/#!/account/payment) and [add an ssh key](https://my.joyent.com/main/#!/account) to your account. If you need instructions for how to generate and SSH key, [read our documentation](https://docs.joyent.com/public-cloud/getting-started).
 
-   There are [multiple ways to install ansible](http://docs.ansible.com/ansible/intro_installation.html) depending on your operating system. Simplest way to do this is by using `pip` command (python package manager).  
-   `sudo pip install ansible`
+1.  Install [Node.js](https://nodejs.org/en/download/) and run `npm install -g triton` to install Triton CLI.
+1.  `triton` uses profiles to store access information. You'll need to set up profiles for relevant data centers.
+    +   `triton profile create` will give a [step-by-step walkthrough](https://docs.joyent.com/public-cloud/api-access/cloudapi) of how to create a profile.
+	+   Choose a profile to use for your Kubernetes Cluster.
+1.  Get into the Triton environment with `eval $(triton env <profile name>)`.
+1.  Run `triton info` to test your configuration.
+
+#### Install Terraform
+
+At this time, Triton only supports certain versions of Terraform. [Download supported version 4.15](https://releases.hashicorp.com/terraform/0.8.5/terraform_0.8.5_darwin_amd64.zip) and proceed to install.
+
+Test your installation by running `terraform`. You should see an output similar to:
+
+```
+$ terraform
+Usage: terraform [--version] [--help] <command> [args]
+
+The available commands for execution are listed below.
+The most common, useful commands are shown first, followed by
+less common or more advanced commands. If you're just getting
+started with Terraform, stick with the common commands. For the
+other commands, please read the help and docs before usage.
+
+Common commands:
+    apply              Builds or changes infrastructure
+    console            Interactive console for Terraform interpolations
+
+# ...
+```
+
+#### Install Ansible
+
+There are [many ways to install Ansible](http://docs.ansible.com/ansible/intro_installation.html), but the simplest would be to use Python package manager (`pip`). If you don’t already have `pip` installed, install it:
+
+```
+sudo easy_install pip
+```
+Ansible by default manages machines over SSH and requires Python 2.6 or 2.7 to be installed on all the hosts.
+
+Install Ansible:
+
+```
+sudo pip install ansible
+```
+
+Once done, you can run `ansible` to test your installation. You should see a list of usage commands that looks like the following:
+
+```
+$ ansible
+Usage: ansible <host-pattern> [options]
+
+Options:
+  -a MODULE_ARGS, --args=MODULE_ARGS
+                        module arguments
+  --ask-vault-pass      ask for vault password
+  -B SECONDS, --background=SECONDS
+                        run asynchronously, failing after X seconds
+                        (default=N/A)
+  -C, --check           don't make any changes; instead, try to predict some
+                        of the changes that may occur
+  -D, --diff            when changing (small) files and templates, show the
+                        differences in those files; works great with --check
+[...]
+```
+
+#### Install the Kubernetes CLI
+
+There are different ways to [install `kubectl`](https://kubernetes.io/docs/tasks/kubectl/install/), but the simplest way is via `curl`:
+
+```sh
+# OS X
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl
+
+# Linux
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+
+# Windows
+curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/windows/amd64/kubectl.exe
+```
 
 ### Starting Kubernetes Cluster
-Download the tritonK8ssupervisor package and run `setup.sh`:
+Download the k8sontriton package and run `setup.sh`:
+
 ```bash
-git clone https://github.com/fayazg/tritonK8ssupervisor.git
-cd tritonK8ssupervisor 
-./setup.sh
+$ git clone https://github.com/fayazg/tritonK8ssupervisor.git
+Cloning into 'tritonK8ssupervisor'...
+$ cd tritonK8ssupervisor 
+$ ./setup.sh
 ```
+
 Follow the on screen instructions answering questions about the cluster. You can use the default by pressing “Enter”/”Return” key.
 
-#### CLI Questions
-The following questions will require answers that can include spaces:
+#### Setup Questions
+
 ```
 Name your Kubernetes environment: (k8s dev)
 Describe this Kubernetes environment: (k8s dev)
-```
-Hostnames must start with letters and can only include letters and numbers:
-```
 Hostname of the master: (kubemaster)
 Enter a string to use for appending to hostnames of all the nodes: (kubenode)
-
-How many nodes should this Kubernetes cluster have: (2)
-```
-For the following three questions, either press “Enter”/”Return” to use the default:  
-```  
+How many nodes should this Kubernetes cluster have: (1) 2
 What networks should the master be a part of, provide comma separated values: (31428241-4878-47d6-9fba-9a8436b596a4)
 What networks should the nodes be a part of, provide comma separated values: (31428241-4878-47d6-9fba-9a8436b596a4)
 What KVM package should the master and nodes run on: (14b6fade-d0f8-11e5-85c5-4ff7918ab5c1)
 ```
 
-This will provide a Kubernetes environment on triton that will be set up as below:
-![1x2 architecture](docs/img/20170323b-Triton-Kubernetes.jpg)
+After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below:
+
+![1x2 architecture](docs/img/1x2-arch.png)
+
 
 For a more detailed guide and how the automation works, click [here](docs/detailed.md).
