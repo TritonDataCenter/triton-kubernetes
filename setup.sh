@@ -41,7 +41,7 @@ main() {
     runAnsible
 
     echo ""
-    echo "Congradulations, your Kubernetes cluster setup has been complete."
+    echo "Congratulations, your Kubernetes cluster setup has been complete."
     echo ""
     echo "It will take a few minutes for all the Kubernetes process to start up before you can access Kubernetes Dashboard"
     echo "----> To check what processes/containers are coming up, go to http://$(cat terraform/masters.ip):8080/env/$(cat ansible/tmp/kubernetes_environment.id)/infra/containers"
