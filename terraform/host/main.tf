@@ -19,6 +19,7 @@ resource "triton_machine" "host" {
     }
 
     inline = [
+      "sleep 30",
       "sudo cp /home/ubuntu/.ssh/authorized_keys /root/.ssh/",
       "sudo apt-get update",
       "sudo apt-get install python-minimal -y",
