@@ -220,8 +220,11 @@ setConfigFromTritonENV() {
             break
         fi
     done
-    if [[ ! foundKey ]]; then
+    if ! "$foundKey" ; then
         echo "error: couldn't find the ssh key associated with fingerprint $SDC_KEY_ID in ~/.ssh/ directory..."
+        echo "    Clean the setup and make sure your triton profile is set up."
+        echo "    To confirm your profile is set up, try \`triton info\`."
+        cleanRunner
         exit 1
     fi
     echo "" >> config
@@ -487,7 +490,7 @@ cleanRunner() {
             if [ -e terraform/rancher.tf ]; then
                 cd terraform
                 echo "    destroying images..."
-                terraform destroy -force 2> /dev/null
+                terraform destroy -force 2> /dev/null || true
                 cd ..
             fi
             if [[ -e terraform/hosts.ip  &&  -e terraform/masters.ip  &&  -e ~/.ssh/known_hosts ]]; then
