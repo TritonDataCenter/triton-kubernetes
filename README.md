@@ -23,7 +23,8 @@ In order to install Triton, first you must have a [Triton account](https://sso.j
 
 #### Install Terraform
 
-At this time, Triton only supports certain versions of Terraform. [Download supported version 4.15](https://releases.hashicorp.com/terraform/0.8.5/terraform_0.8.5_darwin_amd64.zip) and proceed to install.
+[Download Terraform](https://www.terraform.io/downloads.html) and unzip the package.
+Terraform runs as a single binary named terraform. The final step is to make sure that the terraform binary is available on the PATH. See [this](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux) page for instructions on setting the PATH on Linux and Mac.
 
 Test your installation by running `terraform`. You should see an output similar to:
 
