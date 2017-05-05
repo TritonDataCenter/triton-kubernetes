@@ -22,6 +22,6 @@
     register: agent_registration
     when: "{{ 'rancher-agent' not in containers.stdout }}"
 
--   name: Register compute machine
-    shell: "docker run -e CATTLE_HOST_LABELS='compute=true' --rm --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/rancher:/var/lib/rancher {{ agent_registration.json['image'] }} {{ agent_registration.json['registrationUrl'] }}"
+-   name: Register orchestration machine
+    shell: "docker run -e CATTLE_HOST_LABELS='orchestration=true' --rm --privileged -v /var/run/docker.sock:/var/run/docker.sock -v /var/lib/rancher:/var/lib/rancher {{ agent_registration.json['image'] }} {{ agent_registration.json['registrationUrl'] }}"
     when: "{{ 'rancher-agent' not in containers.stdout }}"

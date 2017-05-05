@@ -110,6 +110,11 @@ getArgument() {
 }
 runAnsible() {
     cd ansible
+    ansible-playbook -i hosts dockerSetup.yml
+    ansible-playbook -i hosts rancherServer.yml
+    if $SEPARATE_PLANE; then
+        curl -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' -d '{"accountId":null, "data":{"fields":{"stacks":[{"name":"healthcheck", "templateId":"library:infra*healthcheck"}, {"name":"kubernetes", "templateId":"library:infra*k8s", "answers":{"CONSTRAINT_TYPE":"required", "CLOUD_PROVIDER":"rancher", "REGISTRY":"", "DISABLE_ADDONS":"false", "POD_INFRA_CONTAINER_IMAGE":"gcr.io/google_containers/pause-amd64:3.0", "INFLUXDB_HOST_PATH":"", "EMBEDDED_BACKUPS":true, "BACKUP_PERIOD":"15m0s", "BACKUP_RETENTION":"24h", "ETCD_HEARTBEAT_INTERVAL":"500", "ETCD_ELECTION_TIMEOUT":"5000"}}, {"name":"network-services", "templateId":"library:infra*network-services"}, {"name":"ipsec", "templateId":"library:infra*ipsec"}]}}, "description":"Default Kubernetes template", "externalId":"catalog://library:project*kubernetes:0", "id":0, "isPublic":true, "kind":"projectTemplate", "name":"Kubernetes", "removeTime":null, "removed":null, "state":"active", "transitioning":"no", "transitioningMessage":null, "transitioningProgress":0, "stacks":[{"type":"catalogTemplate", "name":"healthcheck", "templateId":"library:infra*healthcheck"}, {"type":"catalogTemplate", "answers":{"CONSTRAINT_TYPE":"required", "CLOUD_PROVIDER":"rancher", "REGISTRY":"", "DISABLE_ADDONS":"false", "POD_INFRA_CONTAINER_IMAGE":"gcr.io/google_containers/pause-amd64:3.0", "INFLUXDB_HOST_PATH":"", "EMBEDDED_BACKUPS":true, "BACKUP_PERIOD":"15m0s", "BACKUP_RETENTION":"24h", "ETCD_HEARTBEAT_INTERVAL":"500", "ETCD_ELECTION_TIMEOUT":"5000"}, "name":"kubernetes", "templateId":"library:infra*k8s"}, {"type":"catalogTemplate", "name":"network-services", "templateId":"library:infra*network-services"}, {"type":"catalogTemplate", "name":"ipsec", "templateId":"library:infra*ipsec"}]}' "http://$(cat ../terraform/masters.ip):8080/v2-beta/projecttemplates/$(cat tmp/kubernetes_template_id.id)" > /dev/null 2>&1
+    fi
     ansible-playbook -i hosts clusterUp.yml
     cd ..
 }
@@ -124,6 +129,12 @@ createAnsibleConfigs() {
     cat terraform/masters.ip >> ansible/hosts
     echo "[HOST]" >> ansible/hosts
     cat terraform/hosts.ip >> ansible/hosts
+    if $SEPARATE_PLANE; then
+        echo "[K8SHA]" >> ansible/hosts
+        cat terraform/k8sha.ip >> ansible/hosts
+        echo "[K8SETCD]" >> ansible/hosts
+        cat terraform/k8setcd.ip >> ansible/hosts
+    fi
     echo "    created: ansible/hosts"
     master=$(tail -1 terraform/masters.ip)
     echo "master: $master" > ansible/roles/ranchermaster/vars/vars.yml
@@ -151,6 +162,14 @@ runTerraformTasks() {
             updateTerraformConfig host $(echo $KUBERNETES_NODE_HOSTNAME_BEGINSWITH$i | sed 's/"//g')
         done
 
+        if $SEPARATE_PLANE; then
+            updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd1 | sed 's/"//g')
+            updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd2 | sed 's/"//g')
+            updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd3 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8s1 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8s2 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8s3 | sed 's/"//g')
+        fi
         cd terraform
         echo "Starting terraform tasks"
         terraform get
@@ -160,6 +179,30 @@ runTerraformTasks() {
     fi
 }
 updateTerraformConfig() {
+    if [ $1 == "k8sha" ]; then
+        echo ""  >> terraform/rancher.tf
+        echo "module \"$2\" {" >> terraform/rancher.tf
+        echo "    source = \"k8sha\"" >> terraform/rancher.tf
+        echo "    hostname = \"$2\"" >> terraform/rancher.tf
+        echo "    networks = [\"$(echo $RANCHER_MASTER_NETWORKS | sed 's/,/","/g')\"]" >> terraform/rancher.tf
+        echo "    root_authorized_keys = \"\${file(\"$(echo $SDC_KEY | sed 's/"//g')\")}\"" >> terraform/rancher.tf
+        # echo "    image = \"0867ef86-e69d-4aaa-ba3b-8d2aef0c204e\"" >> terraform/rancher.tf
+        echo "    package = \"$(echo $HOST_PACKAGE | sed 's/"//g')\"" >> terraform/rancher.tf
+        echo "}" >> terraform/rancher.tf
+        return
+    fi
+    if [ $1 == "k8setcd" ]; then
+        echo ""  >> terraform/rancher.tf
+        echo "module \"$2\" {" >> terraform/rancher.tf
+        echo "    source = \"k8setcd\"" >> terraform/rancher.tf
+        echo "    hostname = \"$2\"" >> terraform/rancher.tf
+        echo "    networks = [\"$(echo $RANCHER_MASTER_NETWORKS | sed 's/,/","/g')\"]" >> terraform/rancher.tf
+        echo "    root_authorized_keys = \"\${file(\"$(echo $SDC_KEY | sed 's/"//g')\")}\"" >> terraform/rancher.tf
+        # echo "    image = \"0867ef86-e69d-4aaa-ba3b-8d2aef0c204e\"" >> terraform/rancher.tf
+        echo "    package = \"$(echo $HOST_PACKAGE | sed 's/"//g')\"" >> terraform/rancher.tf
+        echo "}" >> terraform/rancher.tf
+        return
+    fi
     if [ $1 == "master" ]; then
         echo ""  >> terraform/rancher.tf
         echo "module \"$2\" {" >> terraform/rancher.tf
@@ -269,6 +312,23 @@ getConfigFromUser() {
     else
         KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_DESCRIPTION | sed 's/"//g')")
     fi
+    echo "---------------"
+    gotValidInput=false
+    while ! $gotValidInput; do
+        read -p "Would you like etcd and K8s to run on dedicated nodes (+6 VMs) (yes | no)? " yn
+        case $yn in
+            yes )
+                SEPARATE_PLANE=true
+                gotValidInput=true
+                # echo "SEPARATE_PLANE: true" >> ansible/roles/ranchermaster/vars/vars.yml
+                ;;
+            no )
+                SEPARATE_PLANE=false
+                gotValidInput=true
+                ;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
@@ -456,6 +516,9 @@ verifyConfig() {
     echo "Name of kubernetes environment: $KUBERNETES_NAME"
     echo "Kubernetes environment description: $KUBERNETES_DESCRIPTION"
     echo "Master hostname: $RANCHER_MASTER_HOSTNAME"
+    if $SEPARATE_PLANE; then
+        echo "    There will be three nodes created for etcd and three for Kubernetes HA."
+    fi
     echo "All node hostnames will start with: $KUBERNETES_NODE_HOSTNAME_BEGINSWITH"
     echo "Kubernetes environment will have $KUBERNETES_NUMBER_OF_NODES nodes"
     echo "Master server will be part of these networks: $RANCHER_MASTER_NETWORKS"
@@ -485,38 +548,39 @@ cleanRunner() {
     echo "Clearing settings...."
     while true; do
         if [ -e terraform/masters.ip ]; then
-            echo "WARNING: You are about to destroy the following KVMs associated with Rancher cluster:"
-            cat terraform/masters.ip 2>/dev/null
-            cat terraform/hosts.ip 2>/dev/null
+            echo "WARNING: You are about to destroy KVMs associated with this Rancher cluster."
 
             read -p "Do you wish to destroy the KVMs and reset configuration (yes | no)? " yn
         else
             read -p "Do you wish to reset configuration (yes | no)? " yn
         fi
-    case $yn in
-        yes )
-            if [ -e terraform/rancher.tf ]; then
-                cd terraform
-                echo "    destroying images..."
-                terraform destroy -force 2> /dev/null || true
-                cd ..
-            fi
-            if [[ -e terraform/hosts.ip  &&  -e terraform/masters.ip  &&  -e ~/.ssh/known_hosts ]]; then
-                for host_key in $(cat terraform/hosts.ip terraform/masters.ip); do
-                    ssh-keygen -R $host_key 2>&1 >> /dev/null
-                done
-            fi
-            rm -rf terraform/hosts.ip terraform/masters.ip terraform/terraform.* terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
+        case $yn in
+            yes )
+                if [ -e terraform/rancher.tf ]; then
+                    cd terraform
+                    echo "    destroying images..."
+                    terraform destroy -force 2> /dev/null || true
+                    cd ..
+                fi
+                if [[ -e terraform/hosts.ip  &&  -e terraform/masters.ip  &&  -e ~/.ssh/known_hosts ]]; then
+                    for host_key in $(cat terraform/hosts.ip terraform/masters.ip); do
+                        ssh-keygen -R $host_key 2>&1 >> /dev/null
+                    done
+                fi
+                rm -rf terraform/hosts.ip terraform/masters.ip terraform/k8setcd.ip terraform/k8sha.ip terraform/terraform.* terraform/.terraform* terraform/rancher.tf 2>&1 >> /dev/null
+                rm -rf ansible/roles/ranchermaster/vars/vars.yml ansible/tmp/kubernetes_* 2>&1 >> /dev/null
+                echo 'master: 64.30.129.229' > ansible/roles/ranchermaster/vars/vars.yml
+                echo 'kubernetes_name: "k8s dev"' >> ansible/roles/ranchermaster/vars/vars.yml
+                echo 'kubernetes_description: "k8s dev"' >> ansible/roles/ranchermaster/vars/vars.yml
+                sed "s~private_key_file = .*$~private_key_file = ~g" ansible/ansible.cfg > tmp && mv tmp ansible/ansible.cfg
+                rm -f  ansible/hosts ansible/*retry ansible/ansible.cfg.tmp 2>&1 >> /dev/null
+                rm -rf config tmp/* 2>&1 >> /dev/null
 
-            sed "s~private_key_file = .*$~private_key_file = ~g" ansible/ansible.cfg > tmp && mv tmp ansible/ansible.cfg
-            rm -f  ansible/hosts ansible/*retry ansible/ansible.cfg.tmp 2>&1 >> /dev/null
-            rm -rf config tmp/* 2>&1 >> /dev/null
-
-            echo "    All clear!"
-            return;;
-        no ) exit;;
-        * ) echo "Please answer yes or no.";;
-    esac
+                echo "    All clear!"
+                return;;
+            no ) exit;;
+            * ) echo "Please answer yes or no.";;
+        esac
     done
 }
 debugVars() {
@@ -546,6 +610,7 @@ exportVars() {
         export "$line"
     done <config.tmp
     rm config.tmp
+    export SEPARATE_PLANE
 }
 
 main "$@"
