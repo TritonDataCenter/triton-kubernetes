@@ -1,6 +1,6 @@
 ---
 -   name: Set up Rancher Master and Kubernetes Template
-    hosts: MASTER
+    hosts: MASTER[0]
     remote_user: root
     vars:
         playbook_dir: $(pwd)
