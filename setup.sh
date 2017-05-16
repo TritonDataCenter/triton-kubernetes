@@ -365,7 +365,7 @@ getConfigFromUser() {
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
-        read -p "Would you like HA for Rancher Server (+3 VMs) (yes | no)? " yn
+        read -p "Would you like HA for Kubernetes Cluster Manager (+3 VMs) (yes | no)? " yn
         case $yn in
             yes )
                 RANCHER_HA=true
@@ -381,7 +381,7 @@ getConfigFromUser() {
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
-        read -p "Would you like etcd and K8s to run on dedicated nodes (+6 VMs) (yes | no)? " yn
+        read -p "Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)? " yn
         case $yn in
             yes )
                 SEPARATE_PLANE=true
@@ -582,7 +582,7 @@ verifyConfig() {
     echo "Name of kubernetes environment: $KUBERNETES_NAME"
     echo "Kubernetes environment description: $KUBERNETES_DESCRIPTION"
     if $RANCHER_HA; then
-        echo "Rancher HA hosts: ${RANCHER_MASTER_HOSTNAME}1, ${RANCHER_MASTER_HOSTNAME}2, ${RANCHER_MASTER_HOSTNAME}db"
+        echo "Cluster Manager hosts: ${RANCHER_MASTER_HOSTNAME}1, ${RANCHER_MASTER_HOSTNAME}2, ${RANCHER_MASTER_HOSTNAME}db"
     else
         echo "Master hostname: $RANCHER_MASTER_HOSTNAME"
     fi
