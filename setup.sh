@@ -313,7 +313,7 @@ setConfigFromTritonENV() {
             break
         fi
         # old version of ssh-keygen, defaults to md5
-        if [ "$(ssh-keygen -l -f ~/.ssh/joyentc_id_rsa | awk '{print $2}' | grep ^SHA256)" == "" ]; then
+        if [ "$(ssh-keygen -l -f ~/.ssh/$(echo $f | sed 's/.pub$//') 2> /dev/null | awk '{print $2}' | grep ^SHA256)" == "" ]; then
             if [[ "$(ssh-keygen -l -f ~/.ssh/$(echo $f | sed 's/.pub$//') 2> /dev/null | awk '{print $2}')" == "$SDC_KEY_ID" ]]; then
                 echo "SDC_KEY=\"~/.ssh/$(echo $f | sed 's/.pub$//')\"" >> config
                 foundKey=true
