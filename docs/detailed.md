@@ -134,6 +134,18 @@ Describe this Kubernetes environment: (k8s dev)
 Provide a description for the Kubernetes Environment and press Enter.
 
 ```
+Would you like HA for Kubernetes Cluster Manager (+3 VMs) (yes | no)?
+```
+
+HA for Kubernetes Cluster Manager will run a 2 node HA setup with 1 mysql VM.
+
+```
+Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)?
+```
+
+HA for Kubernetes Management Services will run 3 node etcd cluster on dedicated VMs and dedicate 3 vms for K8s services like the apiserver/scheduler/controllermanager.
+
+```
 Hostname of the master: (kubemaster)
 ```
 

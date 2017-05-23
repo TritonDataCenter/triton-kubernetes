@@ -11,7 +11,7 @@
     action: command docker logs master
     register: rancher_logs
     until: rancher_logs.stdout.find("Listening on") != -1
-    retries: 30
+    retries: 60
     delay: 10
     when: not containers.stdout | search("rancher/server")
 

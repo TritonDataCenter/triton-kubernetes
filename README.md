@@ -112,6 +112,8 @@ Follow the on screen instructions answering questions about the cluster. You can
 ```
 Name your Kubernetes environment: (k8s dev)
 Describe this Kubernetes environment: (k8s dev)
+Would you like HA for Kubernetes Cluster Manager (+3 VMs) (yes | no)?
+Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)?
 Hostname of the master: (kubemaster)
 Enter a string to use for appending to hostnames of all the nodes: (kubenode)
 How many nodes should this Kubernetes cluster have: (1) 2
