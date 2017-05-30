@@ -424,10 +424,10 @@ getConfigFromUser() {
     gotValidInput=false
     while ! $gotValidInput; do
         tmp_ValidatedInput=$(getArgument "How many nodes should this Kubernetes cluster have:" "$(echo $KUBERNETES_NUMBER_OF_NODES | sed 's/"//g')")
-        if ($SEPARATE_PLANE && [[ $tmp_ValidatedInput -lt 100 ]] && [[ $tmp_ValidatedInput -gt 0 ]]) || [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
+        if [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
             gotValidInput=true
         else
-            echo "error: Enter a valid value or leave blank to use the default (up to 9 VMs for non-HA and upto 100 VMs for HA)."
+            echo "error: Enter a valid value (1-9) or leave blank to use the default."
         fi
     done
     KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
