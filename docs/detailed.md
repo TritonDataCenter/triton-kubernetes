@@ -8,7 +8,7 @@ All it takes is the entry of a few simple parameters and then the Triton K8s Sup
 
 Once the Kubernetes Cluster is set up, the Triton K8s Supervisor will simply continue on and automate the provisioning of a Kubernetes Environment on the Kubernetes Cluster it just created.  The Triton K8s Supervisor leverages [Rancher](http://rancher.com/kubernetes) best practices and tools to complete this step, ensuring that you have a production grade, supportable (and easily upgradable) Kubernetes Environment.
 
-![1x2 Architecture](img/1x2-arch.png)
+![1x2 Architecture](img/20170530a-Triton-Kubernetes-HA.jpg)
 
 #### Step three: deploying your first Kubernetes Managed Application.
 

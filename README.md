@@ -122,7 +122,7 @@ What networks should the nodes be a part of, provide comma separated values: (31
 What KVM package should the master and nodes run on: (14b6fade-d0f8-11e5-85c5-4ff7918ab5c1)
 ```
 
-After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below:
+After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below (if HA isn't set up):
 
 ![1x2 architecture](docs/img/1x2-arch.png)
 

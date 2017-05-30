@@ -204,9 +204,9 @@ runTerraformTasks() {
             updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd1 | sed 's/"//g')
             updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd2 | sed 's/"//g')
             updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd3 | sed 's/"//g')
-            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8s1 | sed 's/"//g')
-            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8s2 | sed 's/"//g')
-            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8s3 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8smgmt1 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8smgmt2 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8smgmt3 | sed 's/"//g')
         fi
         cd terraform
         echo "Starting terraform tasks"
@@ -424,10 +424,10 @@ getConfigFromUser() {
     gotValidInput=false
     while ! $gotValidInput; do
         tmp_ValidatedInput=$(getArgument "How many nodes should this Kubernetes cluster have:" "$(echo $KUBERNETES_NUMBER_OF_NODES | sed 's/"//g')")
-        if [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
+        if ($SEPARATE_PLANE && [[ $tmp_ValidatedInput -lt 100 ]] && [[ $tmp_ValidatedInput -gt 0 ]]) || [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
             gotValidInput=true
         else
-            echo "error: Enter a valid value (number between 1-9) or leave blank to use the default."
+            echo "error: Enter a valid value or leave blank to use the default (up to 9 VMs for non-HA and upto 100 VMs for HA)."
         fi
     done
     KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
