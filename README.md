@@ -112,6 +112,8 @@ Follow the on screen instructions answering questions about the cluster. You can
 ```
 Name your Kubernetes environment: (k8s dev)
 Describe this Kubernetes environment: (k8s dev)
+Would you like HA for Kubernetes Cluster Manager (+3 VMs) (yes | no)?
+Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)?
 Hostname of the master: (kubemaster)
 Enter a string to use for appending to hostnames of all the nodes: (kubenode)
 How many nodes should this Kubernetes cluster have: (1) 2
@@ -120,7 +122,7 @@ What networks should the nodes be a part of, provide comma separated values: (31
 What KVM package should the master and nodes run on: (14b6fade-d0f8-11e5-85c5-4ff7918ab5c1)
 ```
 
-After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below:
+After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below (if HA isn't set up):
 
 ![1x2 architecture](docs/img/1x2-arch.png)
 

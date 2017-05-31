@@ -1,0 +1,6 @@
+---
+-   name: Setup docker-engine on all hosts (masters/hosts)
+    hosts: all
+    remote_user: root
+    roles:
+    -   dockersetup

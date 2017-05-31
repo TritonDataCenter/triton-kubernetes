@@ -1,21 +1,35 @@
 ---
--   name: Setup docker-engine on all hosts (masters/hosts)
-    hosts: all
-    remote_user: root
-    roles:
-    -   dockersetup
-
--   name: Set up Rancher Master and Kubernetes Environment
-    hosts: MASTER
+-   name: Set up Rancher Master and Kubernetes Template
+    hosts: MASTER[0]
     remote_user: root
     vars:
         playbook_dir: $(pwd)
     vars_files:
     -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
     roles:
-    -   ranchermaster
+    -   k8senvironment
 
--   name: Add hosts to Kubernetes Environment
+-   name: Add hosts to Kubernetes Environment (ETCD)
+    hosts: K8SETCD
+    remote_user: root
+    vars:
+        playbook_dir: $(pwd)
+    vars_files:
+    -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
+    roles:
+    -   k8setcd
+    
+-   name: Add hosts to Kubernetes Environment (ORCHESTRATION)
+    hosts: K8SHA
+    remote_user: root
+    vars:
+        playbook_dir: $(pwd)
+    vars_files:
+    -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
+    roles:
+    -   k8sha
+
+-   name: Add hosts to Kubernetes Environment (COMPUTE)
     hosts: HOST
     remote_user: root
     vars:

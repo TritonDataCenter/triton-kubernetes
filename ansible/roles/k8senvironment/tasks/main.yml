@@ -1,0 +1,28 @@
+---
+-   name: Get Kubernetes Template ID
+    action: uri
+        method=GET
+        url="http://{{ master }}:8080/v2-beta/projectTemplates?name=kubernetes"
+    register: kubernetes_template_id
+    run_once: true
+    delegate_to: "{{ master }}"
+
+-   name: Store kubernetes_template_id
+    local_action: shell echo {{ kubernetes_template_id.json.data[0].id }} > tmp/kubernetes_template_id.id
+    
+-   name: Create Kubernetes Environment
+    uri:
+        method: POST
+        url: "http://{{ master }}:8080/v2-beta/projects"
+        HEADER_Accept: "application/json"
+        HEADER_Content-Type: "application/json"
+        body_format: json
+        body: ' { "description":"{{ kubernetes_description }}", "name":"{{ kubernetes_name }}", "projectTemplateId":"{{ kubernetes_template_id.json.data[0].id }}", "allowSystemRole":false, "members":[], "virtualMachine":false, "servicesPortRange":null, "projectLinks":[]}'
+        return_content: yes
+        status_code: 201
+    register: kubernetes_environment_id
+    run_once: true
+    delegate_to: "{{ master }}"
+
+-   name: Store kubernetes_environment_id
+    local_action: shell echo {{ kubernetes_environment_id.json.id }} > tmp/kubernetes_environment.id

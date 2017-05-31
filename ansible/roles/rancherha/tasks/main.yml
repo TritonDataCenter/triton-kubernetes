@@ -1,35 +1,32 @@
 ---
--   name: Check if master container is running
+-   name: Check if Rancher HA container is running
     command: docker ps -a
     register: containers
+-   debug: msg="{{ containers.stdout }}"
+-   name: Start Rancher Server HA containers
+    shell: "docker run --name=master -d --restart=unless-stopped -p 8080:8080 -p 9345:9345 rancher/server --db-host {{ mysqldb }} --db-port 3306 --db-user {{ db_user }} --db-pass {{ db_pass }} --db-name {{ db_name }} --advertise-address {{ ansible_default_ipv4.address }}"
+    when: not containers.stdout | search("rancher/server")
 
--   name: Start master containers
-    docker_container:
-        name: master
-        image: rancher/server:stable
-        published_ports: 8080:8080
-        restart_policy: unless-stopped
-        state: started
-    when: "{{ 'master' not in containers.stdout }}"
 -   name: Wait for the Rancher servers to start
     action: command docker logs master
     register: rancher_logs
     until: rancher_logs.stdout.find("Listening on") != -1
-    retries: 30
+    retries: 60
     delay: 10
-    when: "{{ 'master' not in containers.stdout }}"
+    when: not containers.stdout | search("rancher/server")
+
 -   debug: msg="You can connect to rancher server http://{{ ansible_default_ipv4.address }}:8080"
-    when: "{{ 'master' not in containers.stdout }}"
+    when: not containers.stdout | search("rancher/server")
 
 -   pause:
         seconds: 15
         prompt: "Waiting for Rancher to be fully up before continueing to build Kubernetes environment..."
-    when: "{{ 'master' not in containers.stdout }}"
+    when: not containers.stdout | search("rancher/server")
 
 -   name: Get Kubernetes Template ID
     action: uri
         method=GET
-        url="http://{{ master }}:8080/v2-beta/projectTemplates?name=kubernetes"
+        url="http://{{ ansible_default_ipv4.address }}:8080/v2-beta/projectTemplates?name=kubernetes"
     register: kubernetes_template_id
     run_once: true
     delegate_to: "{{ master }}"

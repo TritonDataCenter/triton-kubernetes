@@ -1,0 +1,20 @@
+---
+-   name: MysqlDB for Rancher HA
+    hosts: MYSQLDB
+    remote_user: root
+    vars:
+        playbook_dir: $(pwd)
+    vars_files:
+    -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
+    roles:
+    -   mysqldb
+
+-   name: Set up Rancher Master and Kubernetes Template
+    hosts: MASTER
+    remote_user: root
+    vars:
+        playbook_dir: $(pwd)
+    vars_files:
+    -   "{{playbook_dir}}/roles/ranchermaster/vars/vars.yml"
+    roles:
+    -   rancherha
