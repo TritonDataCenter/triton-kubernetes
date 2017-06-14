@@ -99,7 +99,7 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s htt
 Download the k8sontriton package and run `setup.sh`:
 
 ```bash
-$ git clone https://github.com/fayazg/tritonK8ssupervisor.git
+$ git clone https://github.com/joyent/k8s-triton-supervisor.git
 Cloning into 'tritonK8ssupervisor'...
 $ cd tritonK8ssupervisor 
 $ ./setup.sh
