@@ -1,4 +1,4 @@
-[Kubernetes](https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/) is an open-source system for automating deployment, scaling, and management of application containers across clusters of hosts. Here I introduce the [Triton K8s Supervisor](https://github.com/fayazg/tritonK8ssupervisor) and walk through the steps required to run Kubernetes on Triton.
+[Kubernetes](https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/) is an open-source system for automating deployment, scaling, and management of application containers across clusters of hosts. Here I introduce the [Triton K8s Supervisor](https://github.com/joyent/k8s-triton-supervisor) and walk through the steps required to run Kubernetes on Triton.
 
 #### Step one: creating your Kubernetes Cluster.  
 
@@ -113,12 +113,12 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s htt
 
 ### Now let's create a Kubernetes Cluster
 
-The Triton K8s Supervisor uses `triton`, `terraform`, and `ansible` to set up and interact with a Kubernetes Cluster. Once those have been installed, you can download the [Triton K8s Supervisor package](https://github.com/fayazg/tritonK8ssupervisor.git), start `setup.sh`, and answer the prompted questions.
+The Triton K8s Supervisor uses `triton`, `terraform`, and `ansible` to set up and interact with a Kubernetes Cluster. Once those have been installed, you can download the [Triton K8s Supervisor package](https://github.com/joyent/k8s-triton-supervisor.git), start `setup.sh`, and answer the prompted questions.
 
 Default values will be shown in parentheses and if no input is provided, defaults will be used.
 
 ```
-$ git clone https://github.com/fayazg/tritonK8ssupervisor.git
+$ git clone https://github.com/joyent/k8s-triton-supervisor.git
 Cloning into 'tritonK8ssupervisor'...
 $ cd tritonK8ssupervisor 
 $ ./setup.sh
@@ -262,7 +262,7 @@ Waiting on Kubernetes Dashboard to come up.
 
 The last container to come up will be for the Kubernetes Dashboard. Once that container is up your Kubernets Environment is ready.  You will get the above two URLs. The first URL is for the Kubernetes Dashboard, and the second URL is for Kubernetes CLI (`kubectl` config).  These will alow you to bypass Rancher and interact with the native Kubernetes interfaces.
 
-Congratulations!  You have a production grade Kubernetes Environment ready for your use.  One note, however, before we move on to deploying some sample applications on your new, 100% open source, Kubernetes Environment.  If you want to customize any of these set up steps for your Kubernetes Environment, check out [this GitHub repo](https://github.com/fayazg/tritonK8ssupervisor/blob/master/docs/manual-setup.md) for an explanation of how to manually set up a Kubernetes Cluster on Triton.
+Congratulations!  You have a production grade Kubernetes Environment ready for your use.  One note, however, before we move on to deploying some sample applications on your new, 100% open source, Kubernetes Environment.  If you want to customize any of these set up steps for your Kubernetes Environment, check out [this GitHub repo](https://github.com/joyent/k8s-triton-supervisor/blob/master/docs/manual-setup.md) for an explanation of how to manually set up a Kubernetes Cluster on Triton.
 
 ### Now, let's deploy an app with Kubernetes
 
