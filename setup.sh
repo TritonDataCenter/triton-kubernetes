@@ -9,6 +9,48 @@ db_user=cattle
 db_pass=cattle
 
 main() {
+    if [ ! -e bin/terraform ]; then
+        echo "Getting the correct version of terraform ..."
+        # Detect the platform
+        mkdir bin
+        cd bin
+        OS="`uname`"
+        case $OS in
+            'Linux')
+                wget https://releases.hashicorp.com/terraform/0.9.11/terraform_0.9.11_linux_amd64.zip
+                unzip -o terraform_0.9.11_linux_amd64.zip
+                rm terraform_0.9.11_linux_amd64.zip
+                cd ..
+                ;;
+            'FreeBSD')
+                wget https://releases.hashicorp.com/terraform/0.9.11/terraform_0.9.11_freebsd_amd64.zip
+                unzip terraform_0.9.11_freebsd_amd64.zip
+                rm terraform_0.9.11_freebsd_amd64.zip
+                cd ..
+                ;;
+            'Darwin')
+                wget https://releases.hashicorp.com/terraform/0.9.11/terraform_0.9.11_darwin_amd64.zip
+                unzip terraform_0.9.11_darwin_amd64.zip
+                rm terraform_0.9.11_darwin_amd64.zip
+                cd ..
+                ;;
+            'SunOS')
+                wget https://releases.hashicorp.com/terraform/0.9.11/terraform_0.9.11_solaris_amd64.zip
+                unzip terraform_0.9.11_solaris_amd64.zip
+                rm terraform_0.9.11_solaris_amd64.zip
+                cd ..
+                ;;
+            *)
+                cd ..
+                echo "Couldn't determine os type."
+                exit 1
+                ;;
+        esac
+        echo ""
+        echo "Terraform for $OS added to $(pwd)/bin/ directory."
+        echo ""
+    fi
+    
     if [[ ! -z "$1" && "$1" == "-c" ]]; then
         cleanRunner
         exit 0
@@ -210,8 +252,9 @@ runTerraformTasks() {
         fi
         cd terraform
         echo "Starting terraform tasks"
-        terraform get
-        terraform apply
+        # terraform init --plugin-dir=$GOBIN
+        ../bin/terraform get
+        ../bin/terraform apply
         echo "    terraform tasks completed"
         cd ..
     fi
@@ -629,7 +672,7 @@ cleanRunner() {
                 if [ -e terraform/rancher.tf ]; then
                     cd terraform
                     echo "    destroying images..."
-                    terraform destroy -force 2> /dev/null || true
+                    ../bin/terraform destroy -force 2> /dev/null || true
                     cd ..
                 fi
                 if [[ -e terraform/hosts.ip  &&  -e terraform/masters.ip  &&  -e ~/.ssh/known_hosts ]]; then
