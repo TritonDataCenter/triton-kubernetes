@@ -8,8 +8,10 @@ db_name=cattle
 db_user=cattle
 db_pass=cattle
 
+TERRAFORM=$(pwd)/bin/terraform
+
 main() {
-    if [ ! -e bin/terraform ]; then
+    if [ ! -e $TERRAFORM ]; then
         echo "Getting the correct version of terraform ..."
         # Detect the platform
         mkdir bin
@@ -253,8 +255,8 @@ runTerraformTasks() {
         cd terraform
         echo "Starting terraform tasks"
         # terraform init --plugin-dir=$GOBIN
-        ../bin/terraform get
-        ../bin/terraform apply
+        $TERRAFORM get
+        $TERRAFORM apply
         echo "    terraform tasks completed"
         cd ..
     fi
@@ -672,7 +674,7 @@ cleanRunner() {
                 if [ -e terraform/rancher.tf ]; then
                     cd terraform
                     echo "    destroying images..."
-                    ../bin/terraform destroy -force 2> /dev/null || true
+                    $TERRAFORM destroy -force 2> /dev/null || true
                     cd ..
                 fi
                 if [[ -e terraform/hosts.ip  &&  -e terraform/masters.ip  &&  -e ~/.ssh/known_hosts ]]; then
