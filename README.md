@@ -2,7 +2,7 @@
 In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
 
 ### Pre-Reqs
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Terraform**, **Ansible**, and the **Kubernetes CLI**.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, and the **Kubernetes CLI**.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
@@ -21,29 +21,9 @@ In order to install Triton, first you must have a [Triton account](https://sso.j
 1.  Get into the Triton environment with `eval $(triton env <profile name>)`.
 1.  Run `triton info` to test your configuration.
 
-#### Install Terraform
+#### Terraform
 
-[Download Terraform](https://www.terraform.io/downloads.html) and unzip the package.
-Terraform runs as a single binary named terraform. The final step is to make sure that the terraform binary is available on the PATH. See [this](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux) page for instructions on setting the PATH on Linux and Mac.
-
-Test your installation by running `terraform`. You should see an output similar to:
-
-```
-$ terraform
-Usage: terraform [--version] [--help] <command> [args]
-
-The available commands for execution are listed below.
-The most common, useful commands are shown first, followed by
-less common or more advanced commands. If you're just getting
-started with Terraform, stick with the common commands. For the
-other commands, please read the help and docs before usage.
-
-Common commands:
-    apply              Builds or changes infrastructure
-    console            Interactive console for Terraform interpolations
-
-# ...
-```
+Terraform will be downloaded automatically under the `<k8s-triton-supervisor>/bin/` directory.
 
 #### Install Ansible
 
@@ -100,8 +80,8 @@ Download the k8sontriton package and run `setup.sh`:
 
 ```bash
 $ git clone https://github.com/joyent/k8s-triton-supervisor.git
-Cloning into 'tritonK8ssupervisor'...
-$ cd tritonK8ssupervisor 
+Cloning into 'k8s-triton-supervisor'...
+$ cd k8s-triton-supervisor 
 $ ./setup.sh
 ```
 
@@ -122,9 +102,10 @@ What networks should the nodes be a part of, provide comma separated values: (31
 What KVM package should the master and nodes run on: (14b6fade-d0f8-11e5-85c5-4ff7918ab5c1)
 ```
 
-After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below (if HA isn't set up):
+After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below:
 
-![1x2 architecture](docs/img/1x2-arch.png)
-
+| without HA  | with HA  |
+|----|----|
+| ![1x2 architecture](docs/img/1x2-arch.png) | ![1x2 architecture](docs/img/20170530a-Triton-Kubernetes-HA.jpg) |
 
 For a more detailed guide and how the automation works, click [here](docs/detailed.md).

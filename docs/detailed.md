@@ -18,7 +18,7 @@ Follow along as through these three easy steps in detail below.  Complete them o
 
 ### Let’s get started: the pre-requisites
 
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Terraform**, **Ansible**, and the **Kubernetes CLI**.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, and the **Kubernetes CLI**.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
@@ -37,29 +37,9 @@ In order to install Triton, first you must have a [Triton account](https://sso.j
 1.  Get into the Triton environment with `eval $(triton env <profile name>)`.
 1.  Run `triton info` to test your configuration.
 
-#### Install Terraform
+#### Terraform
 
-[Download Terraform](https://www.terraform.io/downloads.html) and unzip the package.
-Terraform runs as a single binary named terraform. The final step is to make sure that the terraform binary is available on the PATH. See [this](https://stackoverflow.com/questions/14637979/how-to-permanently-set-path-on-linux) page for instructions on setting the PATH on Linux and Mac.
-
-Test your installation by running `terraform`. You should see an output similar to:
-
-```
-$ terraform
-Usage: terraform [--version] [--help] <command> [args]
-
-The available commands for execution are listed below.
-The most common, useful commands are shown first, followed by
-less common or more advanced commands. If you're just getting
-started with Terraform, stick with the common commands. For the
-other commands, please read the help and docs before usage.
-
-Common commands:
-    apply              Builds or changes infrastructure
-    console            Interactive console for Terraform interpolations
-
-# ...
-```
+Terraform will be downloaded automatically under the `<k8s-triton-supervisor>/bin/` directory.
 
 #### Install Ansible
 
@@ -113,7 +93,7 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s htt
 
 ### Now let's create a Kubernetes Cluster
 
-The Triton K8s Supervisor uses `triton`, `terraform`, and `ansible` to set up and interact with a Kubernetes Cluster. Once those have been installed, you can download the [Triton K8s Supervisor package](https://github.com/joyent/k8s-triton-supervisor.git), start `setup.sh`, and answer the prompted questions.
+The Triton K8s Supervisor uses `triton`, `terraform`, and `ansible` to set up and interact with a Kubernetes Cluster. Once `triton` and `ansible` have been installed, you can download the [Triton K8s Supervisor package](https://github.com/joyent/k8s-triton-supervisor.git), start `setup.sh`, and answer the prompted questions.
 
 Default values will be shown in parentheses and if no input is provided, defaults will be used.
 
