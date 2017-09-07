@@ -2,7 +2,7 @@
 In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
 
 ### Pre-Reqs
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Terraform**, **Ansible**, and the **Kubernetes CLI**.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, and the **Kubernetes CLI**.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 

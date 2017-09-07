@@ -18,7 +18,7 @@ Follow along as through these three easy steps in detail below.  Complete them o
 
 ### Let’s get started: the pre-requisites
 
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Terraform**, **Ansible**, and the **Kubernetes CLI**.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, and the **Kubernetes CLI**.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
@@ -93,7 +93,7 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s htt
 
 ### Now let's create a Kubernetes Cluster
 
-The Triton K8s Supervisor uses `triton`, `terraform`, and `ansible` to set up and interact with a Kubernetes Cluster. Once those have been installed, you can download the [Triton K8s Supervisor package](https://github.com/joyent/k8s-triton-supervisor.git), start `setup.sh`, and answer the prompted questions.
+The Triton K8s Supervisor uses `triton`, `terraform`, and `ansible` to set up and interact with a Kubernetes Cluster. Once `triton` and `ansible` have been installed, you can download the [Triton K8s Supervisor package](https://github.com/joyent/k8s-triton-supervisor.git), start `setup.sh`, and answer the prompted questions.
 
 Default values will be shown in parentheses and if no input is provided, defaults will be used.
 
