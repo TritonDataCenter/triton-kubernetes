@@ -1,8 +1,10 @@
 ## Quick Start Guide
 In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
 
+> NOTE: This package has been tested on Linux/OSX.
+
 ### Pre-Reqs
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, and the **Kubernetes CLI**.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, **wget**, and the **Kubernetes CLI**.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
@@ -58,6 +60,21 @@ Options:
   -D, --diff            when changing (small) files and templates, show the
                         differences in those files; works great with --check
 [...]
+```
+
+#### Install `wget`
+
+Install `wget` for the system you are on:
+
+```sh
+# OS X using brew
+brew install wget
+
+# Debian/Ubuntu
+apt-get install wget
+
+# CentOS/RHEL
+yum install wget
 ```
 
 #### Install the Kubernetes CLI

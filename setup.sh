@@ -14,6 +14,7 @@ main() {
     if [ ! -e $TERRAFORM ]; then
         echo "Getting the correct version of terraform ..."
         # Detect the platform
+        rm -rf bin || true
         mkdir bin
         cd bin
         OS="`uname`"
