@@ -1,5 +1,7 @@
 [Kubernetes](https://kubernetes.io/docs/concepts/overview/what-is-kubernetes/) is an open-source system for automating deployment, scaling, and management of application containers across clusters of hosts. Here I introduce the [Triton K8s Supervisor](https://github.com/joyent/k8s-triton-supervisor) and walk through the steps required to run Kubernetes on Triton.
 
+> NOTE: This package has been tested on Linux/OSX.
+
 #### Step one: creating your Kubernetes Cluster.  
 
 All it takes is the entry of a few simple parameters and then the Triton K8s Supervisor will automate the provisioning of the Triton virtual machine hosts, Docker Engines and networks that will serve as your Kubernetes Cluster.  The Triton K8s Supervisor leverages [Terraform](https://www.terraform.io/) and [Ansible](https://www.ansible.com/) to complete these steps, so you can easily modify your Kubernetes Cluster creation set up if you wish.
@@ -18,7 +20,7 @@ Follow along as through these three easy steps in detail below.  Complete them o
 
 ### Let’s get started: the pre-requisites
 
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, and the **Kubernetes CLI**.
+In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, **wget**, and the **Kubernetes CLI**.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
@@ -74,6 +76,21 @@ Options:
   -D, --diff            when changing (small) files and templates, show the
                         differences in those files; works great with --check
 [...]
+```
+
+#### Install `wget`
+
+Install `wget` for the system you are on:
+
+```sh
+# OS X using brew
+brew install wget
+
+# Debian/Ubuntu
+apt-get install wget
+
+# CentOS/RHEL
+yum install wget
 ```
 
 #### Install the Kubernetes CLI
