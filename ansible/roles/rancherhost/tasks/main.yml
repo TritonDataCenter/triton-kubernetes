@@ -1,23 +1,21 @@
 ---
--   name: Check if the rancher-agent is running
+-   name: Check if rancher-agent is running
     command: docker ps -a
     register: containers
 
--   name: Get kubernetes_environment_id
+-   name: Get Kubernetes Environment ID from tmp/kubernetes_environment.id
     local_action: slurp src="tmp/kubernetes_environment.id"
     register: project_id
     when: "{{ 'rancher-agent' not in containers.stdout }}"
 
--   name: Get registration url
+-   name: Get Rancher agent registration token from master
     action: uri
         method=POST
         status_code=201
         url="http://{{ master }}:8080/v2-beta/projects/{{ project_id['content'] | b64decode | replace('\n', '') }}/registrationtokens" return_content=yes
     register: rancher_agent_registration
     when: "{{ 'rancher-agent' not in containers.stdout }}"
-
--   name: Get registration token
-    action: uri
+-   action: uri
         url="{{ rancher_agent_registration.json['actions']['activate'] }}" return_content=yes
     register: agent_registration
     when: "{{ 'rancher-agent' not in containers.stdout }}"

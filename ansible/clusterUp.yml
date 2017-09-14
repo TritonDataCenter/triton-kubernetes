@@ -20,7 +20,7 @@
     -   k8setcd
     
 -   name: Add hosts to Kubernetes Environment (ORCHESTRATION)
-    hosts: K8SHA
+    hosts: K8SSRVS
     remote_user: root
     vars:
         playbook_dir: $(pwd)

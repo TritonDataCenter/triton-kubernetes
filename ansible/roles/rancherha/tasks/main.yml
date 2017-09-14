@@ -1,9 +1,9 @@
 ---
--   name: Check if Rancher HA container is running
+-   name: Check if Rancher/server container is running
     command: docker ps -a
     register: containers
 -   debug: msg="{{ containers.stdout }}"
--   name: Start Rancher Server HA containers
+-   name: Start Rancher/server container
     shell: "docker run --name=master -d --restart=unless-stopped -p 8080:8080 -p 9345:9345 rancher/server --db-host {{ mysqldb }} --db-port 3306 --db-user {{ db_user }} --db-pass {{ db_pass }} --db-name {{ db_name }} --advertise-address {{ ansible_default_ipv4.address }}"
     when: not containers.stdout | search("rancher/server")
 
@@ -31,5 +31,5 @@
     run_once: true
     delegate_to: "{{ master }}"
 
--   name: Store kubernetes_template_id
+-   name: Store Kubernetes Template ID in tmp/kubernetes_template_id.id
     local_action: shell echo {{ kubernetes_template_id.json.data[0].id }} > tmp/kubernetes_template_id.id
