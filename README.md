@@ -1,12 +1,14 @@
-## Quick Start Guide
-In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
+# Express Gateway Running on Kubernetes in Triton Cloud
+
+## Kubernetes Setup on Triton
+In this guide, we will start a simple 2 worker node Kubernetes install that runs on Triton Cloud.
 
 > NOTE: This package has been tested on Linux/OSX.
 
 ### Pre-Reqs
 In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, **wget**, and the **Kubernetes CLI**.
 
-[Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
+[Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster.
 
 [Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned. We use Terraform to provision virtual machines, set up root access, and install `python`.
 
@@ -98,7 +100,7 @@ Download the k8sontriton package and run `setup.sh`:
 ```bash
 $ git clone https://github.com/joyent/k8s-triton-supervisor.git
 Cloning into 'k8s-triton-supervisor'...
-$ cd k8s-triton-supervisor 
+$ cd k8s-triton-supervisor
 $ ./setup.sh
 ```
 
@@ -126,3 +128,61 @@ After verification of the entries, setup will provide a Kubernetes environment o
 | ![1x2 architecture](docs/img/1x2-arch.png) | ![1x2 architecture](docs/img/20170530a-Triton-Kubernetes-HA.jpg) |
 
 For a more detailed guide and how the automation works, click [here](docs/detailed.md).
+
+## Express Gateway Demo
+
+#### Initial setup
+
+1. Set up kubeconfig
+
+    - Go to http://165.225.138.108:8080/env/1a7/kubernetes/kubectl
+    - Download the kubectl configuration at the top into ~/.kube/config
+
+2. Deploy redis and the redis service
+
+    kubectl apply -f redis.yml
+
+3. Deploy the gateway configuration
+
+    kubectl apply -f gateway-config.yml
+
+4. Deploy the gateway
+
+    kubectl apply -f gateway.yml
+
+
+#### Change configuration
+
+1. Edit gateway-config.yml to your liking.
+
+2. Change the following value in gateway.yml:
+
+        spec.template.metadata.annotations.config-version.
+
+   This is necessary to let Kubernetes know that the ConfigMap has changed.
+
+2. Push changes:
+
+    kubectl apply -f gateway-config.yml -f gateway.yml
+
+
+#### Access the gateway
+
+- Use IP of any worker node in the cluster
+- HTTP port will be 31000
+- Admin port will be 31001
+
+e.g: http://165.225.138.82:31001
+
+Access via `eg` tool:
+
+    EG_ADMIN_URL="http://165.225.138.82:31001/" eg users create
+
+
+#### Remove EG demo in Kubernetes
+
+    kubectl delete service express-gateway
+    kubectl delete deployment express-gateway
+    kubectl delete configmap gateway-config
+    kubectl delete deployment redis
+    kubectl delete service redis

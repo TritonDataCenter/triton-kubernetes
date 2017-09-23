@@ -1,0 +1,54 @@
+apiVersion: extensions/v1beta1
+kind: Deployment
+metadata:
+  name: express-gateway
+spec:
+  replicas: 1
+  template:
+    metadata:
+      labels:
+        app: express-gateway
+      annotations:
+        config-version: "1"
+    spec:
+      containers:
+        - name: express-gateway
+          image: expressgateway/express-gateway:v1.2.0-getting-started
+          resources:
+            requests:
+              cpu: 100m
+              memory: 100Mi
+          ports:
+            - name: http
+              containerPort: 8080
+            - name: admin
+              containerPort: 9876
+          volumeMounts:
+            - name: config-volume
+              mountPath: /usr/src/app/config/system.config.yml
+              subPath: system.config.yml
+            - name: config-volume
+              mountPath: /usr/src/app/config/gateway.config.yml
+              subPath: gateway.config.yml
+      volumes:
+        - name: config-volume
+          configMap:
+            name: gateway-config
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: express-gateway
+spec:
+  selector:
+    app: express-gateway
+  type: NodePort
+  ports:
+    - name: http
+      nodePort: 31000
+      port: 8080
+      targetPort: http
+    - name: admin
+      nodePort: 31001
+      port: 9876
+      targetPort: admin

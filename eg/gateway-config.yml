@@ -1,0 +1,60 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: gateway-config
+data:
+  system.config.yml: |
+    db:
+      redis:
+        host: redis.default
+        port: 6379
+        namespace: EG
+    crypto:
+      cipherKey: sensitiveKey
+      algorithm: aes256
+      saltRounds: 10
+
+    # OAuth2 Settings
+    session:
+      secret: keyboard cat
+      resave: false
+      saveUninitialized: false
+    accessTokens:
+      timeToExpiry: 7200000
+    refreshTokens:
+      timeToExpiry: 7200000
+    authorizationCodes:
+      timeToExpiry: 300000
+  gateway.config.yml: |
+    http:
+      port: 8080
+    admin:
+      port: 9876
+      hostname: 0.0.0.0
+    apiEndpoints:
+      api:
+        host: localhost
+        paths: '/ip'
+    serviceEndpoints:
+      httpbin:
+        url: 'https://httpbin.org'
+    policies:
+      - basic-auth
+      - cors
+      - expression
+      - key-auth
+      - log
+      - oauth2
+      - proxy
+      - rate-limit
+    pipelines:
+      default:
+        apiEndpoints:
+          - api
+        policies:
+        # Uncomment `key-auth:` when instructed to in the Getting Started guide.
+        # - key-auth:
+          - proxy:
+              - action:
+                  serviceEndpoint: httpbin
+                  changeOrigin: true
