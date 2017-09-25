@@ -5,23 +5,19 @@
 -   name: Install mysql on DB node (root/password)
     raw: debconf-set-selections <<< 'mysql-server mysql-server/root_password password password' && debconf-set-selections <<< 'mysql-server mysql-server/root_password_again password password' && apt-get -y install mysql-server
 
--   name: Create db, and setup user permission
+-   name: Create db, user, and set up permission
     mysql_db:
         state: present
         name: "{{ db_name }}"
         login_password: password
-
--   name: User Permission - local
-    mysql_user:
+-   mysql_user:
         name: "{{ db_user }}"
         host: localhost
         password: "{{ db_pass }}"
         priv: 'cattle.*:ALL,GRANT'
         state: present
         login_password: password
-        
--   name: User Permission - all
-    mysql_user:
+-   mysql_user:
         name: "{{ db_user }}"
         host: "%"
         password: "{{ db_pass }}"

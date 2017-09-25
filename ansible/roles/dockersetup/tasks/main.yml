@@ -2,13 +2,13 @@
 -   name: Check if docker is installed
     shell: echo $(docker --version | grep 1.12.6)
     register: docker_installed
--   name: Update all packages to the latest version
+-   name: System Update
     apt:
         upgrade: dist
         update_cache: yes
         cache_valid_time: 86400
     when: docker_installed.stdout.find('Docker version')
--   name: Install docker pre-reqs
+-   name: Install pre-reqs (python-pip, zfs, build-essential and linux-headers-generic)
     apt: name={{ item.name }}
     with_items:
     -   { name: 'linux-headers-generic' }
@@ -16,7 +16,7 @@
     -   { name: 'zfs' }
     -   { name: 'python-pip' }
     when: docker_installed.stdout.find('Docker version')
--   name: Install docker-py
+-   name: Install docker-py using pip
     pip:
         name: docker-py
     when: docker_installed.stdout.find('Docker version')
@@ -28,13 +28,13 @@
     -   { name: 'curl' }
     -   { name: 'software-properties-common' }
     when: docker_installed.stdout.find('Docker version')
--   name: Add docker's official key
+-   name: Add docker's official key (to install docker-engine using apt)
     apt_key:
         id: 58118E89F3A912897C070ADBF76221572C52609D
         keyserver: p80.pool.sks-keyservers.net
         state: present
     when: docker_installed.stdout.find('Docker version')
--   name: Add docker repo
+-   name: Add docker repo (to install docker-engine using apt)
     apt_repository:
         repo: deb https://apt.dockerproject.org/repo ubuntu-xenial main
         state: present

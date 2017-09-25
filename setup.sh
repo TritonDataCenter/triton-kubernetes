@@ -195,7 +195,7 @@ createAnsibleConfigs() {
     echo "[HOST]" >> ansible/hosts
     cat terraform/hosts.ip >> ansible/hosts
     if $SEPARATE_PLANE; then
-        echo "[K8SHA]" >> ansible/hosts
+        echo "[K8SSRVS]" >> ansible/hosts
         cat terraform/k8sha.ip >> ansible/hosts
         echo "[K8SETCD]" >> ansible/hosts
         cat terraform/k8setcd.ip >> ansible/hosts
@@ -249,9 +249,9 @@ runTerraformTasks() {
             updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd1 | sed 's/"//g')
             updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd2 | sed 's/"//g')
             updateTerraformConfig k8setcd $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}etcd3 | sed 's/"//g')
-            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8smgmt1 | sed 's/"//g')
-            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8smgmt2 | sed 's/"//g')
-            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}k8smgmt3 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}srvs1 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}srvs2 | sed 's/"//g')
+            updateTerraformConfig k8sha $(echo ${KUBERNETES_NODE_HOSTNAME_BEGINSWITH}srvs3 | sed 's/"//g')
         fi
         cd terraform
         echo "Starting terraform tasks"

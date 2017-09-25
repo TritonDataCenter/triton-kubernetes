@@ -1,9 +1,9 @@
 ---
--   name: Check if master container is running
+-   name: Check if Rancher/server container is running
     command: docker ps -a
     register: containers
 
--   name: Start master containers
+-   name: Start Rancher/server container
     docker_container:
         name: master
         image: rancher/server:stable
@@ -11,7 +11,7 @@
         restart_policy: unless-stopped
         state: started
     when: "{{ 'master' not in containers.stdout }}"
--   name: Wait for the Rancher servers to start
+-   name: Wait for the Rancher server to start
     action: command docker logs master
     register: rancher_logs
     until: rancher_logs.stdout.find("Listening on") != -1
@@ -34,5 +34,5 @@
     run_once: true
     delegate_to: "{{ master }}"
 
--   name: Store kubernetes_template_id
+-   name: Store Kubernetes Template ID in tmp/kubernetes_template_id.id
     local_action: shell echo {{ kubernetes_template_id.json.data[0].id }} > tmp/kubernetes_template_id.id
