@@ -1,0 +1,50 @@
+---
+- name: Remove existing mount
+  shell: umount /mnt
+- name: Make Docker config directory
+  file:
+    path: /etc/docker
+    state: directory
+- name: Create a physical volume
+  shell: pvcreate -y /dev/vdb
+- name: Create a Docker volume group
+  shell: vgcreate docker /dev/vdb
+- name: Create thinpool logical volume
+  shell: lvcreate --wipesignatures y -n thinpool docker -l 95%VG
+- name: Create thinpoolmeta logical volume
+  shell: lvcreate --wipesignatures y -n thinpoolmeta docker -l 1%VG
+- name: Convert the volumes to a thin pool and a storage location for metadata
+  shell: |
+    lvconvert -y \
+      --zero n \
+      -c 512K \
+      --thinpool docker/thinpool \
+      --poolmetadata docker/thinpoolmeta
+- name: Make directory for lvm profile
+  file:
+    path: /etc/lvm/profile
+    state: directory
+- name: Configure autoextension of thin pools via an LVM profile
+  copy:
+    content: |
+      activation {
+        thin_pool_autoextend_threshold=80
+        thin_pool_autoextend_percent=20
+      }
+    dest: /etc/lvm/profile/docker-thinpool.profile
+- name: Apply the LVM profile
+  shell: lvchange --metadataprofile docker-thinpool docker/thinpool
+- name: Enable monitoring for logical volumes
+  shell: lvs -o+seg_monitor
+- name: Add devicemapper storage options to Docker config
+  copy:
+    content: |
+      {
+        "storage-driver": "devicemapper",
+        "storage-opts": [
+          "dm.thinpooldev=/dev/mapper/docker-thinpool",
+          "dm.use_deferred_removal=true",
+          "dm.use_deferred_deletion=true"
+        ]
+      }
+    dest: /etc/docker/daemon.json
