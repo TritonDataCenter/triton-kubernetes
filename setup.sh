@@ -159,6 +159,7 @@ getArgument() {
 }
 runAnsible() {
     cd ansible
+    ansible-playbook -i hosts dockerStorageSetup.yml
     ansible-playbook -i hosts dockerSetup.yml
     if $RANCHER_HA; then
         ansible-playbook -i hosts rancherServers.yml
