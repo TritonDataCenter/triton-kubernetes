@@ -1,4 +1,7 @@
 ---
+- name: Install package thin-provisioning-tools
+  apt:
+    name: thin-provisioning-tools
 - name: Remove existing mount
   shell: umount /mnt
 - name: Make Docker config directory
