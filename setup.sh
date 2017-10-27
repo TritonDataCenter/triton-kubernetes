@@ -54,11 +54,19 @@ main() {
         echo ""
     fi
     
-    if [[ ! -z "$1" && "$1" == "-c" ]]; then
+    if [[ ! -z "$1" && "$1" == "-a" ]]; then
+        setVarDefaults
+        setConfigFromTritonENV
+        addEnvironment
+        exit 0
+    elif [[ ! -z "$1" && "$1" == "-c" ]]; then
         cleanRunner
         exit 0
     fi
-
+    if [ -e config ]; then
+        echo "error: old configuration found"
+        cleanRunner
+    fi
     if [ -e terraform/rancher.tf ]; then
         echo "error: configuration for a previous run has been found"
         echo "    clean the configuration (./setup -c)"
@@ -378,10 +386,6 @@ setConfigFromTritonENV() {
     echo "" >> config
 }
 setVarDefaults() {
-    if [ -e config ]; then
-        echo "error: old configuration found"
-        cleanRunner
-    fi
     KUBERNETES_NAME="k8s dev"
     KUBERNETES_DESCRIPTION=$KUBERNETES_NAME
     RANCHER_MASTER_HOSTNAME="kubemaster"
@@ -401,18 +405,11 @@ getConfigFromUser() {
     local tmp=0
     local gotValidInput=false
     local tmp_ValidatedInput
-    echo "---------------"
-    KUBERNETES_NAME=$(getArgument "Name your Kubernetes environment:" "$(echo $KUBERNETES_NAME | sed 's/"//g')")
-    echo "---------------"
-    if [[ $KUBERNETES_DESCRIPTION == "" ]]; then
-        KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_NAME | sed 's/"//g')")
-    else
-        KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_DESCRIPTION | sed 's/"//g')")
-    fi
+    
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
-        read -p "Would you like HA for Kubernetes Cluster Manager (+3 VMs) (yes | no)? " yn
+        read -p "Would you like HA for the Cluster Manager (+3 VMs) (yes | no)? " yn
         case $yn in
             yes )
                 RANCHER_HA=true
@@ -428,24 +425,7 @@ getConfigFromUser() {
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
-        read -p "Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)? " yn
-        case $yn in
-            yes )
-                SEPARATE_PLANE=true
-                gotValidInput=true
-                # echo "SEPARATE_PLANE: true" >> ansible/roles/ranchermaster/vars/vars.yml
-                ;;
-            no )
-                SEPARATE_PLANE=false
-                gotValidInput=true
-                ;;
-            * ) echo "Please answer yes or no.";;
-        esac
-    done
-    echo "---------------"
-    gotValidInput=false
-    while ! $gotValidInput; do
-        tmp_ValidatedInput=$(getArgument "Hostname of the master:" "$(echo $RANCHER_MASTER_HOSTNAME | sed 's/"//g')")
+        tmp_ValidatedInput=$(getArgument "Hostname of manager(s):" "$(echo $RANCHER_MASTER_HOSTNAME | sed 's/"//g')")
         if [[ $tmp_ValidatedInput =~ ^[a-zA-Z][0-9a-zA-Z]+$ ]]; then
             gotValidInput=true
         else
@@ -454,30 +434,6 @@ getConfigFromUser() {
         fi
     done
     RANCHER_MASTER_HOSTNAME=$tmp_ValidatedInput
-    echo "---------------"
-    gotValidInput=false
-    while ! $gotValidInput; do
-        tmp_ValidatedInput=$(getArgument "Enter a string to use for appending to hostnames of all the nodes:" "$(echo $KUBERNETES_NODE_HOSTNAME_BEGINSWITH | sed 's/"//g')")
-        if [[ $tmp_ValidatedInput =~ ^[a-zA-Z][0-9a-zA-Z]+$ ]]; then
-            gotValidInput=true
-        else
-            echo "error: Enter a valid value or leave blank to use the default."
-            echo "    Must start with a letter and can only include letters and numbers"
-        fi
-    done
-    KUBERNETES_NODE_HOSTNAME_BEGINSWITH=$tmp_ValidatedInput
-    echo "---------------"
-    # HARD LIMIT: 1-9 nodes allowed only since this setup has no HA
-    gotValidInput=false
-    while ! $gotValidInput; do
-        tmp_ValidatedInput=$(getArgument "How many nodes should this Kubernetes cluster have:" "$(echo $KUBERNETES_NUMBER_OF_NODES | sed 's/"//g')")
-        if [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
-            gotValidInput=true
-        else
-            echo "error: Enter a valid value (1-9) or leave blank to use the default."
-        fi
-    done
-    KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
     echo "---------------"
     echo "From the networks below:"
     # print options and find location for "Joyent-SDC-Public"
@@ -528,6 +484,55 @@ getConfigFromUser() {
             echo "    Values should be comma separated between 1 and $countNetwork."
         fi
     done
+    # package :TODO
+    echo "---------------"
+    echo "From the list below:"
+    echo "1. Triton"
+    echo "2. AWS"
+    echo "3. Azure"
+    echo "4. GCP"
+    while [ ${theargument:-0} -ne "1" ]; do
+        read -p "Where do you want to create the Kubernetes environment? " theargument
+    done
+    echo "---------------"
+    echo "Using triton profile $(triton profile get | grep name | sed 's/name: //g')"
+    echo "---------------"
+    KUBERNETES_NAME=$(getArgument "Name your Kubernetes environment:" "$(echo $KUBERNETES_NAME | sed 's/"//g')")
+    echo "---------------"
+    if [[ $KUBERNETES_DESCRIPTION == "" ]]; then
+        KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_NAME | sed 's/"//g')")
+    else
+        KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_DESCRIPTION | sed 's/"//g')")
+    fi
+    echo "---------------"
+    gotValidInput=false
+    while ! $gotValidInput; do
+        read -p "Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)? " yn
+        case $yn in
+            yes )
+                SEPARATE_PLANE=true
+                gotValidInput=true
+                # echo "SEPARATE_PLANE: true" >> ansible/roles/ranchermaster/vars/vars.yml
+                ;;
+            no )
+                SEPARATE_PLANE=false
+                gotValidInput=true
+                ;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
+    echo "---------------"
+    gotValidInput=false
+    while ! $gotValidInput; do
+        tmp_ValidatedInput=$(getArgument "Enter a string to use for appending to hostnames of all the nodes:" "$(echo $KUBERNETES_NODE_HOSTNAME_BEGINSWITH | sed 's/"//g')")
+        if [[ $tmp_ValidatedInput =~ ^[a-zA-Z][0-9a-zA-Z]+$ ]]; then
+            gotValidInput=true
+        else
+            echo "error: Enter a valid value or leave blank to use the default."
+            echo "    Must start with a letter and can only include letters and numbers"
+        fi
+    done
+    KUBERNETES_NODE_HOSTNAME_BEGINSWITH=$tmp_ValidatedInput
     echo "---------------"
     echo "From the networks below:"
     # print options
@@ -621,6 +626,18 @@ getConfigFromUser() {
         fi
     done
     HOST_PACKAGE=$(echo $HOST_PACKAGE | sed 's/"//g')
+    echo "---------------"
+    # HARD LIMIT: 1-9 nodes allowed only since this setup has no HA
+    gotValidInput=false
+    while ! $gotValidInput; do
+        tmp_ValidatedInput=$(getArgument "How many nodes should this Kubernetes cluster have:" "$(echo $KUBERNETES_NUMBER_OF_NODES | sed 's/"//g')")
+        if [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
+            gotValidInput=true
+        else
+            echo "error: Enter a valid value (1-9) or leave blank to use the default."
+        fi
+    done
+    KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
 }
 verifyConfig() {
     echo "################################################################################"
@@ -729,6 +746,191 @@ exportVars() {
     rm config.tmp
     export SEPARATE_PLANE
     export RANCHER_HA
+}
+addEnvironment() {
+    # get networks from the current triton profile to prompt
+    local networks=$(triton networks -oname,id | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
+    # get packages for the current triton profile to prompt
+    local packages=$(triton packages -oname,id | grep "\-kvm-" | grep -v "^NAME.*ID$" | tr -s " " | tr " " "=" | sort)
+
+    local tmp=0
+    local gotValidInput=false
+    local tmp_ValidatedInput
+    echo "---------------"
+    while [ $tmp -ne 1 ]; do
+        read -p "Where is your Cluster Manager: " clusterManagerLocation
+        if [ $(ssh -o StrictHostKeyChecking=no root@${clusterManagerLocation} "sudo docker ps -a" 2>&1 | grep master$ | wc -l) -eq 1 ]; then
+            tmp=1
+        else
+            echo "Cluster Manager not found. Please provide an accessable IP/CNS."
+        fi
+    done
+    echo "---------------"
+    echo "From the list below:"
+    echo "1. Triton"
+    echo "2. AWS"
+    echo "3. Azure"
+    echo "4. GCP"
+    while [ ${theargument:-0} -ne "1" ]; do
+        read -p "Where do you want to create the Kubernetes environment? " theargument
+    done
+    echo "---------------"
+    echo "Using triton profile $(triton profile get | grep name | sed 's/name: //g')"
+    echo "---------------"
+    KUBERNETES_NAME=$(getArgument "Name your Kubernetes environment:" "$(echo $KUBERNETES_NAME | sed 's/"//g')")
+    echo "---------------"
+    if [[ $KUBERNETES_DESCRIPTION == "" ]]; then
+        KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_NAME | sed 's/"//g')")
+    else
+        KUBERNETES_DESCRIPTION=$(getArgument "Describe this Kubernetes environment:" "$(echo $KUBERNETES_DESCRIPTION | sed 's/"//g')")
+    fi
+    echo "---------------"
+    gotValidInput=false
+    while ! $gotValidInput; do
+        read -p "Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)? " yn
+        case $yn in
+            yes )
+                SEPARATE_PLANE=true
+                gotValidInput=true
+                # echo "SEPARATE_PLANE: true" >> ansible/roles/ranchermaster/vars/vars.yml
+                ;;
+            no )
+                SEPARATE_PLANE=false
+                gotValidInput=true
+                ;;
+            * ) echo "Please answer yes or no.";;
+        esac
+    done
+    echo "---------------"
+    gotValidInput=false
+    while ! $gotValidInput; do
+        tmp_ValidatedInput=$(getArgument "Enter a string to use for appending to hostnames of all the nodes:" "$(echo $KUBERNETES_NODE_HOSTNAME_BEGINSWITH | sed 's/"//g')")
+        if [[ $tmp_ValidatedInput =~ ^[a-zA-Z][0-9a-zA-Z]+$ ]]; then
+            gotValidInput=true
+        else
+            echo "error: Enter a valid value or leave blank to use the default."
+            echo "    Must start with a letter and can only include letters and numbers"
+        fi
+    done
+    KUBERNETES_NODE_HOSTNAME_BEGINSWITH=$tmp_ValidatedInput
+    echo "---------------"
+    # print options and find location for "Joyent-SDC-Public"
+    local publicNetworkLocation=1
+    local countNetwork
+    tmp=0
+    for network in $networks; do
+        tmp=$((tmp + 1))
+        echo -e "$tmp.\t$(echo $network | sed 's/=/  /g')"
+        # get default location of public network
+        if [[ "$network" == "Joyent-SDC-Public="* ]]; then
+            publicNetworkLocation=$tmp
+        fi
+    done
+    countNetwork=$tmp
+    echo "From the networks below:"
+    # print options
+    tmp=0
+    for network in $networks; do
+        tmp=$((tmp + 1))
+        echo -e "$tmp.\t$(echo $network | sed 's/=/  /g')"
+    done
+
+    # set publicNetworkLocation to KUBERNETES_NODE_NETWORKS, if it wasn't set already
+    if [[ $KUBERNETES_NODE_NETWORKS == "" ]]; then
+        KUBERNETES_NODE_NETWORKS=$(getNetworkIDs $publicNetworkLocation)
+    fi
+
+    # get input for network and validate to make sure the input provided is within the limit (number of networks)
+    gotValidInput=false
+    while ! $gotValidInput; do
+        tmp_KUBERNETES_NODE_NETWORKS=$(getArgument "What networks should the nodes be a part of, provide comma separated values:" "$(echo $KUBERNETES_NODE_NETWORKS | sed 's/"//g')")
+        KUBERNETES_NODE_NETWORKS=$(echo $KUBERNETES_NODE_NETWORKS | tr ',' '\n' | sort | uniq | tr '\n' ',' | sed 's/\(.*\),$/\1/')
+        tmp_KUBERNETES_NODE_NETWORKS=$(echo $tmp_KUBERNETES_NODE_NETWORKS | tr ',' '\n' | sort | uniq | tr '\n' ',' | sed 's/\(.*\),$/\1/')
+
+        # if valid input was given, move forward, else quit
+        if [[ $(echo $tmp_KUBERNETES_NODE_NETWORKS | grep '^[1-9][0-9]\?\(,[1-9][0-9]\?\)*$' 2> /dev/null) ]]; then
+            gotValidInput=true
+            for network in $(echo $tmp_KUBERNETES_NODE_NETWORKS | tr "," "\n"); do
+                if [[ "$network" -gt "$countNetwork" || "$network" -lt 1 ]]; then
+                    echo "error: Enter a valid option or leave blank to use the default."
+                    echo "    Values should be comma separated between 1 and $countNetwork."
+                    gotValidInput=false
+                fi
+            done
+
+            if $gotValidInput; then
+                KUBERNETES_NODE_NETWORKS=$(getNetworkIDs $tmp_KUBERNETES_NODE_NETWORKS)
+            fi
+
+        elif [[ $tmp_KUBERNETES_NODE_NETWORKS == $KUBERNETES_NODE_NETWORKS ]]; then
+            gotValidInput=true
+        else
+            echo "error: Enter a valid option or leave blank to use the default."
+            echo "    Values should be comma separated between 1 and $countNetwork."
+        fi
+    done
+    echo "---------------"
+    echo "From the packages below:"
+    # print options and find location for "k4-highcpu-kvm-7.75G"
+    local packageLocation=1
+    local countPackages
+    tmp=0
+    for package in $packages; do
+        tmp=$((tmp + 1))
+        echo -e "$tmp.\t$(echo $package | sed 's/=/  /g')"
+        # get default location of package
+        if [[ "$package" == "k4-highcpu-kvm-7.75G="* ]]; then
+            packageLocation=$tmp
+        fi
+    done
+    countPackages=$tmp
+
+    # set packageLocation to HOST_PACKAGE, if it wasn't set already
+    if [[ $HOST_PACKAGE == "" ]]; then
+        HOST_PACKAGE=$(getPackageID $packageLocation)
+    fi
+
+    # get input for package and validate to make sure the input provided is within the limit (number of packages)
+    gotValidInput=false
+    while ! $gotValidInput; do
+        tmp_HOST_PACKAGE=$(getArgument "What KVM package should the master and nodes run on:" "$(echo $HOST_PACKAGE | sed 's/"//g')")
+
+        # if valid input was given, move forward, else quit
+        if [[ $(echo $tmp_HOST_PACKAGE | grep '^[1-9][0-9]*$' 2> /dev/null) ]]; then
+            gotValidInput=true
+            for package in $(echo $tmp_HOST_PACKAGE | tr "," "\n"); do
+                if [[ "$package" -gt "$countPackages" || "$package" -lt 1 ]]; then
+                    echo "error: Enter a valid option or leave blank to use the default."
+                    echo "    Value should be between 1 and $countPackages."
+                    gotValidInput=false
+                fi
+            done
+
+            if $gotValidInput; then
+                HOST_PACKAGE=$(getPackageID $tmp_HOST_PACKAGE)
+                echo "entered $tmp_HOST_PACKAGE and got $HOST_PACKAGE"
+            fi
+
+        elif [[ $tmp_HOST_PACKAGE == $(echo $HOST_PACKAGE | sed 's/"//g') ]]; then
+            gotValidInput=true
+        else
+            echo "error: Enter a valid option or leave blank to use the default."
+            echo "    Value should be between 1 and $countPackages."
+        fi
+    done
+    HOST_PACKAGE=$(echo $HOST_PACKAGE | sed 's/"//g')
+    echo "---------------"
+    # HARD LIMIT: 1-9 nodes allowed only since this setup has no HA
+    gotValidInput=false
+    while ! $gotValidInput; do
+        tmp_ValidatedInput=$(getArgument "How many nodes should this Kubernetes cluster have:" "$(echo $KUBERNETES_NUMBER_OF_NODES | sed 's/"//g')")
+        if [[ $tmp_ValidatedInput =~ ^[1-9]$ ]]; then
+            gotValidInput=true
+        else
+            echo "error: Enter a valid value (1-9) or leave blank to use the default."
+        fi
+    done
+    KUBERNETES_NUMBER_OF_NODES=$tmp_ValidatedInput
 }
 
 main "$@"
