@@ -409,7 +409,7 @@ getConfigFromUser() {
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
-        read -p "Would you like HA for the Cluster Manager (+3 VMs) (yes | no)? " yn
+        read -p "Would you like HA for the Global Cluster Manager (+3 VMs) (yes | no)? " yn
         case $yn in
             yes )
                 RANCHER_HA=true
@@ -425,7 +425,7 @@ getConfigFromUser() {
     echo "---------------"
     gotValidInput=false
     while ! $gotValidInput; do
-        tmp_ValidatedInput=$(getArgument "Hostname of manager(s):" "$(echo $RANCHER_MASTER_HOSTNAME | sed 's/"//g')")
+        tmp_ValidatedInput=$(getArgument "Hostname of Cluster Manager(s):" "$(echo $RANCHER_MASTER_HOSTNAME | sed 's/"//g')")
         if [[ $tmp_ValidatedInput =~ ^[a-zA-Z][0-9a-zA-Z]+$ ]]; then
             gotValidInput=true
         else
@@ -458,7 +458,7 @@ getConfigFromUser() {
     # get input for network and validate to make sure the input provided is within the limit (number of networks)
     gotValidInput=false
     while ! $gotValidInput; do
-        tmp_RANCHER_MASTER_NETWORKS=$(getArgument "What networks should the master be a part of, provide comma separated values:" "$(echo $RANCHER_MASTER_NETWORKS | sed 's/"//g')")
+        tmp_RANCHER_MASTER_NETWORKS=$(getArgument "What networks should the Cluster Manager(s) be a part of, provide comma separated values:" "$(echo $RANCHER_MASTER_NETWORKS | sed 's/"//g')")
         RANCHER_MASTER_NETWORKS=$(echo $RANCHER_MASTER_NETWORKS | tr ',' '\n' | sort | uniq | tr '\n' ',' | sed 's/\(.*\),$/\1/')
         tmp_RANCHER_MASTER_NETWORKS=$(echo $tmp_RANCHER_MASTER_NETWORKS | tr ',' '\n' | sort | uniq | tr '\n' ',' | sed 's/\(.*\),$/\1/')
 
