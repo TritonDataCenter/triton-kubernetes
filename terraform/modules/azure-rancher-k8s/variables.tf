@@ -103,6 +103,10 @@ variable "azure_subnet_address_prefix" {
   default = "10.0.2.0/24"
 }
 
+variable "azurerm_network_security_group_name" {
+  default = "k8s-firewall"
+}
+
 variable "etcd_azure_size" {
   default = "Standard_A0"
 }
