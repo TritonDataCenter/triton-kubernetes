@@ -1,7 +1,0 @@
----
--   name: Setup production devicemapper storage on all hosts (masters/hosts)
-    hosts: all
-    remote_user: root
-    roles:
-    -   dockerstoragesetup
-
