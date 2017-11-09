@@ -19,7 +19,9 @@ module "triton_example" {
   orchestration_node_count = "3"
   compute_node_count       = "<set compute_node_count>"
 
-  triton_account       = "<set triton_account"
+  k8s_plane_isolation = "required"
+
+  triton_account       = "<set triton_account>"
   triton_key_path      = "<set triton_key_path>"
   triton_key_id        = "<set triton_key_id>"
   triton_url           = "<set triton_url>"
@@ -49,6 +51,8 @@ module "azure_example" {
   etcd_node_count          = "3"
   orchestration_node_count = "3"
   compute_node_count       = "3"
+
+  k8s_plane_isolation = "none"
 
   azure_subscription_id = ""
   azure_client_id       = ""

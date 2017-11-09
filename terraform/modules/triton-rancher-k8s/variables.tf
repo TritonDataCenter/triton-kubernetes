@@ -14,6 +14,11 @@ variable "secret_key" {
   description = ""
 }
 
+variable "k8s_plane_isolation" {
+  default     = "none"
+  description = "Plane isolation of the Kubernetes cluster. required or none"
+}
+
 variable "etcd_node_count" {
   default     = "3"
   description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
