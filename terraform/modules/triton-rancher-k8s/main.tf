@@ -42,8 +42,9 @@ data "template_file" "install_rancher_agent_etcd" {
   template = "${file("${path.module}/files/install_rancher_agent.sh.tpl")}"
 
   vars {
-    hostname              = "${var.name}-etcd-${count.index + 1}"
-    rancher_agent_command = "${rancher_registration_token.etcd.command}"
+    hostname                  = "${var.name}-etcd-${count.index + 1}"
+    rancher_agent_command     = "${rancher_registration_token.etcd.command}"
+    docker_engine_install_url = "${var.docker_engine_install_url}"
   }
 }
 
@@ -75,8 +76,9 @@ data "template_file" "install_rancher_agent_orchestration" {
   template = "${file("${path.module}/files/install_rancher_agent.sh.tpl")}"
 
   vars {
-    hostname              = "${var.name}-orchestration-${count.index + 1}"
-    rancher_agent_command = "${rancher_registration_token.orchestration.command}"
+    hostname                  = "${var.name}-orchestration-${count.index + 1}"
+    rancher_agent_command     = "${rancher_registration_token.orchestration.command}"
+    docker_engine_install_url = "${var.docker_engine_install_url}"
   }
 }
 
@@ -108,8 +110,9 @@ data "template_file" "install_rancher_agent_compute" {
   template = "${file("${path.module}/files/install_rancher_agent.sh.tpl")}"
 
   vars {
-    hostname              = "${var.name}-compute-${count.index + 1}"
-    rancher_agent_command = "${rancher_registration_token.compute.command}"
+    hostname                  = "${var.name}-compute-${count.index + 1}"
+    rancher_agent_command     = "${rancher_registration_token.compute.command}"
+    docker_engine_install_url = "${var.docker_engine_install_url}"
   }
 }
 

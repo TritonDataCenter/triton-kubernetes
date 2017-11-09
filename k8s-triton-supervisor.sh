@@ -16,6 +16,7 @@ main() {
 				getTritonAccountConfig
 				addCluster
 				addEnvironment
+				verifySetup
 				startProvisioning cluster_module
 				exit 0
 			;;
@@ -24,8 +25,8 @@ main() {
 				echo "Using $TERRAFORM ...
 				"
 				declare -a environment_modules
-				getTritonAccountConfig
 				addEnvironment
+				verifySetup
 				startProvisioning
 				exit 0
 			;;
@@ -59,6 +60,15 @@ startProvisioning() {
 	)
 }
 
+verifySetup() {
+	if [ "$(getVerification "Do you want to create this cluster manager")" == "false" ] ; then
+		echo "Canceling the configuration ..."
+		echo ""
+		echo "NOTE: Terraform files have been updated with the provided settings so you can still run the modules manually."
+		exit 1
+	fi
+}
+
 addCluster() {
     # SET the following variables:
     #	_master_triton_machine_package
@@ -88,13 +98,15 @@ addEnvironment() {
 		echo "From clouds below:"
 		echo "1. Triton"
 		echo "2. Azure"
-		echo "3. GCP"
 		__cloudOption=0
 		while [ $__cloudOption != "1" ] && [ $__cloudOption != "2" ] && [ $__cloudOption != "3" ]; do
 			__cloudOption=$(getArgument "Which cloud do you want to run your environment on" "1")
 			case $__cloudOption in
-				'1') # _name, _etcd_node_count, _orchestration_node_count, _compute_node_count, _etcd_triton_machine_package, _orchestration_triton_machine_package, _compute_triton_machine_package
-					_name="$(getArgument "Name your environment" "dev-test")"
+				'1') # TRITON: _name, _etcd_node_count, _orchestration_node_count, _compute_node_count, _etcd_triton_machine_package, _orchestration_triton_machine_package, _compute_triton_machine_package
+					if [ -z "${_triton_account+x}" ]; then
+						getTritonAccountConfig
+					fi
+					_name="$(getArgument "Name your environment" "triton-test")"
 					__ha="$(getVerification "Do you want this environment to run in HA mode")"
 					if [ "$__ha" == "true" ]; then
 						_etcd_node_count=3
@@ -117,16 +129,47 @@ addEnvironment() {
 					environment_modules+=(${_name})
 					createEnvironmentOnTriton
 				;;
+				'2') # AZURE:
+					if [ -z "${_azure_tenant_id+x}" ]; then
+						getAzureAccountConfig
+					fi
+					_name="$(getArgument "Name your environment" "azure-test")"
+					__ha="$(getVerification "Do you want this environment to run in HA mode")"
+					if [ "$__ha" == "true" ]; then
+						_etcd_node_count=3
+						_orchestration_node_count=3
+					else
+						_etcd_node_count=0
+						_orchestration_node_count=0
+					fi
+					_compute_node_count="$(getArgument "Number of compute nodes for $_name environment" "3")"
+					# TODO: networks for environment
+					_azure_location="$(getArgument "Where should the $_name environment be located" "West US 2")"
+					if [ "$__ha" == "true" ]; then
+						_etcd_azure_size="$(getArgument "What size hosts should be used for $_name environment etcd nodes" "Standard_A1")"
+						_orchestration_azure_size="$(getArgument "What size hosts should be used for $_name environment orchestration nodes running apiserver/scheduler/controllermanager/..." "Standard_A1")"
+					fi
+					_compute_azure_size="$(getArgument "What size hosts should be used for $_name environment compute nodes" "Standard_A1")"
+					_azure_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
+					environment_modules+=(${_name})
+					createEnvironmentOnAzure
+				;;
 			esac
 		done
 		__addEnvironment="$(getVerification "Do you want to add another environment to this cluster")"
 	done
 }
+getAzureAccountConfig() {
+	_azure_subscription_id="$(getArgument "Azure subscription id")"
+	_azure_client_id="$(getArgument "Azure client id")"
+	_azure_client_secret="$(getArgument "Azure client secret")"
+	_azure_tenant_id="$(getArgument "Azure tenant id")"
+}
 getTritonAccountConfig() {
 	_triton_account="${SDC_ACCOUNT:-"$(getArgument "Your Triton account login name")"}"
 	_triton_url="${SDC_URL:-"$(getArgument "The Triton CloudAPI endpoint URL" "https://us-east-1.api.joyent.com")"}"
 	_triton_key_id="${SDC_KEY_ID:-"$(getArgument "Your Triton account key id")"}"
-	
+
 	for f in ~/.ssh/*; do
 		if [[ "$(ssh-keygen -E md5 -lf "${f//.pub$/}" 2> /dev/null | awk '{print $2}' | sed 's/^MD5://')" == "$_triton_key_id" ]]; then
 			export SDC_KEY=${f//.pub$/}
@@ -154,6 +197,42 @@ createClusterManager() {
 	| sed "s; master_triton_machine_package.*=.*; master_triton_machine_package = \"${_master_triton_machine_package}\";g" \
 	| sed "s; name.*=.*; name                          = \"${_name}\";g" \
 	| sed "s; ha.*=.*; ha                            = ${_ha};g" > tmp.cfg && mv tmp.cfg create-rancher.tf
+	)
+}
+createEnvironmentOnAzure() {
+	(
+	cd terraform
+	cat >>create-rancher-env.tf <<-EOF
+
+	module "${_name}" {
+	  source = "./modules/azure-rancher-k8s"
+
+	  api_url    = "http://\${element(data.terraform_remote_state.rancher.masters, 0)}:8080"
+	  access_key = ""
+	  secret_key = ""
+
+	  name = "${_name}"
+
+	  etcd_node_count          = "${_etcd_node_count}"
+	  orchestration_node_count = "${_orchestration_node_count}"
+	  compute_node_count       = "${_compute_node_count}"
+
+	  azure_subscription_id = "${_azure_subscription_id}"
+	  azure_client_id       = "${_azure_client_id}"
+	  azure_client_secret   = "${_azure_client_secret}"
+	  azure_tenant_id       = "${_azure_tenant_id}"
+
+	  azure_location = "${_azure_location}"
+
+	  azure_ssh_user        = "ubuntu"
+	  azure_public_key_path = "${_azure_public_key_path}"
+
+	  etcd_azure_size          = "${_etcd_azure_size}"
+	  orchestration_azure_size = "${_orchestration_azure_size}"
+	  compute_azure_size       = "${_compute_azure_size}"
+	}
+
+	EOF
 	)
 }
 createEnvironmentOnTriton() {
@@ -236,7 +315,7 @@ getTERRAFORM() {
 	local __TERRAFORM_VERSION
 	local __TERRAFORM_URL
 	local __TERRAFORM_ZIP_FILE
-	
+
 	if [ -n "$(command -v terraform)" ]; then
 		__TERRAFORM="$(command -v terraform)"
 		__TERRAFORM_VERSION="$(terraform version | grep 'Terraform v' | sed 's/Terraform v//')"
@@ -247,12 +326,12 @@ getTERRAFORM() {
 		__TERRAFORM_URL="https://releases.hashicorp.com/terraform/$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r -M '.current_version')/terraform_$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r -M '.current_version')_$(uname | tr '[:upper:]' '[:lower:]')_amd64.zip"
 		mkdir bin >/dev/null 2>&1 || true
 		cd bin
-		
+
 		if [ ! -e "$__TERRAFORM_ZIP_FILE" ]; then
 			echo ""
 			echo "Downloading latest Terraform zip'd binary"
 			curl -s -o "$__TERRAFORM_ZIP_FILE" "$__TERRAFORM_URL"
-			
+
 			echo ""
 			echo "Extracting Terraform executable"
 			unzip -q -o "$__TERRAFORM_ZIP_FILE"

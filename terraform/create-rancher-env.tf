@@ -38,7 +38,7 @@ module "triton_example" {
 }
 
 module "azure_example" {
-  source = "./modules/rancher-k8s"
+  source = "./modules/azure-rancher-k8s"
 
   api_url    = "http://${element(data.terraform_remote_state.rancher.masters, 0)}:8080"
   access_key = ""
@@ -50,7 +50,19 @@ module "azure_example" {
   orchestration_node_count = "3"
   compute_node_count       = "3"
 
-  azure = "true"
+  azure_subscription_id = ""
+  azure_client_id       = ""
+  azure_client_secret   = ""
+  azure_tenant_id       = ""
+
+  azure_location = "West US 2"
+
+  azure_ssh_user        = "ubuntu"
+  azure_public_key_path = "~/.ssh/id_rsa.pub"
+
+  etcd_azure_size          = "Standard_A1"
+  orchestration_azure_size = "Standard_A1"
+  compute_azure_size       = "Standard_A1"
 }
 
 module "gcp_example" {
