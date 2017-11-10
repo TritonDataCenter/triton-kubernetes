@@ -21,9 +21,18 @@ data "triton_image" "image" {
   version = "${var.triton_image_version}"
 }
 
+data "external" "rancher_environment_template" {
+  program = ["bash", "${path.module}/files/rancher_environment_template_search.sh"]
+
+  query = {
+    rancher_api_url = "${var.api_url}"
+    name            = "${var.k8s_plane_isolation == "required" ? "required-plane-isolation-" : ""}kubernetes"
+  }
+}
+
 resource "rancher_environment" "k8s" {
-  name          = "${var.name}"
-  orchestration = "kubernetes"
+  name                = "${var.name}"
+  project_template_id = "${data.external.rancher_environment_template.result.id}"
 }
 
 resource "rancher_registration_token" "etcd" {

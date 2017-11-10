@@ -24,15 +24,58 @@ resource "azurerm_subnet" "subnet" {
   address_prefix       = "${var.azure_subnet_address_prefix}"
 }
 
+resource "azurerm_network_security_group" "firewall" {
+  name                = "${var.azurerm_network_security_group_name}"
+  location            = "${var.azure_location}"
+  resource_group_name = "${azurerm_resource_group.resource_group.name}"
+}
+
+resource "azurerm_network_security_rule" "port500" {
+  name                        = "Port500-UdpAllowAny"
+  priority                    = 1000
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Udp"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = "${azurerm_resource_group.resource_group.name}"
+  network_security_group_name = "${azurerm_network_security_group.firewall.name}"
+}
+
+resource "azurerm_network_security_rule" "port4500" {
+  name                        = "Port4500-UdpAllowAny"
+  priority                    = 1001
+  direction                   = "Inbound"
+  access                      = "Allow"
+  protocol                    = "Udp"
+  source_port_range           = "*"
+  destination_port_range      = "*"
+  source_address_prefix       = "*"
+  destination_address_prefix  = "*"
+  resource_group_name         = "${azurerm_resource_group.resource_group.name}"
+  network_security_group_name = "${azurerm_network_security_group.firewall.name}"
+}
+
 provider "rancher" {
   api_url    = "${var.api_url}"
   access_key = "${var.access_key}"
   secret_key = "${var.secret_key}"
 }
 
+data "external" "rancher_environment_template" {
+  program = ["bash", "${path.module}/files/rancher_environment_template_search.sh"]
+
+  query = {
+    rancher_api_url = "${var.api_url}"
+    name            = "${var.k8s_plane_isolation == "required" ? "required-plane-isolation-" : ""}kubernetes"
+  }
+}
+
 resource "rancher_environment" "k8s" {
-  name          = "${var.name}"
-  orchestration = "kubernetes"
+  name                = "${var.name}"
+  project_template_id = "${data.external.rancher_environment_template.result.id}"
 }
 
 resource "rancher_registration_token" "etcd" {
@@ -57,6 +100,15 @@ data "template_file" "install_rancher_agent_etcd" {
   }
 }
 
+resource "azurerm_public_ip" "public_ip_etcd" {
+  count = "${var.etcd_node_count}"
+
+  name                         = "${var.name}-etcd-${count.index + 1}"
+  location                     = "${var.azure_location}"
+  resource_group_name          = "${azurerm_resource_group.resource_group.name}"
+  public_ip_address_allocation = "dynamic"
+}
+
 resource "azurerm_network_interface" "nic_etcd" {
   count = "${var.etcd_node_count}"
 
@@ -64,10 +116,13 @@ resource "azurerm_network_interface" "nic_etcd" {
   location            = "${var.azure_location}"
   resource_group_name = "${azurerm_resource_group.resource_group.name}"
 
+  network_security_group_id = "${azurerm_network_security_group.firewall.id}"
+
   ip_configuration {
     name                          = "testconfiguration1"
     subnet_id                     = "${azurerm_subnet.subnet.id}"
     private_ip_address_allocation = "dynamic"
+    public_ip_address_id          = "${element(azurerm_public_ip.public_ip_etcd.*.id, count.index)}"
   }
 }
 
@@ -143,6 +198,15 @@ data "template_file" "install_rancher_agent_orchestration" {
   }
 }
 
+resource "azurerm_public_ip" "public_ip_orchestration" {
+  count = "${var.orchestration_node_count}"
+
+  name                         = "${var.name}-orchestration-${count.index + 1}"
+  location                     = "${var.azure_location}"
+  resource_group_name          = "${azurerm_resource_group.resource_group.name}"
+  public_ip_address_allocation = "dynamic"
+}
+
 resource "azurerm_network_interface" "nic_orchestration" {
   count = "${var.orchestration_node_count}"
 
@@ -150,10 +214,13 @@ resource "azurerm_network_interface" "nic_orchestration" {
   location            = "${var.azure_location}"
   resource_group_name = "${azurerm_resource_group.resource_group.name}"
 
+  network_security_group_id = "${azurerm_network_security_group.firewall.id}"
+
   ip_configuration {
     name                          = "testconfiguration1"
     subnet_id                     = "${azurerm_subnet.subnet.id}"
     private_ip_address_allocation = "dynamic"
+    public_ip_address_id          = "${element(azurerm_public_ip.public_ip_orchestration.*.id, count.index)}"
   }
 }
 
@@ -229,6 +296,15 @@ data "template_file" "install_rancher_agent_compute" {
   }
 }
 
+resource "azurerm_public_ip" "public_ip_compute" {
+  count = "${var.compute_node_count}"
+
+  name                         = "${var.name}-compute-${count.index + 1}"
+  location                     = "${var.azure_location}"
+  resource_group_name          = "${azurerm_resource_group.resource_group.name}"
+  public_ip_address_allocation = "dynamic"
+}
+
 resource "azurerm_network_interface" "nic_compute" {
   count = "${var.compute_node_count}"
 
@@ -236,10 +312,13 @@ resource "azurerm_network_interface" "nic_compute" {
   location            = "${var.azure_location}"
   resource_group_name = "${azurerm_resource_group.resource_group.name}"
 
+  network_security_group_id = "${azurerm_network_security_group.firewall.id}"
+
   ip_configuration {
     name                          = "testconfiguration1"
     subnet_id                     = "${azurerm_subnet.subnet.id}"
     private_ip_address_allocation = "dynamic"
+    public_ip_address_id          = "${element(azurerm_public_ip.public_ip_compute.*.id, count.index)}"
   }
 }
 

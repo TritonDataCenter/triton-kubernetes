@@ -30,18 +30,24 @@ curl -X PUT \
 	-d '{"id":"api.host","type":"activeSetting","baseType":"setting","name":"api.host","activeValue":null,"inDb":false,"source":null,"value":"http://${primary_ip}:8080"}' \
 	'${rancher_host}/v2-beta/settings/api.host'
 
-# Modify kubernetes template plane isolation
-sleep 5
+# Wait for default kubernetes template to become active
+printf 'Waiting for default kubernetes template to become active'
+while [ "$(curl --silent ${rancher_host}/v2-beta/projecttemplates/?name=kubernetes | jq -r '.data | length')" = "0" ]; do
+	printf '.'
+	sleep 5
+done
+
+# Clone default kubernetes template and make a template where plane isolation is required
 kube_template=$(curl -X GET \
 	-H 'Accept: application/json' \
 	'${rancher_host}/v2-beta/projecttemplates/?name=kubernetes')
 
-kube_template_id=$(echo $kube_template | jq -r '.data[0].id')
 kube_template=$(echo $kube_template | jq '.data[0]')
 kube_template=$(echo $kube_template | jq '(.stacks[] | select(.name == "kubernetes") | .answers) |= {"CONSTRAINT_TYPE":"required"}')
+kube_template=$(echo $kube_template | jq '. + {"name": "required-plane-isolation-kubernetes","description": "Kubernetes Template with plane isolation set to required","isPublic": true,"uuid":"","id":""}')
 
-curl -X PUT \
+curl -X POST \
 	-H 'Accept: application/json' \
 	-H 'Content-Type: application/json' \
 	-d "$kube_template" \
-	'${rancher_host}/v2-beta/projecttemplates/'$kube_template_id
+	'${rancher_host}/v2-beta/projecttemplates'
