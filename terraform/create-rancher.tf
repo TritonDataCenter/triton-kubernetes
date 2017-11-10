@@ -7,10 +7,7 @@ terraform {
 module "create_rancher" {
   source = "./modules/triton-rancher"
 
-  triton_network_names = [
-    "Joyent-SDC-Public",
-    "Joyent-SDC-Private",
-  ]
+  triton_network_names = ["Joyent-SDC-Public", "Joyent-SDC-Private"]
 
   triton_image_name    = "ubuntu-certified-16.04"
   triton_image_version = "20170619.1"

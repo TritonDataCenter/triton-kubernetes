@@ -181,7 +181,23 @@ getClusterManagerConfig() {
 	#   _ha
 	_name="$(getArgument "Name your Global Cluster Manager" "global-cluster")"
 	_ha="$(getVerification "Do you want to set up the Global Cluster Manager in HA mode")"
-	# TODO: networks for global cluster manager
+	echo "From below options:"
+	echo "Joyent-SDC-Public"
+	echo "Joyent-SDC-Private"
+	echo "Both"
+	_network_choice="$(getArgument "Which Triton networks should be used for this environment" "Joyent-SDC-Public")"
+	if [ "${_network_choice}" == "Joyent-SDC-Public" ]
+	then
+		_network_choice="triton_network_names = [ \"Joyent-SDC-Public\" ]"
+	elif [ "${_network_choice}" == "Joyent-SDC-Private" ]
+	then
+		_network_choice="triton_network_names = [ \"Joyent-SDC-Private\" ]"
+	elif [ "${_network_choice}" == "Both" ]
+	then
+		_network_choice="triton_network_names = [ \"Joyent-SDC-Public\", \"Joyent-SDC-Private\" ]"
+	else
+		echo "error: no networks selected"
+	fi
 	if triton profile get >/dev/null 2>&1
 	then
 		echo "From below packages:"
@@ -227,7 +243,23 @@ getTritonEnvironmentConfig() {
 		_orchestration_node_count=0
 	fi
 	_compute_node_count="$(getArgument "Number of compute nodes for $_name environment" "3")"
-	# TODO: networks for environment
+	echo "From below options:"
+	echo "Joyent-SDC-Public"
+	echo "Joyent-SDC-Private"
+	echo "Both"
+	_network_choice="$(getArgument "Which Triton networks should be used for this environment" "Joyent-SDC-Public")"
+	if [ "${_network_choice}" == "Joyent-SDC-Public" ]
+	then
+		_network_choice="triton_network_names = [ \"Joyent-SDC-Public\" ]"
+	elif [ "${_network_choice}" == "Joyent-SDC-Private" ]
+	then
+		_network_choice="triton_network_names = [ \"Joyent-SDC-Private\" ]"
+	elif [ "${_network_choice}" == "Both" ]
+	then
+		_network_choice="triton_network_names = [ \"Joyent-SDC-Public\", \"Joyent-SDC-Private\" ]"
+	else
+		echo "error: no networks selected"
+	fi
 	if triton profile get >/dev/null 2>&1
 	then
 		echo "From below packages:"
@@ -251,6 +283,7 @@ setModuleClusterManager() {
 		| sed "s; triton_url.*=.*; triton_url                     = \"${_triton_url}\";g" \
 		| sed "s; name.*=.*; name                           = \"${_name}\";g" \
 		| sed "s; master_triton_machine_package.*=.*; master_triton_machine_package  = \"${_master_triton_machine_package}\";g" \
+		| sed "s; triton_network_names.*=.*; ${_network_choice};g" \
 		| sed "s; mysqldb_triton_machine_package.*=.*; mysqldb_triton_machine_package = \"${_mysqldb_triton_machine_package}\";g" \
 		| sed "s; ha.*=.*; ha                             = ${_ha};g" > tmp.cfg && mv tmp.cfg create-rancher.tf
 	)
@@ -258,10 +291,10 @@ setModuleClusterManager() {
 setModuleAzureEnvironment() {
 	(
 		cd terraform
-		k8s_plane_isolation="none"
+		__k8s_plane_isolation="none"
 		if [ "$_ha" == "true" ]
 		then
-			k8s_plane_isolation="required"
+			__k8s_plane_isolation="required"
 		fi
 		cat >>create-rancher-env.tf <<-EOF
 
@@ -278,7 +311,7 @@ setModuleAzureEnvironment() {
 		  orchestration_node_count = "${_orchestration_node_count}"
 		  compute_node_count       = "${_compute_node_count}"
 
-		  k8s_plane_isolation = "${k8s_plane_isolation}"
+		  k8s_plane_isolation = "${__k8s_plane_isolation}"
 
 		  azure_subscription_id = "${_azure_subscription_id}"
 		  azure_client_id       = "${_azure_client_id}"
@@ -301,10 +334,10 @@ setModuleAzureEnvironment() {
 setModuleTritonEnvironment() {
 	(
 		cd terraform
-		k8s_plane_isolation="none"
+		__k8s_plane_isolation="none"
 		if [ "$_ha" == "true" ]
 		then
-			k8s_plane_isolation="required"
+			__k8s_plane_isolation="required"
 		fi
 		cat >>create-rancher-env.tf <<-EOF
 
@@ -321,17 +354,14 @@ setModuleTritonEnvironment() {
 		  orchestration_node_count = "${_orchestration_node_count}"
 		  compute_node_count       = "${_compute_node_count}"
 
-		  k8s_plane_isolation = "${k8s_plane_isolation}"
+		  k8s_plane_isolation = "${__k8s_plane_isolation}"
 
 		  triton_account       = "${_triton_account}"
 		  triton_key_path      = "${_triton_key_path}"
 		  triton_key_id        = "${_triton_key_id}"
 		  triton_url           = "${_triton_url}"
 
-		  triton_network_names = [
-		    "Joyent-SDC-Public",
-		    "Joyent-SDC-Private",
-		  ]
+		  ${_network_choice}
 
 		  etcd_triton_machine_package          = "${_etcd_triton_machine_package}"
 		  orchestration_triton_machine_package = "${_orchestration_triton_machine_package}"
