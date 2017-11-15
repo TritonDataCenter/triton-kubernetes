@@ -13,6 +13,7 @@ sudo curl ${docker_engine_install_url} | sh
 sudo service docker restart
 
 sudo hostnamectl set-hostname ${hostname}
+sudo bash -c 'echo "127.0.0.1 ${hostname}" >> /etc/hosts'
 
 # Run Rancher agent container
 ${rancher_agent_command}
