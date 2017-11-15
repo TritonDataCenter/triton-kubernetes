@@ -13,10 +13,6 @@ module "create_rancher" {
   triton_image_version = "20170619.1"
   triton_ssh_user      = "ubuntu"
 
-  # triton_image_name    = "centos-7"
-  # triton_image_version = "20170327"
-  # triton_ssh_user      = "root"
-
   triton_account                = "fayazg"
   triton_key_path               = "/Users/fayazg/.ssh/demo_id_rsa"
   triton_key_id                 = "2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37"

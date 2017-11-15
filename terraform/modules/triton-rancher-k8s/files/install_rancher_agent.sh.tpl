@@ -10,6 +10,20 @@ fi
 
 sudo curl ${docker_engine_install_url} | sh
 
+sudo service docker stop
+sudo mkdir /etc/systemd/system/docker.service.d
+cat >>/home/ubuntu/docker.conf <<EOF
+[Service]
+ExecStart=
+ExecStart=/usr/bin/dockerd --graph="/mnt/docker"
+EOF
+sudo mkdir /etc/systemd/system/docker.service.d/
+sudo mv /home/ubuntu/docker.conf /etc/systemd/system/docker.service.d/
+sudo chown root:root /etc/systemd/system/docker.service.d/docker.conf
+sudo mkdir /mnt/docker
+sudo bash -c "mv /var/lib/docker/* /mnt/docker/"
+sudo rm -rf /var/lib/docker
+sudo systemctl daemon-reload
 sudo service docker restart
 
 sudo hostnamectl set-hostname ${hostname}

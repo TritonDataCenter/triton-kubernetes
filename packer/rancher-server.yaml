@@ -1,0 +1,13 @@
+---
+variables:
+- !include variables/triton.yaml
+
+builders:
+- !include builders/triton-kvm-rancherserver.yaml
+
+provisioners:
+- type: shell
+  inline:
+    - sudo curl "https://releases.rancher.com/install-docker/1.12.sh" | sh
+    - sudo apt-get install jq -y
+    - sudo docker pull rancher/server:v1.6.10

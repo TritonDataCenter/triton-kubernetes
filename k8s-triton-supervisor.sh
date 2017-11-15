@@ -5,6 +5,7 @@ set -o pipefail
 # set -o xtrace
 
 main() {
+	scriptname=$0
 	check_prerequisites
 
 	while (( $# ))
@@ -15,9 +16,16 @@ main() {
 				echo "Using $TERRAFORM ...
 				"
 				oneClusterPerClone
-				getTritonAccountConfig
-				getClusterManagerConfig
-				verifySetup "cluster"
+				shift
+				if [ ! -z "${1+x}" ]
+				then
+					echo "Reading configuration from ${1}"
+					readConfig "$1"
+				else
+					getTritonAccountConfig
+					getClusterManagerConfig
+					verifySetup "cluster"
+				fi
 				setModuleClusterManager
 				startProvisioning "create_rancher"
 				showClusterDetails
@@ -27,7 +35,21 @@ main() {
 				getTERRAFORM
 				echo "Using $TERRAFORM ...
 				"
-				getEnvironmentConfig
+				shift
+				if [ ! -z "${1+x}" ]
+				then
+					echo "Reading configuration from ${1}"
+					readConfig "$1"
+					if [ ! -z "${_etcd_triton_machine_package+x}" ]
+					then
+						setModuleTritonEnvironment
+					elif [ ! -z "${_azure_subscription_id+x}" ]
+					then
+						setModuleAzureEnvironment
+					fi
+				else
+					getEnvironmentConfig
+				fi
 				startProvisioning "${_name}"
 				showEnvironmentDetails
 				exit 0
@@ -272,6 +294,117 @@ getTritonEnvironmentConfig() {
 	fi
 	_compute_triton_machine_package="$(getArgument "Which Triton package should be used for $_name environment compute nodes" "k4-highcpu-kvm-1.75G")"
 }
+readConfig() {
+	while read -r line || [[ -n "$line" ]]; do
+		line=$(echo "$line" | tr -d ' ')
+		if echo "$line" | grep -q ^SDC_ACCOUNT=
+		then
+			_triton_account=${line//SDC_ACCOUNT=/}
+			echo "Triton Account: $_triton_account"
+		elif echo "$line" | grep -q ^SDC_URL=
+		then
+			_triton_url=${line//SDC_URL=/}
+			echo "Triton URL: $_triton_url"
+		elif echo "$line" | grep -q ^SDC_KEY_ID=
+		then
+			_triton_key_id=${line//SDC_KEY_ID=/}
+			echo "Triton Key ID: $_triton_key_id"
+		elif echo "$line" | grep -q ^SDC_KEY=
+		then
+			_triton_key_path=${line//SDC_KEY=/}
+			echo "Triton Key Material: $_triton_key_path"
+		elif echo "$line" | grep -q ^name=
+		then
+			_name=${line//name=/}
+			echo "Name: $_name"
+		elif echo "$line" | grep -q ^ha=
+		then
+			_ha=${line//ha=/}
+			echo "HA: $_ha"
+		elif echo "$line" | grep -q ^networks=
+		then
+			_network_choice="triton_network_names = [ \"${line//networks=/}\" ]"
+			_network_choice=${_network_choice//,/\",\ \"}
+			echo "Networks: ${_network_choice//triton_network_names = /}"
+		elif echo "$line" | grep -q ^master_package=
+		then
+			_master_triton_machine_package=${line//master_package=/}
+			echo "Cluster Manager Package: $_master_triton_machine_package"
+		elif echo "$line" | grep -q ^mysqldb_package=
+		then
+			_mysqldb_triton_machine_package=${line//mysqldb_package=/}
+			echo "Cluster Manager DB Package: $_mysqldb_triton_machine_package"
+		elif echo "$line" | grep -q ^compute_count=
+		then
+			_compute_node_count=${line//compute_count=/}
+			echo "Number of Compute Nodes: $_compute_node_count"
+		elif echo "$line" | grep -q ^etcd_package=
+		then
+			_etcd_triton_machine_package=${line//etcd_package=/}
+			echo "Environment ETCD Package: $_etcd_triton_machine_package"
+		elif echo "$line" | grep -q ^orchestration_package=
+		then
+			_orchestration_triton_machine_package=${line//orchestration_package=/}
+			echo "Environment Orchestration Package $_orchestration_triton_machine_package"
+		elif echo "$line" | grep -q ^compute_package=
+		then
+			_compute_triton_machine_package=${line//compute_package=/}
+			echo "Environment Compute Package $_compute_triton_machine_package"
+		elif echo "$line" | grep -q ^triton_image_name=
+		then
+			triton_image_name=${line//triton_image_name=/}
+			echo "Image Name: $triton_image_name"
+		elif echo "$line" | grep -q ^triton_image_version=
+		then
+			triton_image_version=${line//triton_image_version=/}
+			echo "Image Version: $triton_image_version"
+		elif echo "$line" | grep -q ^azure_subscription_id=
+		then
+			_azure_subscription_id=${line//azure_subscription_id=/}
+			echo "Azure Subscription ID: $_azure_subscription_id"
+		elif echo "$line" | grep -q ^azure_client_id=
+		then
+			_azure_client_id=${line//azure_client_id=/}
+			echo "Azure Client ID ..."
+		elif echo "$line" | grep -q ^azure_client_secret=
+		then
+			_azure_client_secret=${line//azure_client_secret=/}
+			echo "Azure Client Secret ..."
+		elif echo "$line" | grep -q ^azure_tenant_id=
+		then
+			_azure_tenant_id=${line//azure_tenant_id=/}
+			echo "Azure Tenant ID ..."
+		elif echo "$line" | grep -q ^azure_location=
+		then
+			_azure_location=${line//azure_location=/}
+			echo "Location: $_azure_location"
+		elif echo "$line" | grep -q ^azure_public_key_path=
+		then
+			_azure_public_key_path=${line//azure_public_key_path=/}
+			echo "Public Key Path: $_azure_public_key_path"
+		elif echo "$line" | grep -q ^etcd_azure_size=
+		then
+			_etcd_azure_size=${line//etcd_azure_size=/}
+			echo "ETCD Image Size: $_etcd_azure_size"
+		elif echo "$line" | grep -q ^orchestration_azure_size=
+		then
+			_orchestration_azure_size=${line//orchestration_azure_size=/}
+			echo "Orchestration Image Size: $_orchestration_azure_size"
+		elif echo "$line" | grep -q ^compute_azure_size=
+		then
+			_compute_azure_size=${line//compute_azure_size=/}
+			echo "Compute Image Size: $_compute_azure_size"
+		fi
+		if [ "$_ha" == "true" ]
+		then
+			_etcd_node_count=3
+			_orchestration_node_count=3
+		else
+			_etcd_node_count=0
+			_orchestration_node_count=0
+		fi
+	done < "${1}"
+}
 
 setModuleClusterManager() {
 	# TERRAFORM, _triton_account, _triton_url, _triton_key_id, _triton_key_path,  _master_triton_machine_package, _name, _ha
@@ -282,6 +415,8 @@ setModuleClusterManager() {
 		| sed "s; triton_key_id.*=.*; triton_key_id                  = \"${_triton_key_id}\";g" \
 		| sed "s; triton_url.*=.*; triton_url                     = \"${_triton_url}\";g" \
 		| sed "s; name.*=.*; name                           = \"${_name}\";g" \
+		| sed "s; triton_image_name.*=.*; triton_image_name    = \"${triton_image_name:-"ubuntu-certified-16.04"}\";g" \
+		| sed "s; triton_image_version.*=.*; triton_image_version    = \"${triton_image_version:-"20170619.1"}\";g" \
 		| sed "s; master_triton_machine_package.*=.*; master_triton_machine_package  = \"${_master_triton_machine_package}\";g" \
 		| sed "s; triton_network_names.*=.*; ${_network_choice};g" \
 		| sed "s; mysqldb_triton_machine_package.*=.*; mysqldb_triton_machine_package = \"${_mysqldb_triton_machine_package}\";g" \
@@ -361,6 +496,9 @@ setModuleTritonEnvironment() {
 		  triton_key_id        = "${_triton_key_id}"
 		  triton_url           = "${_triton_url}"
 
+		  triton_image_name    = "${triton_image_name:-"ubuntu-certified-16.04"}"
+		  triton_image_version = "${triton_image_version:-"20170619.1"}"
+
 		  ${_network_choice}
 
 		  etcd_triton_machine_package          = "${_etcd_triton_machine_package}"
@@ -432,7 +570,7 @@ showClusterDetails() {
 
 	Next step is adding Kubernetes environments to be managed here.
 	To start your first environment, run:
-	    $0 -e
+	    $scriptname -e
 
 	EOM
 }
@@ -458,7 +596,7 @@ showEnvironmentDetails() {
 	NOTE: Nodes might take a few minutes to connect and come up.
 
 	To start another environment, run:
-	    $0 -e
+	    $scriptname -e
 
 	EOM
 }
@@ -501,7 +639,7 @@ getTERRAFORM() {
 USAGE() {
 	echo "
 	Usage:
-		$0 [-c|-e]
+		$scriptname (-c|-e) [conf file]
 	Options:
 		-c  create a cluster manager on Triton
 		-e  create and add a Kubernetes environment to an existing cluster manager
