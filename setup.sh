@@ -10,6 +10,8 @@ db_pass=cattle
 
 TERRAFORM=$(pwd)/bin/terraform
 
+MYNAME=$0
+
 main() {
     if [ ! -e $TERRAFORM ]; then
         echo "Getting the correct version of terraform ..."
@@ -61,7 +63,7 @@ main() {
 
     if [ -e terraform/rancher.tf ]; then
         echo "error: configuration for a previous run has been found"
-        echo "    clean the configuration (./setup -c)"
+        echo "    clean the configuration ($MYNAME -c)"
         exit
     fi
 
