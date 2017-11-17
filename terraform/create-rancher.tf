@@ -20,6 +20,13 @@ module "create_rancher" {
   name                          = "global-cluster"
   master_triton_machine_package = "k4-highcpu-kvm-1.75G"
   ha                            = true
+
+  # rancher_server_image      = "docker-registry.joyent.com:5000/rancher/server:v1.6.10"
+  # rancher_agent_image       = "docker-registry.joyent.com:5000/rancher/agent:v1.2.6"
+
+  # rancher_registry          = "docker-registry.joyent.com:5000"
+  # rancher_registry_username = "username"
+  # rancher_registry_password = "password"
 }
 
 output "masters" {

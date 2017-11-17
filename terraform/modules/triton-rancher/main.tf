@@ -63,6 +63,13 @@ data "template_file" "install_rancher_master" {
     mysqldb_database_name = "${var.mysqldb_database_name}"
 
     docker_engine_install_url = "${var.docker_engine_install_url}"
+
+    rancher_server_image = "${var.rancher_server_image}"
+    rancher_agent_image  = "${var.rancher_agent_image}"
+
+    rancher_registry          = "${var.rancher_registry}"
+    rancher_registry_username = "${var.rancher_registry_username}"
+    rancher_registry_password = "${var.rancher_registry_password}"
   }
 }
 
@@ -89,6 +96,8 @@ data "template_file" "setup_rancher_k8s" {
     docker_machine_driver_triton_url      = "${var.docker_machine_driver_triton_url}"
     docker_machine_driver_triton_checksum = "${var.docker_machine_driver_triton_checksum}"
     rancher_ui_driver_triton              = "${var.rancher_ui_driver_triton}"
+
+    rancher_registry = "${var.rancher_registry}"
   }
 }
 

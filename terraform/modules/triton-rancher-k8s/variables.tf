@@ -93,3 +93,33 @@ variable "compute_triton_machine_package" {
   default     = "k4-highcpu-kvm-1.75G"
   description = "The Triton machine package to use for Kubernetes compute node(s). Defaults to k4-highcpu-kvm-1.75G."
 }
+
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for rancher images"
+}
+
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
+
+variable "k8s_registry" {
+  default     = ""
+  description = "The docker registry to use for k8s images"
+}
+
+variable "k8s_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "k8s_registry_password" {
+  default     = ""
+  description = "The password to use."
+}

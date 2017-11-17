@@ -22,14 +22,19 @@ sudo rm -rf /var/lib/docker
 sudo systemctl daemon-reload
 sudo service docker restart
 
+# Run docker login if requested
+if [ "${rancher_registry_username}" != "" ]; then
+	sudo docker login -u ${rancher_registry_username} -p ${rancher_registry_password} ${rancher_registry}
+fi
+
 # Run Rancher docker container
 container_id=""
 if [ "${ha}" = 1 ]; then
-	container_id=$(sudo docker run -d --restart=unless-stopped -p 8080:8080 -p 9345:9345 rancher/server:v1.6.10 \
+	container_id=$(sudo docker run -d --restart=unless-stopped -p 8080:8080 -p 9345:9345 -e CATTLE_BOOTSTRAP_REQUIRED_IMAGE=${rancher_agent_image} ${rancher_server_image} \
 		--db-host ${mysqldb_host} --db-port ${mysqldb_port} --db-user ${mysqldb_user} --db-pass ${mysqldb_password} --db-name ${mysqldb_database_name} \
 		--advertise-address $(ip route get 1 | awk '{print $NF;exit}'))
 else
-	container_id=$(sudo docker run -d --restart=unless-stopped -p 8080:8080 rancher/server:v1.6.10)
+	container_id=$(sudo docker run -d --restart=unless-stopped -p 8080:8080 -e CATTLE_BOOTSTRAP_REQUIRED_IMAGE=${rancher_agent_image} ${rancher_server_image})
 fi
 
 # Copy private key to Rancher host
