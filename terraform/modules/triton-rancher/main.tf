@@ -15,6 +15,11 @@ data "triton_image" "image" {
   version = "${var.triton_image_version}"
 }
 
+data "triton_image" "mysql_image" {
+  name    = "${var.triton_mysql_image_name}"
+  version = "${var.triton_mysql_image_version}"
+}
+
 data "template_file" "install_rancher_mysqldb" {
   template = "${file("${path.module}/files/install_rancher_mysqldb.sh")}"
 
@@ -30,7 +35,7 @@ resource "triton_machine" "rancher_mysqldb" {
   count = "${var.ha}"
 
   package = "${coalesce(var.mysqldb_triton_machine_package, var.master_triton_machine_package)}"
-  image   = "${data.triton_image.image.id}"
+  image   = "${data.triton_image.mysql_image.id}"
   name    = "${var.name}-mysqldb"
 
   networks = ["${data.triton_network.networks.*.id}"]

@@ -295,7 +295,8 @@ getTritonEnvironmentConfig() {
 	_compute_triton_machine_package="$(getArgument "Which Triton package should be used for $_name environment compute nodes" "k4-highcpu-kvm-1.75G")"
 }
 readConfig() {
-	while read -r line || [[ -n "$line" ]]; do
+	while read -r line || [[ -n "$line" ]]
+	do
 		line=$(echo "$line" | tr -d ' ')
 		if echo "$line" | grep -q ^SDC_ACCOUNT=
 		then
@@ -394,6 +395,38 @@ readConfig() {
 		then
 			_compute_azure_size=${line//compute_azure_size=/}
 			echo "Compute Image Size: $_compute_azure_size"
+		elif echo "$line" | grep -q ^rancher_server_image=
+		then
+			rancher_server_image=${line//rancher_server_image=/}
+			echo "Rancher Server Image: $rancher_server_image"
+		elif echo "$line" | grep -q ^rancher_agent_image=
+		then
+			rancher_agent_image=${line//rancher_agent_image=/}
+			echo "Rancher Agent Image: $rancher_agent_image"
+		elif echo "$line" | grep -q ^rancher_registry=
+		then
+			rancher_registry=${line//rancher_registry=/}
+			echo "Rancher Registry: $rancher_registry"
+		elif echo "$line" | grep -q ^rancher_registry_username=
+		then
+			rancher_registry_username=${line//rancher_registry_username=/}
+			echo "Rancher Registry Username: $rancher_registry_username"
+		elif echo "$line" | grep -q ^rancher_registry_password=
+		then
+			rancher_registry_password=${line//rancher_registry_password=/}
+			echo "Rancher Registry Password ..."
+		elif echo "$line" | grep -q ^k8s_registry=
+		then
+			k8s_registry=${line//k8s_registry=/}
+			echo "K8s Registry: $k8s_registry"
+		elif echo "$line" | grep -q ^k8s_registry_username=
+		then
+			k8s_registry_username=${line//k8s_registry_username=/}
+			echo "K8s Registry Username: $k8s_registry_username"
+		elif echo "$line" | grep -q ^k8s_registry_password=
+		then
+			k8s_registry_password=${line//k8s_registry_password=/}
+			echo "K8s Registry Password ..."
 		fi
 		if [ "$_ha" == "true" ]
 		then
@@ -409,22 +442,72 @@ readConfig() {
 setModuleClusterManager() {
 	# TERRAFORM, _triton_account, _triton_url, _triton_key_id, _triton_key_path,  _master_triton_machine_package, _name, _ha
 	(
+		rancher_server_image_line='# rancher_server_image      = "docker-registry.joyent.com:5000/rancher/server:v1.6.10"'
+		rancher_agent_image_line='# rancher_agent_image       = "docker-registry.joyent.com:5000/rancher/agent:v1.2.6"'
+		rancher_registry_line='# rancher_registry          = "docker-registry.joyent.com:5000"'
+		rancher_registry_username_line='# rancher_registry_username = "username"'
+		rancher_registry_password_line='# rancher_registry_password = "password"'
+		if [ ! -z "${rancher_server_image}" ]
+		then
+			rancher_server_image_line="rancher_server_image      = \"${rancher_server_image}\""
+			rancher_agent_image_line="rancher_agent_image       = \"${rancher_agent_image}\""
+			rancher_registry_line="rancher_registry          = \"${rancher_registry}\""
+			rancher_registry_username_line="rancher_registry_username = \"${rancher_registry_username}\""
+			rancher_registry_password_line="rancher_registry_password = \"${rancher_registry_password}\""
+		fi
+		
 		cd terraform
-		sed "s; triton_account.*=.*; triton_account                 = \"${_triton_account}\";g" create-rancher.tf \
-		| sed "s; triton_key_path.*=.*; triton_key_path                = \"${_triton_key_path}\";g" \
-		| sed "s; triton_key_id.*=.*; triton_key_id                  = \"${_triton_key_id}\";g" \
-		| sed "s; triton_url.*=.*; triton_url                     = \"${_triton_url}\";g" \
-		| sed "s; name.*=.*; name                           = \"${_name}\";g" \
-		| sed "s; triton_image_name.*=.*; triton_image_name    = \"${triton_image_name:-"ubuntu-certified-16.04"}\";g" \
-		| sed "s; triton_image_version.*=.*; triton_image_version    = \"${triton_image_version:-"20170619.1"}\";g" \
-		| sed "s; master_triton_machine_package.*=.*; master_triton_machine_package  = \"${_master_triton_machine_package}\";g" \
-		| sed "s; triton_network_names.*=.*; ${_network_choice};g" \
-		| sed "s; mysqldb_triton_machine_package.*=.*; mysqldb_triton_machine_package = \"${_mysqldb_triton_machine_package}\";g" \
-		| sed "s; ha.*=.*; ha                             = ${_ha};g" > tmp.cfg && mv tmp.cfg create-rancher.tf
+		cat >>create-rancher.tf <<-EOF
+		
+		module "create_rancher" {
+		  source = "./modules/triton-rancher"
+
+		  ${_network_choice}
+
+		  triton_image_name    = "${triton_image_name:-"ubuntu-certified-16.04"}"
+		  triton_image_version = "${triton_image_version:-"20170619.1"}"
+		  triton_ssh_user      = "ubuntu"
+
+		  triton_account                 = "${_triton_account}"
+		  triton_key_path                = "${_triton_key_path}"
+		  triton_key_id                  = "${_triton_key_id}"
+		  triton_url                     = "${_triton_url}"
+		  name                           = "${_name}"
+		  master_triton_machine_package  = "${_master_triton_machine_package}"
+		  mysqldb_triton_machine_package = "${_mysqldb_triton_machine_package}"
+		  ha                             = ${_ha}
+		  
+		  ${rancher_server_image_line}
+		  ${rancher_agent_image_line}
+		  ${rancher_registry_line}
+		  ${rancher_registry_username_line}
+		  ${rancher_registry_password_line}
+		}
+		
+		EOF
 	)
 }
 setModuleAzureEnvironment() {
 	(
+		rancher_registry_line='# rancher_registry          = "docker-registry.joyent.com:5000"'
+		rancher_registry_username_line='# rancher_registry_username = "username"'
+		rancher_registry_password_line='# rancher_registry_password = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			rancher_registry_line="rancher_registry          = \"${rancher_registry}\""
+			rancher_registry_username_line="rancher_registry_username = \"${rancher_registry_username}\""
+			rancher_registry_password_line="rancher_registry_password = \"${rancher_registry_password}\""
+		fi
+		k8s_registry_line='# k8s_registry              = "docker-registry.joyent.com:5000"'
+		k8s_registry_username_line='# k8s_registry_username     = "username"'
+		k8s_registry_password_line='# k8s_registry_password     = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			k8s_registry_line="k8s_registry          = \"${k8s_registry}\""
+			k8s_registry_username_line="k8s_registry_username = \"${k8s_registry_username}\""
+			k8s_registry_password_line="k8s_registry_password = \"${k8s_registry_password}\""
+		fi
+	
 		cd terraform
 		__k8s_plane_isolation="none"
 		if [ "$_ha" == "true" ]
@@ -461,6 +544,14 @@ setModuleAzureEnvironment() {
 		  etcd_azure_size          = "${_etcd_azure_size}"
 		  orchestration_azure_size = "${_orchestration_azure_size}"
 		  compute_azure_size       = "${_compute_azure_size}"
+		  
+		  ${rancher_registry_line}
+		  ${rancher_registry_username_line}
+		  ${rancher_registry_password_line}
+
+		  ${k8s_registry_line}
+		  ${k8s_registry_username_line}
+		  ${k8s_registry_password_line}
 		}
 
 		EOF
@@ -468,6 +559,25 @@ setModuleAzureEnvironment() {
 }
 setModuleTritonEnvironment() {
 	(
+		rancher_registry_line='# rancher_registry          = "docker-registry.joyent.com:5000"'
+		rancher_registry_username_line='# rancher_registry_username = "username"'
+		rancher_registry_password_line='# rancher_registry_password = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			rancher_registry_line="rancher_registry          = \"${rancher_registry}\""
+			rancher_registry_username_line="rancher_registry_username = \"${rancher_registry_username}\""
+			rancher_registry_password_line="rancher_registry_password = \"${rancher_registry_password}\""
+		fi
+		k8s_registry_line='# k8s_registry              = "docker-registry.joyent.com:5000"'
+		k8s_registry_username_line='# k8s_registry_username     = "username"'
+		k8s_registry_password_line='# k8s_registry_password     = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			k8s_registry_line="k8s_registry          = \"${k8s_registry}\""
+			k8s_registry_username_line="k8s_registry_username = \"${k8s_registry_username}\""
+			k8s_registry_password_line="k8s_registry_password = \"${k8s_registry_password}\""
+		fi
+	
 		cd terraform
 		__k8s_plane_isolation="none"
 		if [ "$_ha" == "true" ]
@@ -504,6 +614,14 @@ setModuleTritonEnvironment() {
 		  etcd_triton_machine_package          = "${_etcd_triton_machine_package}"
 		  orchestration_triton_machine_package = "${_orchestration_triton_machine_package}"
 		  compute_triton_machine_package       = "${_compute_triton_machine_package}"
+
+		  ${rancher_registry_line}
+		  ${rancher_registry_username_line}
+		  ${rancher_registry_password_line}
+
+		  ${k8s_registry_line}
+		  ${k8s_registry_username_line}
+		  ${k8s_registry_password_line}
 		}
 
 		EOF
@@ -616,14 +734,14 @@ getTERRAFORM() {
 	then
 		(
 			__TERRAFORM_ZIP_FILE="terraform_""$(uname | tr '[:upper:]' '[:lower:]')""_amd64.zip"
-			__TERRAFORM_URL="https://releases.hashicorp.com/terraform/$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r -M '.current_version')/terraform_$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r -M '.current_version')_$(uname | tr '[:upper:]' '[:lower:]')_amd64.zip"
+			__TERRAFORM_URL="https://releases.hashicorp.com/terraform/0.10.8/terraform_0.10.8_$(uname | tr '[:upper:]' '[:lower:]')_amd64.zip"
 			mkdir bin >/dev/null 2>&1 || true
 			cd bin
 
 			if [ ! -e "$__TERRAFORM_ZIP_FILE" ]
 			then
 				echo ""
-				echo "Downloading latest Terraform zip'd binary"
+				echo "Downloading Terraform v0.10.8 ..."
 				curl -s -o "$__TERRAFORM_ZIP_FILE" "$__TERRAFORM_URL"
 
 				echo ""

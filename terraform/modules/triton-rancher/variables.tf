@@ -31,6 +31,16 @@ variable "triton_image_version" {
   description = "The version/tag of the Triton image to use."
 }
 
+variable "triton_mysql_image_name" {
+  default     = "ubuntu-certified-16.04"
+  description = "The name of the Triton image to use."
+}
+
+variable "triton_mysql_image_version" {
+  default     = "20170619.1"
+  description = "The version/tag of the Triton image to use."
+}
+
 variable "triton_ssh_user" {
   default     = "root"
   description = "The ssh user to use."
