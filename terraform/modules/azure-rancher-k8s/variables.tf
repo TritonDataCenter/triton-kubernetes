@@ -118,3 +118,33 @@ variable "orchestration_azure_size" {
 variable "compute_azure_size" {
   default = "Standard_A0"
 }
+
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for rancher images"
+}
+
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
+
+variable "k8s_registry" {
+  default     = ""
+  description = "The docker registry to use for k8s images"
+}
+
+variable "k8s_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "k8s_registry_password" {
+  default     = ""
+  description = "The password to use."
+}

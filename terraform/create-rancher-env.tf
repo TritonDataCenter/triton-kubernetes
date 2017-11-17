@@ -37,6 +37,14 @@ module "triton_example" {
   etcd_triton_machine_package          = "<set etcd_triton_machine_package>"
   orchestration_triton_machine_package = "<set orchestration_triton_machine_package>"
   compute_triton_machine_package       = "<set compute_triton_machine_package>"
+
+  # rancher_registry          = "docker-registry.joyent.com:5000"
+  # rancher_registry_username = "username"
+  # rancher_registry_password = "password"
+
+  # k8s_registry          = "docker-registry.joyent.com:5000"
+  # k8s_registry_username = "username"
+  # k8s_registry_password = "password"
 }
 
 module "azure_example" {
@@ -67,6 +75,14 @@ module "azure_example" {
   etcd_azure_size          = "Standard_A1"
   orchestration_azure_size = "Standard_A1"
   compute_azure_size       = "Standard_A1"
+
+  # rancher_registry          = "docker-registry.joyent.com:5000"
+  # rancher_registry_username = "username"
+  # rancher_registry_password = "password"
+
+  # k8s_registry          = "docker-registry.joyent.com:5000"
+  # k8s_registry_username = "username"
+  # k8s_registry_password = "password"
 }
 
 module "gcp_example" {

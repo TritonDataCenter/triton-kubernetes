@@ -15,5 +15,10 @@ sudo service docker restart
 sudo hostnamectl set-hostname ${hostname}
 sudo bash -c 'echo "127.0.0.1 ${hostname}" >> /etc/hosts'
 
+# Run docker login if requested
+if [ "${rancher_registry_username}" != "" ]; then
+	sudo docker login -u ${rancher_registry_username} -p ${rancher_registry_password} ${rancher_registry}
+fi
+
 # Run Rancher agent container
 ${rancher_agent_command}

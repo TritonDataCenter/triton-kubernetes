@@ -89,3 +89,28 @@ variable "mysqldb_database_name" {
   default     = "cattle"
   description = "The database name that will be setup for Rancher to connect to mysqldb."
 }
+
+variable "rancher_server_image" {
+  default     = "rancher/server:v1.6.10"
+  description = "The Rancher Server image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
+}
+
+variable "rancher_agent_image" {
+  default     = ""
+  description = "If set will pass the CATTLE_BOOTSTRAP_REQUIRED_IMAGE environment variable to the Rancher Server start command."
+}
+
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for rancher server and agent images"
+}
+
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
