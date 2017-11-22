@@ -85,6 +85,42 @@ module "azure_example" {
   # k8s_registry_password = "password"
 }
 
+module "aws_example" {
+  source = "./modules/aws-rancher-k8s"
+
+  api_url    = "http://${element(data.terraform_remote_state.rancher.masters, 0)}:8080"
+  access_key = ""
+  secret_key = ""
+
+  name = "aws-example"
+
+  etcd_node_count          = "3"
+  orchestration_node_count = "3"
+  compute_node_count       = "3"
+
+  k8s_plane_isolation = "required"
+
+  aws_access_key = "<set aws access key>"
+  aws_secret_key = "<set aws secret key>"
+
+  aws_region = "<set aws region>"
+  aws_ami_id = "<set aws ami id>"
+
+  aws_public_key_path = "~/.ssh/id_rsa.pub"
+
+  etcd_aws_instance_type          = "t2.micro"
+  orchestration_aws_instance_type = "t2.micro"
+  compute_aws_instance_type       = "t2.micro"
+
+  # rancher_registry          = "docker-registry.joyent.com:5000"
+  # rancher_registry_username = "username"
+  # rancher_registry_password = "password"
+
+  # k8s_registry          = "docker-registry.joyent.com:5000"
+  # k8s_registry_username = "username"
+  # k8s_registry_password = "password"
+}
+
 module "gcp_example" {
   source = "./modules/rancher-k8s"
 
@@ -99,4 +135,12 @@ module "gcp_example" {
   compute_node_count       = "3"
 
   gcp = "true"
+
+  # rancher_registry          = "docker-registry.joyent.com:5000"
+  # rancher_registry_username = "username"
+  # rancher_registry_password = "password"
+
+  # k8s_registry          = "docker-registry.joyent.com:5000"
+  # k8s_registry_username = "username"
+  # k8s_registry_password = "password"
 }
