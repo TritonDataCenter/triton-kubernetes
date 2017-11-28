@@ -113,6 +113,20 @@ verifySetup() {
 		fi
 		echo "${_compute_node_count} compute nodes will be created for this environment ..."
 		echo "    ${_name}-compute-# ${_compute_triton_machine_package}"
+	elif [ "$1" == "aws" ]
+	then
+		echo "Environment ${_name} will be created on AWS."
+		if [ "$_ha" == "true" ]
+		then
+			echo "${_name} will be running in HA configuration ..."
+			echo "6 dedicated hosts will be created ..."
+			echo "    ${_name}-etcd-[123] ${_etcd_aws_instance_type}"
+			echo "    ${_name}-orchestration-[123] ${_orchestration_aws_instance_type}"
+		else
+			echo "${_name} will be running in non-HA configuration ..."
+		fi
+		echo "${_compute_node_count} compute nodes will be created for this environment ..."
+		echo "    ${_name}-compute-# ${_compute_aws_instance_type}"
 	elif [ "$1" == "azure" ]
 	then
 		echo "Environment ${_name} will be created on Azure."
@@ -141,7 +155,8 @@ getEnvironmentConfig() {
 	local __cloudOption
 	echo "From clouds below:"
 	echo "1. Triton"
-	echo "2. Azure"
+	echo "2. AWS"
+	echo "3. Azure"
 	while [ ! "$__cloudOption" ]
 	do
 		__cloudChoice=$(getArgument "Which cloud do you want to run your environment on" "1")
@@ -153,7 +168,14 @@ getEnvironmentConfig() {
 				setModuleTritonEnvironment
 				__cloudOption=$__cloudChoice
 			;;
-			'2') # AZURE
+			'2') # AWS
+				getAWSAccountConfig
+				getAWSEnvironmentConfig
+				verifySetup "aws"
+				setModuleAWSEnvironment
+				__cloudOption=$__cloudChoice
+			;;
+			'3') # AZURE
 				getAzureAccountConfig
 				getAzureEnvironmentConfig
 				verifySetup "azure"
@@ -164,6 +186,10 @@ getEnvironmentConfig() {
 	done
 }
 
+getAWSAccountConfig() {
+	_aws_access_key="$(getArgument "AWS Access Key")"
+	_aws_secret_key="$(getArgument "AWS Secret Key")"
+}
 getAzureAccountConfig() {
 	_azure_subscription_id="$(getArgument "Azure subscription id")"
 	_azure_client_id="$(getArgument "Azure client id")"
@@ -230,6 +256,29 @@ getClusterManagerConfig() {
 	then
 		_mysqldb_triton_machine_package="$(getArgument "Which Triton package should be used for Global Cluster Manager database server" "k4-highcpu-kvm-1.75G")"
 	fi
+}
+getAWSEnvironmentConfig() {
+	_name="$(getArgument "Name your environment" "aws-test")"
+	_ha="$(getVerification "Do you want this environment to run in HA mode")"
+	if [ "$_ha" == "true" ]
+	then
+		_etcd_node_count=3
+		_orchestration_node_count=3
+	else
+		_etcd_node_count=0
+		_orchestration_node_count=0
+	fi
+	_compute_node_count="$(getArgument "Number of compute nodes for $_name environment" "3")"
+	# TODO: networks for environment
+	_aws_region="$(getArgument "Where should the $_name environment be located" "us-west-2")"
+	_aws_ami_id="$(getArgument "Which image should be used for the nodes" "ami-0def3275")"
+	if [ "$_ha" == "true" ]
+	then
+		_etcd_aws_instance_type="$(getArgument "What size hosts should be used for $_name environment etcd nodes" "t2.micro")"
+		_orchestration_aws_instance_type="$(getArgument "What size hosts should be used for $_name environment orchestration nodes running apiserver/scheduler/controllermanager/..." "t2.micro")"
+	fi
+	_compute_aws_instance_type="$(getArgument "What size hosts should be used for $_name environment compute nodes" "t2.micro")"
+	_aws_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
 }
 getAzureEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "azure-test")"
@@ -484,6 +533,74 @@ setModuleClusterManager() {
 		  ${rancher_registry_password_line}
 		}
 		
+		EOF
+	)
+}
+setModuleAWSEnvironment() {
+	(
+		rancher_registry_line='# rancher_registry          = "docker-registry.joyent.com:5000"'
+		rancher_registry_username_line='# rancher_registry_username = "username"'
+		rancher_registry_password_line='# rancher_registry_password = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			rancher_registry_line="rancher_registry          = \"${rancher_registry}\""
+			rancher_registry_username_line="rancher_registry_username = \"${rancher_registry_username}\""
+			rancher_registry_password_line="rancher_registry_password = \"${rancher_registry_password}\""
+		fi
+		k8s_registry_line='# k8s_registry              = "docker-registry.joyent.com:5000"'
+		k8s_registry_username_line='# k8s_registry_username     = "username"'
+		k8s_registry_password_line='# k8s_registry_password     = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			k8s_registry_line="k8s_registry          = \"${k8s_registry}\""
+			k8s_registry_username_line="k8s_registry_username = \"${k8s_registry_username}\""
+			k8s_registry_password_line="k8s_registry_password = \"${k8s_registry_password}\""
+		fi
+
+		cd terraform
+		__k8s_plane_isolation="none"
+		if [ "$_ha" == "true" ]
+		then
+			__k8s_plane_isolation="required"
+		fi
+		cat >>create-rancher-env.tf <<-EOF
+
+		module "${_name}" {
+		  source = "./modules/aws-rancher-k8s"
+
+		  api_url    = "http://\${element(data.terraform_remote_state.rancher.masters, 0)}:8080"
+		  access_key = ""
+		  secret_key = ""
+
+		  name = "${_name}"
+
+		  etcd_node_count          = "${_etcd_node_count}"
+		  orchestration_node_count = "${_orchestration_node_count}"
+		  compute_node_count       = "${_compute_node_count}"
+
+		  k8s_plane_isolation = "${__k8s_plane_isolation}"
+
+		  aws_access_key = "${_aws_access_key}"
+		  aws_secret_key = "${_aws_secret_key}"
+
+		  aws_region = "${_aws_region}"
+		  aws_ami_id = "${_aws_ami_id}"
+
+		  aws_public_key_path = "~/.ssh/id_rsa.pub"
+
+		  etcd_aws_instance_type          = "t2.micro"
+		  orchestration_aws_instance_type = "t2.micro"
+		  compute_aws_instance_type       = "t2.micro"
+
+		  ${rancher_registry_line}
+		  ${rancher_registry_username_line}
+		  ${rancher_registry_password_line}
+
+		  ${k8s_registry_line}
+		  ${k8s_registry_username_line}
+		  ${k8s_registry_password_line}
+		}
+
 		EOF
 	)
 }

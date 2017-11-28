@@ -72,7 +72,7 @@ variable "aws_public_key_path" {
 
 variable "aws_key_name" {
   description = "Name of the public key to be used for provisioning"
-  default = "rancher_public_key"
+  default     = "rancher_public_key"
 }
 
 variable "etcd_aws_instance_type" {
