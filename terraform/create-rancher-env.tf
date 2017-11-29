@@ -136,10 +136,10 @@ module "gcp_example" {
 
   k8s_plane_isolation = "required"
 
-  gcp_path_to_credentials = "~/thotspots/k8s-test-bb9b7c0021eb.json"
+  gcp_path_to_credentials = "/path/to/creds.json"
   gcp_project_id = "k8s-test-187102"
 
-  gcp_compute_region = "us-west1-a"
+  gcp_compute_region = "us-west1"
   gcp_instance_zone = "us-west1-a"
 
   etcd_gcp_instance_type = "n1-standard-1"
