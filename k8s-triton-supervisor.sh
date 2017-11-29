@@ -256,6 +256,7 @@ getClusterManagerConfig() {
 	then
 		_mysqldb_triton_machine_package="$(getArgument "Which Triton package should be used for Global Cluster Manager database server" "k4-highcpu-kvm-1.75G")"
 	fi
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
 }
 getAWSEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "aws-test")"
@@ -279,6 +280,7 @@ getAWSEnvironmentConfig() {
 	fi
 	_compute_aws_instance_type="$(getArgument "What size hosts should be used for $_name environment compute nodes" "t2.micro")"
 	_aws_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
 }
 getAzureEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "azure-test")"
@@ -301,6 +303,7 @@ getAzureEnvironmentConfig() {
 	fi
 	_compute_azure_size="$(getArgument "What size hosts should be used for $_name environment compute nodes" "Standard_A1")"
 	_azure_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
 }
 getTritonEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "triton-test")"
@@ -342,8 +345,10 @@ getTritonEnvironmentConfig() {
 		_orchestration_triton_machine_package="$(getArgument "Which Triton package should be used for $_name environment orchestration nodes running apiserver/scheduler/controllermanager/..." "k4-highcpu-kvm-1.75G")"
 	fi
 	_compute_triton_machine_package="$(getArgument "Which Triton package should be used for $_name environment compute nodes" "k4-highcpu-kvm-1.75G")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
 }
 readConfig() {
+	docker_engine_install_url=https://releases.rancher.com/install-docker/1.12.sh
 	while read -r line || [[ -n "$line" ]]
 	do
 		line=$(echo "$line" | tr -d ' ')
@@ -476,6 +481,10 @@ readConfig() {
 		then
 			k8s_registry_password=${line//k8s_registry_password=/}
 			echo "K8s Registry Password ..."
+		elif echo "$line" | grep -q ^docker_engine_install_url=
+		then
+			docker_engine_install_url=${line//docker_engine_install_url=/}
+			echo "docker-engine Install Script: $docker_engine_install_url"
 		fi
 		if [ "$_ha" == "true" ]
 		then
@@ -531,6 +540,7 @@ setModuleClusterManager() {
 		  ${rancher_registry_line}
 		  ${rancher_registry_username_line}
 		  ${rancher_registry_password_line}
+		  docker_engine_install_url = "${docker_engine_install_url}"
 		}
 		
 		EOF
@@ -586,7 +596,7 @@ setModuleAWSEnvironment() {
 		  aws_region = "${_aws_region}"
 		  aws_ami_id = "${_aws_ami_id}"
 
-		  aws_public_key_path = "~/.ssh/id_rsa.pub"
+		  aws_public_key_path = "${_aws_public_key_path}"
 
 		  etcd_aws_instance_type          = "t2.micro"
 		  orchestration_aws_instance_type = "t2.micro"
@@ -599,6 +609,7 @@ setModuleAWSEnvironment() {
 		  ${k8s_registry_line}
 		  ${k8s_registry_username_line}
 		  ${k8s_registry_password_line}
+		  docker_engine_install_url = "${docker_engine_install_url}"
 		}
 
 		EOF
@@ -669,6 +680,7 @@ setModuleAzureEnvironment() {
 		  ${k8s_registry_line}
 		  ${k8s_registry_username_line}
 		  ${k8s_registry_password_line}
+		  docker_engine_install_url = "${docker_engine_install_url}"
 		}
 
 		EOF
@@ -739,6 +751,7 @@ setModuleTritonEnvironment() {
 		  ${k8s_registry_line}
 		  ${k8s_registry_username_line}
 		  ${k8s_registry_password_line}
+		  docker_engine_install_url = "${docker_engine_install_url}"
 		}
 
 		EOF
