@@ -122,7 +122,7 @@ module "aws_example" {
 }
 
 module "gcp_example" {
-  source = "./modules/rancher-k8s"
+  source = "./modules/gcp-rancher-k8s"
 
   api_url    = "http://${element(data.terraform_remote_state.rancher.masters, 0)}:8080"
   access_key = ""
@@ -132,9 +132,19 @@ module "gcp_example" {
 
   etcd_node_count          = "3"
   orchestration_node_count = "3"
-  compute_node_count       = "3"
+  compute_node_count       = "1"
 
-  gcp = "true"
+  k8s_plane_isolation = "required"
+
+  gcp_path_to_credentials = "/path/to/creds.json"
+  gcp_project_id = "k8s-test-187102"
+
+  gcp_compute_region = "us-west1"
+  gcp_instance_zone = "us-west1-a"
+
+  etcd_gcp_instance_type = "n1-standard-1"
+  orchestration_gcp_instance_type = "n1-standard-1"
+  compute_gcp_instance_type = "n1-standard-1"
 
   # rancher_registry          = "docker-registry.joyent.com:5000"
   # rancher_registry_username = "username"
