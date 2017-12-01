@@ -5,8 +5,8 @@ provider "google" {
 }
 
 resource "google_compute_firewall" "default" {
-  name    = "rancher"
-  network = "default"
+  name          = "rancher"
+  network       = "default"
   source_ranges = ["0.0.0.0/0"]
 
   allow {
@@ -121,7 +121,7 @@ resource "google_compute_instance" "etcd" {
   service_account {
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
-  
+
   metadata_startup_script = "${element(data.template_file.install_rancher_agent_etcd.*.rendered, count.index)}"
 }
 
@@ -175,7 +175,7 @@ resource "google_compute_instance" "orchestration" {
   service_account {
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
-  
+
   metadata_startup_script = "${element(data.template_file.install_rancher_agent_orchestration.*.rendered, count.index)}"
 }
 
@@ -229,6 +229,6 @@ resource "google_compute_instance" "compute" {
   service_account {
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
-  
+
   metadata_startup_script = "${element(data.template_file.install_rancher_agent_compute.*.rendered, count.index)}"
 }

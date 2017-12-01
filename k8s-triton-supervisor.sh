@@ -46,6 +46,12 @@ main() {
 					elif [ ! -z "${_azure_subscription_id+x}" ]
 					then
 						setModuleAzureEnvironment
+					elif [ ! -z "${_aws_secret_key+x}" ]
+					then
+						setModuleAWSEnvironment
+					elif [ ! -z "${_gcp_path_to_credentials+x}" ]
+					then
+						setModuleGCPEnvironment
 					fi
 				else
 					getEnvironmentConfig
@@ -141,6 +147,20 @@ verifySetup() {
 		fi
 		echo "${_compute_node_count} compute nodes will be created for this environment ..."
 		echo "    ${_name}-compute-# ${_compute_azure_size}"
+	elif [ "$1" == "gcp" ]
+	then
+		echo "Environment ${_name} will be created on GCP."
+		if [ "$_ha" == "true" ]
+		then
+			echo "${_name} will be running in HA configuration ..."
+			echo "6 dedicated hosts will be created ..."
+			echo "    ${_name}-etcd-[123] ${_etcd_gcp_instance_type}"
+			echo "    ${_name}-orchestration-[123] ${_orchestration_gcp_instance_type}"
+		else
+			echo "${_name} will be running in non-HA configuration ..."
+		fi
+		echo "${_compute_node_count} compute nodes will be created for this environment ..."
+		echo "    ${_name}-compute-# ${_compute_gcp_instance_type}"
 	fi
 	echo ""
 	if [ "$(getVerification "Do you want to start the setup")" == "false" ]
@@ -157,6 +177,7 @@ getEnvironmentConfig() {
 	echo "1. Triton"
 	echo "2. AWS"
 	echo "3. Azure"
+	echo "4. GCP"
 	while [ ! "$__cloudOption" ]
 	do
 		__cloudChoice=$(getArgument "Which cloud do you want to run your environment on" "1")
@@ -182,6 +203,12 @@ getEnvironmentConfig() {
 				setModuleAzureEnvironment
 				__cloudOption=$__cloudChoice
 			;;
+			'4') # GCP
+				getGCPAccountConfig
+				getGCPEnvironmentConfig
+				verifySetup "gcp"
+				setModuleGCPEnvironment
+				__cloudOption=$__cloudChoice
 		esac
 	done
 }
@@ -195,6 +222,10 @@ getAzureAccountConfig() {
 	_azure_client_id="$(getArgument "Azure client id")"
 	_azure_client_secret="$(getArgument "Azure client secret")"
 	_azure_tenant_id="$(getArgument "Azure tenant id")"
+}
+getGCPAccountConfig() {
+	_gcp_path_to_credentials="$(getArgument "Path to GCP credentials file")"
+	_gcp_project_id="$(getArgument "GCP Project ID")"
 }
 getTritonAccountConfig() {
 	_triton_account="${SDC_ACCOUNT:-"$(getArgument "Your Triton account login name")"}"
@@ -303,6 +334,29 @@ getAzureEnvironmentConfig() {
 	fi
 	_compute_azure_size="$(getArgument "What size hosts should be used for $_name environment compute nodes" "Standard_A1")"
 	_azure_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
+}
+getGCPEnvironmentConfig() {
+	_name="$(getArgument "Name your environment" "gcp-test")"
+	_ha="$(getVerification "Do you want this environment to run in HA mode")"
+	if [ "$_ha" == "true" ]
+	then
+		_etcd_node_count=3
+		_orchestration_node_count=3
+	else
+		_etcd_node_count=0
+		_orchestration_node_count=0
+	fi
+	_compute_node_count="$(getArgument "Number of compute nodes for $_name environment" "3")"
+	# TODO: networks for environment
+	_gcp_compute_region="$(getArgument "Compute Region" "us-west1")"
+	_gcp_instance_zone="$(getArgument "Instance Zone" "us-west1-a")"
+	if [ "$_ha" == "true" ]
+	then
+		_etcd_gcp_instance_type="$(getArgument "What size hosts should be used for $_name environment etcd nodes" "n1-standard-1")"
+		_orchestration_gcp_instance_type="$(getArgument "What size hosts should be used for $_name environment orchestration nodes running apiserver/scheduler/controllermanager/..." "n1-standard-1")"
+	fi
+	_compute_gcp_instance_type="$(getArgument "What size hosts should be used for $_name environment compute nodes" "n1-standard-1")"
 	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
 }
 getTritonEnvironmentConfig() {
@@ -481,6 +535,66 @@ readConfig() {
 		then
 			k8s_registry_password=${line//k8s_registry_password=/}
 			echo "K8s Registry Password ..."
+		elif echo "$line" | grep -q ^access_key=
+		then
+			_aws_access_key=${line//access_key=/}
+			echo "Access Key ..."
+		elif echo "$line" | grep -q ^secret_key=
+		then
+			_aws_secret_key=${line//secret_key=/}
+			echo "Secret Key ..."
+		elif echo "$line" | grep -q ^etcd_aws_instance_type=
+		then
+			_etcd_aws_instance_type=${line//etcd_aws_instance_type=/}
+			echo "ETCD instance size ${_etcd_aws_instance_type}"
+		elif echo "$line" | grep -q ^orchestration_aws_instance_type=
+		then
+			_orchestration_aws_instance_type=${line//orchestration_aws_instance_type=/}
+			echo "Orchestration instance size ${_orchestration_aws_instance_type}"
+		elif echo "$line" | grep -q ^compute_aws_instance_type=
+		then
+			_compute_aws_instance_type=${line//compute_aws_instance_type=/}
+			echo "Compute instance size ${_compute_aws_instance_type}"
+		elif echo "$line" | grep -q ^aws_region=
+		then
+			_aws_region=${line//aws_region=/}
+			echo "Region ${_aws_region}"
+		elif echo "$line" | grep -q ^aws_ami_id=
+		then
+			_aws_ami_id=${line//aws_ami_id=/}
+			echo "AMI ID ${_aws_ami_id}"
+		elif echo "$line" | grep -q ^aws_public_key_path=
+		then
+			_aws_public_key_path=${line//aws_public_key_path=/}
+			echo "Public ssh key ${_aws_public_key_path}"
+		elif echo "$line" | grep -q ^gcp_path_to_credentials=
+		then
+			_gcp_path_to_credentials=${line//gcp_path_to_credentials=/}
+			echo "GCP credentials ${_gcp_path_to_credentials}"
+		elif echo "$line" | grep -q ^gcp_project_id=
+		then
+			_gcp_project_id=${line//gcp_project_id=/}
+			echo "Project ID ${_gcp_project_id}"
+		elif echo "$line" | grep -q ^etcd_gcp_instance_type=
+		then
+			_etcd_gcp_instance_type=${line//etcd_gcp_instance_type=/}
+			echo "ETCD instance type ${_etcd_gcp_instance_type}"
+		elif echo "$line" | grep -q ^orchestration_gcp_instance_type=
+		then
+			_orchestration_gcp_instance_type=${line//orchestration_gcp_instance_type=/}
+			echo "Orchestration instance type ${_orchestration_gcp_instance_type}"
+		elif echo "$line" | grep -q ^compute_gcp_instance_type=
+		then
+			_compute_gcp_instance_type=${line//compute_gcp_instance_type=/}
+			echo "Compute instance type ${_compute_gcp_instance_type}"
+		elif echo "$line" | grep -q ^gcp_compute_region=
+		then
+			_gcp_compute_region=${line//gcp_compute_region=/}
+			echo "Compute Region ${_gcp_compute_region}"
+		elif echo "$line" | grep -q ^gcp_instance_zone=
+		then
+			_gcp_instance_zone=${line//gcp_instance_zone=/}
+			echo "Instane Zone ${_gcp_instance_zone}"
 		elif echo "$line" | grep -q ^docker_engine_install_url=
 		then
 			docker_engine_install_url=${line//docker_engine_install_url=/}
@@ -598,9 +712,9 @@ setModuleAWSEnvironment() {
 
 		  aws_public_key_path = "${_aws_public_key_path}"
 
-		  etcd_aws_instance_type          = "t2.micro"
-		  orchestration_aws_instance_type = "t2.micro"
-		  compute_aws_instance_type       = "t2.micro"
+		  etcd_aws_instance_type          = "${_etcd_aws_instance_type}"
+		  orchestration_aws_instance_type = "${_orchestration_aws_instance_type}"
+		  compute_aws_instance_type       = "${_compute_aws_instance_type}"
 
 		  ${rancher_registry_line}
 		  ${rancher_registry_username_line}
@@ -673,6 +787,73 @@ setModuleAzureEnvironment() {
 		  orchestration_azure_size = "${_orchestration_azure_size}"
 		  compute_azure_size       = "${_compute_azure_size}"
 		  
+		  ${rancher_registry_line}
+		  ${rancher_registry_username_line}
+		  ${rancher_registry_password_line}
+
+		  ${k8s_registry_line}
+		  ${k8s_registry_username_line}
+		  ${k8s_registry_password_line}
+		  docker_engine_install_url = "${docker_engine_install_url}"
+		}
+
+		EOF
+	)
+}
+setModuleGCPEnvironment() {
+	(
+		rancher_registry_line='# rancher_registry          = "docker-registry.joyent.com:5000"'
+		rancher_registry_username_line='# rancher_registry_username = "username"'
+		rancher_registry_password_line='# rancher_registry_password = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			rancher_registry_line="rancher_registry          = \"${rancher_registry}\""
+			rancher_registry_username_line="rancher_registry_username = \"${rancher_registry_username}\""
+			rancher_registry_password_line="rancher_registry_password = \"${rancher_registry_password}\""
+		fi
+		k8s_registry_line='# k8s_registry              = "docker-registry.joyent.com:5000"'
+		k8s_registry_username_line='# k8s_registry_username     = "username"'
+		k8s_registry_password_line='# k8s_registry_password     = "password"'
+		if [ ! -z "${rancher_registry}" ]
+		then
+			k8s_registry_line="k8s_registry          = \"${k8s_registry}\""
+			k8s_registry_username_line="k8s_registry_username = \"${k8s_registry_username}\""
+			k8s_registry_password_line="k8s_registry_password = \"${k8s_registry_password}\""
+		fi
+
+		cd terraform
+		__k8s_plane_isolation="none"
+		if [ "$_ha" == "true" ]
+		then
+			__k8s_plane_isolation="required"
+		fi
+		cat >>create-rancher-env.tf <<-EOF
+
+		module "${_name}" {
+		  source = "./modules/gcp-rancher-k8s"
+
+		  api_url    = "http://\${element(data.terraform_remote_state.rancher.masters, 0)}:8080"
+		  access_key = ""
+		  secret_key = ""
+
+		  name = "${_name}"
+
+		  etcd_node_count          = "${_etcd_node_count}"
+		  orchestration_node_count = "${_orchestration_node_count}"
+		  compute_node_count       = "${_compute_node_count}"
+
+		  k8s_plane_isolation = "${__k8s_plane_isolation}"
+
+		  gcp_path_to_credentials = "${_gcp_path_to_credentials}"
+		  gcp_project_id = "${_gcp_project_id}"
+		  
+		  gcp_compute_region = "${_gcp_compute_region}"
+		  gcp_instance_zone  = "${_gcp_instance_zone}"
+
+		  etcd_gcp_instance_type          = "${_etcd_gcp_instance_type}"
+		  orchestration_gcp_instance_type = "${_orchestration_gcp_instance_type}"
+		  compute_gcp_instance_type       = "${_compute_gcp_instance_type}"
+
 		  ${rancher_registry_line}
 		  ${rancher_registry_username_line}
 		  ${rancher_registry_password_line}
