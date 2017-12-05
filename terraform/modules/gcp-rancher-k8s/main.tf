@@ -5,7 +5,7 @@ provider "google" {
 }
 
 resource "google_compute_firewall" "default" {
-  name          = "rancher"
+  name          = "${var.compute_firewall}"
   network       = "default"
   source_ranges = ["0.0.0.0/0"]
 

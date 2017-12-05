@@ -70,6 +70,11 @@ variable "gcp_instance_zone" {
   description = "Zone to deploy GCP machine in"
 }
 
+variable "compute_firewall" {
+  default     = "rancher"
+  description = "Google compute firewall"
+}
+
 variable "gcp_image" {
   description = "GCP image to be used for instance"
   default     = "ubuntu-1604-xenial-v20171121a"

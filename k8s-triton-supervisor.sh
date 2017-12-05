@@ -60,6 +60,15 @@ main() {
 				showEnvironmentDetails
 				exit 0
 			;;
+			-d)
+				getTERRAFORM
+				shift
+				if [ ! -z "${1+x}" ]
+				then
+					deleteEnvironment "${1}"
+				fi
+				exit 1
+			;;
 			--cleanAll)
 				shift
 				if [ "$1" == "true" ]; then
@@ -85,7 +94,24 @@ startProvisioning() {
 	(
 		cd terraform
 		$TERRAFORM init
+		$TERRAFORM get
 		$TERRAFORM apply -target "module.${1}"
+	)
+}
+deleteEnvironment() {
+	(
+		cd terraform
+		$TERRAFORM get
+		echo "You are about to delete ${1} environment and all the associated hosts..."
+		if [ "$(getVerification "Do you want to destroy this environmemnt")" == "false" ]
+		then
+			echo ""
+			exit 1
+		fi
+		local _date
+		_date=$(date '+%Y%m%d%H%M%S')
+		$TERRAFORM destroy -force -target "module.${1}"
+		sed "s;module \"${1}\" {$;module \"${1}-deleted-${_date}\" {;g" create-rancher-env.tf > tmp.tf && mv tmp.tf create-rancher-env.tf
 	)
 }
 
@@ -711,6 +737,7 @@ setModuleAWSEnvironment() {
 		  aws_ami_id = "${_aws_ami_id}"
 
 		  aws_public_key_path = "${_aws_public_key_path}"
+		  aws_key_name        = "${_name}-key"
 
 		  etcd_aws_instance_type          = "${_etcd_aws_instance_type}"
 		  orchestration_aws_instance_type = "${_orchestration_aws_instance_type}"
@@ -783,10 +810,15 @@ setModuleAzureEnvironment() {
 		  azure_ssh_user        = "ubuntu"
 		  azure_public_key_path = "${_azure_public_key_path}"
 
+		  azure_resource_group_name           = "${_name}-k8s"
+		  azure_virtual_network_name          = "${_name}-k8snetwork"
+		  azure_subnet_name                   = "${_name}-k8ssubnet"
+		  azurerm_network_security_group_name = "${_name}-k8sfirewall"
+
 		  etcd_azure_size          = "${_etcd_azure_size}"
 		  orchestration_azure_size = "${_orchestration_azure_size}"
 		  compute_azure_size       = "${_compute_azure_size}"
-		  
+
 		  ${rancher_registry_line}
 		  ${rancher_registry_username_line}
 		  ${rancher_registry_password_line}
@@ -846,9 +878,10 @@ setModuleGCPEnvironment() {
 
 		  gcp_path_to_credentials = "${_gcp_path_to_credentials}"
 		  gcp_project_id = "${_gcp_project_id}"
-		  
+
 		  gcp_compute_region = "${_gcp_compute_region}"
 		  gcp_instance_zone  = "${_gcp_instance_zone}"
+		  compute_firewall   = "${_name}-firewall"
 
 		  etcd_gcp_instance_type          = "${_etcd_gcp_instance_type}"
 		  orchestration_gcp_instance_type = "${_orchestration_gcp_instance_type}"
@@ -887,7 +920,7 @@ setModuleTritonEnvironment() {
 			k8s_registry_username_line="k8s_registry_username = \"${k8s_registry_username}\""
 			k8s_registry_password_line="k8s_registry_password = \"${k8s_registry_password}\""
 		fi
-	
+
 		cd terraform
 		__k8s_plane_isolation="none"
 		if [ "$_ha" == "true" ]
@@ -1069,9 +1102,11 @@ USAGE() {
 	echo "
 	Usage:
 		$scriptname (-c|-e) [conf file]
+		$scriptname -d <environment name>
 	Options:
 		-c  create a cluster manager on Triton
 		-e  create and add a Kubernetes environment to an existing cluster manager
+		-d  delete an environment
 	"
 }
 check_prerequisites() {
