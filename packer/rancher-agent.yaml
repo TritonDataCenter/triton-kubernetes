@@ -1,0 +1,37 @@
+---
+variables:
+- !include variables/triton.yaml
+
+builders:
+- !include builders/triton-kvm-rancheragent.yaml
+
+provisioners:
+- type: shell
+  inline:
+    - sudo curl "https://releases.rancher.com/install-docker/1.12.sh" | sh
+    - sudo apt-get install jq -y
+    - sudo docker pull rancher/healthcheck:v0.3.3
+    - sudo docker pull rancher/net:v0.11.9
+    - sudo docker pull rancher/net:holder
+    - sudo docker pull rancher/k8s:v1.7.7-rancher1
+    - sudo docker pull rancher/etcd:v2.3.7-13
+    - sudo docker pull rancher/etc-host-updater:v0.0.3
+    - sudo docker pull rancher/dns:v0.15.3
+    - sudo docker pull rancher/agent:v1.2.6
+    - sudo docker pull busybox
+    - sudo docker pull rancher/kubectld:v0.8.3
+    - sudo docker pull rancher/lb-service-rancher:v0.7.10
+    - sudo docker pull rancher/kubernetes-agent:v0.6.6
+    - sudo docker pull rancher/kubernetes-auth:v0.0.8
+    - sudo docker pull rancher/k8s:v1.7.7-rancher1
+    - sudo docker pull rancher/metadata:v0.9.4
+    - sudo docker pull rancher/network-manager:v0.7.8
+    - sudo docker pull gcr.io/kubernetes-helm/tiller@sha256:fc5bef1464e78abe683c3e9e5e52dcb89111ab129049f8b3819eb157716fe4f7
+    - sudo docker pull gcr.io/google_containers/pause-amd64:3.0
+    - sudo docker pull gcr.io/google_containers/heapster-amd64@sha256:9562208daab690a74425eee4d7c745d98a8dcb95b48c3d91bd8945750020b7f1
+    - sudo docker pull gcr.io/google_containers/heapster-grafana-amd64@sha256:ab7927a702b41e4ffaf1e54fc9647db32a71ea971f441e75906ee83daa3c898d
+    - sudo docker pull gcr.io/google_containers/heapster-influxdb-amd64@sha256:f433e331c1865ad87bc5387589965528b78cd6b1b2f61697e589584d690c1edd
+    - sudo docker pull gcr.io/google_containers/k8s-dns-dnsmasq-nanny-amd64@sha256:46b933bb70270c8a02fa6b6f87d440f6f1fce1a5a2a719e164f83f7b109f7544
+    - sudo docker pull gcr.io/google_containers/k8s-dns-kube-dns-amd64@sha256:1a3fc069de481ae690188f6f1ba4664b5cc7760af37120f70c86505c79eea61d
+    - sudo docker pull gcr.io/google_containers/k8s-dns-sidecar-amd64@sha256:9aab42bf6a2a068b797fe7d91a5d8d915b10dbbc3d6f2b10492848debfba6044
+    - sudo docker pull gcr.io/google_containers/kubernetes-dashboard-amd64@sha256:b537ce8988510607e95b8d40ac9824523b1f9029e6f9f90e9fccc663c355cf5d

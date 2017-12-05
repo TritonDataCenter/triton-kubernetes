@@ -1,0 +1,5 @@
+---
+triton_url: https://us-east-1.api.joyent.com
+triton_account: fayazg
+triton_key_material: /Users/fayaz.ghiasy/.ssh/id_rsa
+triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37

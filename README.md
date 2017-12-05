@@ -1,20 +1,19 @@
 ## Quick Start Guide
-In this guide, we will start a simple 2 worker node Kubernetes install that runs on Joyent Cloud.
+
+This is a multi-cloud Kubernetes solution. **Triton Kubernetes** has a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud. For an example set up, look at the [How-To](#how-to) section.
 
 > NOTE: This package has been tested on Linux/OSX.
 
 ### Pre-Reqs
-In order to start running Triton K8s Supervisor, you must create a **Triton** account and install the **Triton CLI**, **Ansible**, **wget**, and the **Kubernetes CLI**.
+In order to start running **Triton Kubernetes**, you must create a [Triton](https://my.joyent.com/) account and install [`triton` CLI](#install-triton), [`wget`](#install-wget-), and [`kubectl`](#install-the-kubernetes-cli). `terraform` is also a requirement, but if it isn't found, it will be downloaded automatically.
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
 
-[Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned. We use Terraform to provision virtual machines, set up root access, and install `python`.
+[Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.
 
-[Ansible](http://docs.ansible.com/ansible/intro_installation.html) is an IT automation tool that enables app deployment, configuration management and orchestration. We are using Ansible to install pre-reqs (including supported version of docker-engine), create Kubernetes environment and set up Kubernetes cluster.
+#### Install Triton CLI
 
-#### Install Triton
-
-In order to install Triton, first you must have a [Triton account](https://sso.joyent.com/signup). As a new user you will recieve a $250 credit to enable you to give Triton and Kubernetes a test run, but it's important to [add your billing information](https://my.joyent.com/main/#!/account/payment) and [add an ssh key](https://my.joyent.com/main/#!/account) to your account. If you need instructions for how to generate and SSH key, [read our documentation](https://docs.joyent.com/public-cloud/getting-started).
+In order to install `triton`, first you must have a [Triton account](https://sso.joyent.com/signup). As a new user you will receive a $250 credit to enable you to give Triton and Kubernetes a test run, but it's important to [add your billing information](https://my.joyent.com/main/#!/account/payment) and [add an ssh key](https://my.joyent.com/main/#!/account) to your account. If you need instructions for how to generate and SSH key, [read our documentation](https://docs.joyent.com/public-cloud/getting-started).
 
 1.  Install [Node.js](https://nodejs.org/en/download/) and run `npm install -g triton` to install Triton CLI.
 1.  `triton` uses profiles to store access information. You'll need to set up profiles for relevant data centers.
@@ -25,42 +24,7 @@ In order to install Triton, first you must have a [Triton account](https://sso.j
 
 #### Terraform
 
-Terraform will be downloaded automatically under the `<k8s-triton-supervisor>/bin/` directory.
-
-#### Install Ansible
-
-There are [many ways to install Ansible](http://docs.ansible.com/ansible/intro_installation.html), but the simplest would be to use Python package manager (`pip`). If you don’t already have `pip` installed, install it:
-
-```
-sudo easy_install pip
-```
-Ansible by default manages machines over SSH and requires Python 2.6 or 2.7 to be installed on all the hosts.
-
-Install Ansible:
-
-```
-sudo pip install ansible
-```
-
-Once done, you can run `ansible` to test your installation. You should see a list of usage commands that looks like the following:
-
-```
-$ ansible
-Usage: ansible <host-pattern> [options]
-
-Options:
-  -a MODULE_ARGS, --args=MODULE_ARGS
-                        module arguments
-  --ask-vault-pass      ask for vault password
-  -B SECONDS, --background=SECONDS
-                        run asynchronously, failing after X seconds
-                        (default=N/A)
-  -C, --check           don't make any changes; instead, try to predict some
-                        of the changes that may occur
-  -D, --diff            when changing (small) files and templates, show the
-                        differences in those files; works great with --check
-[...]
-```
+Terraform will be downloaded automatically under the `<triton-kubernetes>/bin/` directory.
 
 #### Install `wget`
 
@@ -92,37 +56,118 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s htt
 curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/windows/amd64/kubectl.exe
 ```
 
-### Starting Kubernetes Cluster
-Download the k8sontriton package and run `setup.sh`:
+## How-To
+
+To see the multi-cloud capabilities of Triton Kubernetes, we are going to create a global cluster manager with four identical Kubernetes environments. These environments are going to be all configured in HA mode and on different cloud providers ([Triton](#setup-questions-kubernetes-cluster-on-triton), [AWS](#setup-questions-kubernetes-cluster-on-aws), [Azure](#setup-questions-kubernetes-cluster-on-azure), [GCP](#setup-questions-kubernetes-cluster-on-gcp)).
+
+### Starting a Global Cluster Manager
+Make sure you have a Triton profile created and active.
+Download the **Triton Kubernetes** package and run `triton-kubernetes.sh`:
 
 ```bash
-$ git clone https://github.com/joyent/k8s-triton-supervisor.git
-Cloning into 'k8s-triton-supervisor'...
-$ cd k8s-triton-supervisor 
-$ ./setup.sh
+$ eval "$(triton env)"
+$ git clone https://github.com/joyent/triton-kubernetes.git
+Cloning into 'triton-kubernetes'...
+$ cd triton-kubernetes 
+$ ./triton-kubernetes.sh -c
 ```
 
 Follow the on screen instructions answering questions about the cluster. You can use the default by pressing “Enter”/”Return” key.
 
 #### Setup Questions
 
+| Question                                                                       | Default                                               | Input                |
+|--------------------------------------------------------------------------------|-------------------------------------------------------|----------------------|
+| Name your Global Cluster Manager                                               | global-cluster                                        | <kbd>enter</kbd>     |
+| Do you want to set up the Global Cluster Manager in HA mode                    |                                                       | yes                  |
+| Which Triton networks should be used for this environment                      | Joyent-SDC-Public                                     | <kbd>enter</kbd>     |
+| Which Triton package should be used for Global Cluster Manager server(s)       | k4-highcpu-kvm-1.75G                                  | k4-highcpu-kvm-3.75G |
+| Which Triton package should be used for Global Cluster Manager database server | k4-highcpu-kvm-1.75G                                  | k4-highcpu-kvm-3.75G |
+| docker-engine install script                                                   | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd>     |
+
+After verification of the entries, setup will start Cluster Manager in HA mode on Joyent Cloud. This will be a two node HA configuration with a shared database node.
+
+### Adding a Kubernetes Environments to Global Cluster Manager
+From the same repository directory that [global-cluster](#starting-a-global-cluster-manager) Cluster Manager was created, invoke the following command and follow the on screen instructions answering questions about the Kubernetes environment. We are adding four environments one on each cloud and their inputs are below. You can use the defaults by pressing “Enter”/”Return” key:
+
+```bash
+$ ./triton-kubernetes.sh -e
 ```
-Name your Kubernetes environment: (k8s dev)
-Describe this Kubernetes environment: (k8s dev)
-Would you like HA for Kubernetes Cluster Manager (+3 VMs) (yes | no)?
-Run Kubernetes Management Services on dedicated nodes (+3 VMs for etcd, +3 VMs for K8s services - apiserver/scheduler/controllermanager...) (yes | no)?
-Hostname of the master: (kubemaster)
-Enter a string to use for appending to hostnames of all the nodes: (kubenode)
-How many nodes should this Kubernetes cluster have: (1) 2
-What networks should the master be a part of, provide comma separated values: (31428241-4878-47d6-9fba-9a8436b596a4)
-What networks should the nodes be a part of, provide comma separated values: (31428241-4878-47d6-9fba-9a8436b596a4)
-What KVM package should the master and nodes run on: (14b6fade-d0f8-11e5-85c5-4ff7918ab5c1)
-```
 
-After verification of the entries, setup will provide a Kubernetes environment on triton that will be set up as below:
+#### Setup Questions: Kubernetes cluster on Triton
 
-| without HA  | with HA  |
-|----|----|
-| ![1x2 architecture](docs/img/1x2-arch.png) | ![1x2 architecture](docs/img/20170530a-Triton-Kubernetes-HA.jpg) |
+The Triton credentials are pulled from environment variables. If `eval "$(triton env)"` was not ran, you will be prompted for Triton account, CloudAPI endpoint URL, ssh key ID and private key.
 
-For a more detailed guide and how the automation works, click [here](docs/detailed.md).
+| Question | Default | Input |
+|---------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|----------------------|
+| Which cloud do you want to run your environment on | 1 | <kbd>enter</kbd> |
+| Name your environment | triton-test | <kbd>enter</kbd> |
+| Do you want this environment to run in HA mode |  | yes |
+| Number of compute nodes for triton-test environment | 3 | <kbd>enter</kbd> |
+| Which Triton networks should be used for this environment | Joyent-SDC-Public | <kbd>enter</kbd> |
+| Which Triton package should be used for triton-test environment etcd nodes | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
+| Which Triton package should be used for triton-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
+| Which Triton package should be used for triton-test environment compute nodes | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
+| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+
+After verification of the entries, setup will create a Kubernetes environment in HA mode on Joyent Cloud. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+
+#### Setup Questions: Kubernetes cluster on AWS
+
+| Question | Default | Input |
+|-------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|------------------|
+| Which cloud do you want to run your environment on | 1 | 2 |
+| AWS Access Key |  | \[AWS access key id] |
+| AWS Secret Key |  | \[AWS secret key] |
+| Name your environment | aws-test | <kbd>enter</kbd> |
+| Do you want this environment to run in HA mode |  | yes |
+| Number of compute nodes for aws-test environment | 3 | <kbd>enter</kbd> |
+| Where should the aws-test environment be located | us-west-2 | <kbd>enter</kbd> |
+| Which image should be used for the nodes | ami-0def3275 | <kbd>enter</kbd> |
+| What size hosts should be used for aws-test environment etcd nodes | t2.micro | t2.small |
+| What size hosts should be used for aws-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | t2.micro | t2.small |
+| What size hosts should be used for aws-test environment compute nodes | t2.micro | t2.small |
+| Which ssh public key should these hosts be set up with |  | \[your public ssh key] |
+| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+
+After verification of the entries, setup will create a Kubernetes environment in HA mode running on AWS. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+
+#### Setup Questions: Kubernetes cluster on Azure
+
+| Question | Default | Input |
+|---------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|--------------------------|
+| Which cloud do you want to run your environment on | 1 | 3 |
+| Azure subscription id |  | \[Azure subscription id] |
+| Azure client id |  | \[Azure client id] |
+| Azure client secret |  | \[Azure client secret] |
+| Azure tenant id |  | \[Azure tenant id] |
+| Name your environment | azure-test | <kbd>enter</kbd> |
+| Do you want this environment to run in HA mode |  | yes |
+| Number of compute nodes for azure-test environment | 3 | <kbd>enter</kbd> |
+| Where should the azure-test environment be located | westus2 | <kbd>enter</kbd> |
+| What size hosts should be used for azure-test environment etcd nodes | Standard_A1 | Standard_A2 |
+| What size hosts should be used for azure-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | Standard_A1 | Standard_A2 |
+| What size hosts should be used for azure-test environment compute nodes | Standard_A1 | Standard_A2 |
+| Which ssh public key should these hosts be set up with |  | \[public ssh key] |
+| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+
+After verification of the entries, setup will create a Kubernetes environment in HA mode running on Azure. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+
+#### Setup Questions: Kubernetes cluster on GCP
+
+| Question | Default | Input |
+|-------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|------------------------------|
+| Which cloud do you want to run your environment on | 1 | 4 |
+| Path to GCP credentials file |  | \[GCP json credentials file] |
+| GCP Project ID |  | \[GCP project id] |
+| Name your environment | gcp-test | <kbd>enter</kbd> |
+| Do you want this environment to run in HA mode |  | yes |
+| Number of compute nodes for gcp-test environment | 3 | <kbd>enter</kbd> |
+| Compute Region | us-west1 | <kbd>enter</kbd> |
+| Instance Zone | us-west1-a | <kbd>enter</kbd> |
+| What size hosts should be used for gcp-test environment etcd nodes | n1-standard-1 | n1-standard-2 |
+| What size hosts should be used for gcp-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | n1-standard-1 | n1-standard-2 |
+| What size hosts should be used for gcp-test environment compute nodes | n1-standard-1 | n1-standard-2 |
+| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+
+After verification of the entries, setup will create a Kubernetes environment in HA mode running on GCP. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
