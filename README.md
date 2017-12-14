@@ -6,7 +6,7 @@
 
 This is a multi-cloud Kubernetes solution. **Triton Kubernetes** has a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud. For an example set up, look at the [How-To](#how-to) section.
 
-![Triton-Kubernetes](docs/imgs/Triton-Kubernetes.jpg)
+![Triton-Kubernetes](docs/imgs/Triton-Kubernetes.png)
 
 > NOTE: This package has been tested on Linux/OSX.
 
