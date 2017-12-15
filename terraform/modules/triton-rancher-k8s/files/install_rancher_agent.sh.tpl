@@ -11,20 +11,13 @@ fi
 sudo curl ${docker_engine_install_url} | sh
 
 sudo service docker stop
-sudo mkdir /etc/systemd/system/docker.service.d
-cat >>/home/ubuntu/docker.conf <<EOF
-[Service]
-ExecStart=
-ExecStart=/usr/bin/dockerd --graph="/mnt/docker"
-EOF
-sudo mkdir /etc/systemd/system/docker.service.d/
-sudo mv /home/ubuntu/docker.conf /etc/systemd/system/docker.service.d/
-sudo chown root:root /etc/systemd/system/docker.service.d/docker.conf
+DOCKER_SERVICE=$(systemctl status docker.service --no-pager | grep Loaded | sed 's~\(.*\)loaded (\(.*\)docker.service\(.*\)$~\2docker.service~g')
+sed 's~ExecStart=/usr/bin/dockerd -H\(.*\)~ExecStart=/usr/bin/dockerd --graph="/mnt/docker" -H\1~g' $DOCKER_SERVICE > /home/ubuntu/docker.conf && sudo mv /home/ubuntu/docker.conf $DOCKER_SERVICE
 sudo mkdir /mnt/docker
 sudo bash -c "mv /var/lib/docker/* /mnt/docker/"
 sudo rm -rf /var/lib/docker
 sudo systemctl daemon-reload
-sudo service docker restart
+sudo systemctl restart docker
 
 sudo hostnamectl set-hostname ${hostname}
 
