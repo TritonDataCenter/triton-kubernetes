@@ -7,12 +7,15 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"os/exec"
 	"strings"
 
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
+	"github.com/joyent/triton-go/client"
 	"github.com/joyent/triton-go/compute"
 	"github.com/joyent/triton-go/network"
+	"github.com/joyent/triton-go/storage"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
@@ -20,6 +23,16 @@ import (
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
 type tritonManagerTerraformConfig struct {
+	Terrafrom struct {
+		Backend struct {
+			Manta struct {
+				Account     string `json:"account"`
+				KeyMaterial string `json:"key_material"`
+				KeyID       string `json:"key_id"`
+				Path        string `json:"path"`
+			} `json:"manta"`
+		} `json:"backend"`
+	} `json:"terraform"`
 	Module struct {
 		Name struct {
 			Source string `json:"source"`
@@ -32,18 +45,18 @@ type tritonManagerTerraformConfig struct {
 			TritonKeyID   string `json:"triton_key_id"`
 			TritonURL     string `json:"triton_url,omitempty"`
 
-			TritonNetworkNames   []string `json:"triton_network_names,omitempty"`
-			TritonImageName      string   `json:"triton_image_name,omitempty"`
-			TritonImageVersion   string   `json:"triton_image_version,omitempty"`
-			TritonSSHUser        string   `json:"triton_ssh_user,omitempty"`
-			TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
+			TritonNetworkNames         []string `json:"triton_network_names,omitempty"`
+			TritonImageName            string   `json:"triton_image_name,omitempty"`
+			TritonImageVersion         string   `json:"triton_image_version,omitempty"`
+			TritonSSHUser              string   `json:"triton_ssh_user,omitempty"`
+			MasterTritonMachinePackage string   `json:"master_triton_machine_package,omitempty"`
 
 			RancherServerImage      string `json:"rancher_server_image,omitempty"`
 			RancherAgentImage       string `json:"rancher_agent_image,omitempty"`
 			RancherRegistry         string `json:"rancher_registry,omitempty"`
 			RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
 			RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
-		} `json:"name"`
+		} `json:"cluster-manager"`
 	} `json:"module"`
 }
 
@@ -52,8 +65,6 @@ func NewTritonManager() error {
 
 	// TODO: Move this to const or make configurable
 	cfg.Module.Name.Source = "github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher"
-
-	// Validate configuration provided, if no configuration provided ask user for input.
 
 	// Name
 	if viper.IsSet("name") {
@@ -161,7 +172,20 @@ func NewTritonManager() error {
 	if viper.IsSet("triton_key_id") {
 		cfg.Module.Name.TritonKeyID = viper.GetString("triton_key_id")
 	} else {
-		// TODO: Exec ssh-keygen -E md5 -lf PATH_TO_FILE
+		// ssh-keygen -E md5 -lf PATH_TO_FILE
+		// Sample output:
+		// 2048 MD5:68:9f:9a:c4:76:3a:f4:62:77:47:3e:47:d4:34:4a:b7 njalali@Nimas-MacBook-Pro.local (RSA)
+		out, err := exec.Command("ssh-keygen", "-E", "md5", "-lf", cfg.Module.Name.TritonKeyPath).Output()
+		if err != nil {
+			return err
+		}
+
+		parts := strings.Split(string(out), " ")
+		if len(parts) != 4 {
+			return errors.New("Could not get ssh key id")
+		}
+
+		cfg.Module.Name.TritonKeyID = strings.TrimPrefix(parts[1], "MD5:")
 	}
 
 	// Triton URL
@@ -181,21 +205,49 @@ func NewTritonManager() error {
 	}
 
 	// We now have enough information to init a triton client
-	fingerprint := "68:9f:9a:c4:76:3a:f4:62:77:47:3e:47:d4:34:4a:b7"
+	cfg.Terrafrom.Backend.Manta.Account = cfg.Module.Name.TritonAccount
+	cfg.Terrafrom.Backend.Manta.KeyMaterial = cfg.Module.Name.TritonKeyPath
+	cfg.Terrafrom.Backend.Manta.KeyID = cfg.Module.Name.TritonKeyID
+	cfg.Terrafrom.Backend.Manta.Path = fmt.Sprintf("/triton-kubernetes/%s/", cfg.Module.Name.Name)
+
 	keyMaterial, err := ioutil.ReadFile(cfg.Module.Name.TritonKeyPath)
 	if err != nil {
 		return err
 	}
 
-	sshKeySigner, err := authentication.NewPrivateKeySigner(fingerprint, keyMaterial, cfg.Module.Name.TritonAccount)
+	sshKeySigner, err := authentication.NewPrivateKeySigner(cfg.Module.Name.TritonKeyID, keyMaterial, cfg.Module.Name.TritonAccount)
 	if err != nil {
 		return err
 	}
 
 	config := &triton.ClientConfig{
 		TritonURL:   cfg.Module.Name.TritonURL,
+		MantaURL:    "https://us-east.manta.joyent.com", // TODO: Make this configurable
 		AccountName: cfg.Module.Name.TritonAccount,
 		Signers:     []authentication.Signer{sshKeySigner},
+	}
+
+	// Validate that a manta folder with the same cluster name doesn't exist.
+	// We leverage manta to store both terraform state and the terraform json configuration.
+	tritonStorageClient, err := storage.NewClient(config)
+	if err != nil {
+		return err
+	}
+
+	input := storage.ListDirectoryInput{
+		DirectoryName: fmt.Sprintf("/stor/%s", cfg.Terrafrom.Backend.Manta.Path),
+		Limit:         100,
+	}
+
+	_, err = tritonStorageClient.Dir().List(context.Background(), &input)
+	if err != nil && !client.IsResourceNotFoundError(err) {
+		return err
+	}
+
+	// Verify that the folder path doesn't already exist
+	if err == nil || !client.IsResourceNotFoundError(err) {
+		fmt.Printf("A cluster manager that's named \"%s\" already exists\n", cfg.Module.Name.Name)
+		return nil
 	}
 
 	tritonComputeClient, err := compute.NewClient(config)
@@ -290,8 +342,8 @@ func NewTritonManager() error {
 		cfg.Module.Name.TritonSSHUser = result
 	}
 
-	if viper.IsSet("triton_machine_package") {
-		cfg.Module.Name.TritonMachinePackage = viper.GetString("triton_machine_package")
+	if viper.IsSet("master_triton_machine_package") {
+		cfg.Module.Name.MasterTritonMachinePackage = viper.GetString("master_triton_machine_package")
 	} else {
 		listPackageInput := compute.ListPackagesInput{}
 		packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)
@@ -316,13 +368,13 @@ func NewTritonManager() error {
 		}
 
 		prompt := promptui.Select{
-			Label: "Triton Machine Package to use",
+			Label: "Triton Machine Package to use for Rancher Master",
 			Items: kvmPackages,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
 				Inactive: `  {{ .Name }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton Machine Package:" | bold}} {{ .Name }}`, promptui.IconGood),
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Rancher Master Triton Machine Package:" | bold}} {{ .Name }}`, promptui.IconGood),
 			},
 			Searcher: searcher,
 		}
@@ -332,7 +384,7 @@ func NewTritonManager() error {
 			return err
 		}
 
-		cfg.Module.Name.TritonMachinePackage = kvmPackages[i].Name
+		cfg.Module.Name.MasterTritonMachinePackage = kvmPackages[i].Name
 	}
 
 	jsonBytes, err := json.MarshalIndent(&cfg, "", "\t")
@@ -340,7 +392,49 @@ func NewTritonManager() error {
 		return err
 	}
 
-	fmt.Println(string(jsonBytes))
+	err = ioutil.WriteFile("main.tf.json", jsonBytes, 0644)
+	if err != nil {
+		return err
+	}
+
+	// Create manta path so terraform can store state properly
+	dirInput := storage.PutDirectoryInput{
+		DirectoryName: fmt.Sprintf("/stor/%s", cfg.Terrafrom.Backend.Manta.Path),
+	}
+	err = tritonStorageClient.Dir().Put(context.Background(), &dirInput)
+	if err != nil {
+		return err
+	}
+
+	// Run terraform init
+	tfInit := exec.Command("terraform", []string{"init", "-force-copy"}...)
+	tfInit.Stdin = os.Stdin
+	tfInit.Stdout = os.Stdout
+	tfInit.Stderr = os.Stderr
+
+	if err := tfInit.Start(); err != nil {
+		return err
+	}
+
+	err = tfInit.Wait()
+	if err != nil {
+		return err
+	}
+
+	// Run terraform apply
+	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve"}...)
+	tfApply.Stdin = os.Stdin
+	tfApply.Stdout = os.Stdout
+	tfApply.Stderr = os.Stderr
+
+	if err := tfApply.Start(); err != nil {
+		return err
+	}
+
+	err = tfApply.Wait()
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

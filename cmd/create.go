@@ -12,10 +12,10 @@ import (
 
 // createCmd represents the create command
 var createCmd = &cobra.Command{
-	Use:       "create [manager or cluster]",
-	Short:     "Create cluster managers or kubernetes clusters.",
-	Long:      `Create allows you to create a new cluster manager or a new kubernetes cluster.`,
-	ValidArgs: []string{"manager", "cluster"},
+	Use:       "create [manager or cluster or node]",
+	Short:     "Create cluster managers, kubernetes clusters or individual kubernetes cluster nodes.",
+	Long:      `Create allows you to create a new cluster manager or a new kubernetes cluster or an individual kubernetes cluster node.`,
+	ValidArgs: []string{"manager", "cluster", "node"},
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return errors.New(`"triton-kubernetes create" requires one argument`)
@@ -33,7 +33,6 @@ var createCmd = &cobra.Command{
 }
 
 func createCmdFunc(cmd *cobra.Command, args []string) {
-	// TODO: Work your own magic here
 	createType := args[0]
 	switch createType {
 	case "manager":
@@ -45,6 +44,13 @@ func createCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "cluster":
 		fmt.Println("create cluster called")
+		err := create.NewTritonCluster()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	case "node":
+		fmt.Println("create node called")
 	}
 }
 

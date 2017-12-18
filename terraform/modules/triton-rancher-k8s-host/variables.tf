@@ -1,5 +1,5 @@
-variable "name" {
-  description = "Human readable name used as prefix to generated names."
+variable "hostname" {
+  description = ""
 }
 
 variable "rancher_api_url" {
@@ -14,24 +14,13 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
+variable "rancher_environment_id" {
+  description = "The ID of the Rancher environment this host should register itself to"
 }
 
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
+variable "rancher_host_labels" {
+  type        = "map"
+  description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
 variable "docker_engine_install_url" {
@@ -83,19 +72,9 @@ variable "triton_ssh_user" {
   description = "The ssh user to use."
 }
 
-variable "etcd_triton_machine_package" {
+variable "triton_machine_package" {
   default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for Kubernetes etcd node(s). Defaults to k4-highcpu-kvm-1.75G."
-}
-
-variable "orchestration_triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for Kubernetes orchestration node(s). Defaults to k4-highcpu-kvm-1.75G."
-}
-
-variable "compute_triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for Kubernetes compute node(s). Defaults to k4-highcpu-kvm-1.75G."
+  description = "The Triton machine package to use for this host. Defaults to k4-highcpu-kvm-1.75G."
 }
 
 variable "rancher_registry" {
@@ -109,21 +88,6 @@ variable "rancher_registry_username" {
 }
 
 variable "rancher_registry_password" {
-  default     = ""
-  description = "The password to use."
-}
-
-variable "k8s_registry" {
-  default     = ""
-  description = "The docker registry to use for k8s images"
-}
-
-variable "k8s_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "k8s_registry_password" {
   default     = ""
   description = "The password to use."
 }
