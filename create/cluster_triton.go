@@ -1,13 +1,14 @@
 package create
 
 import (
-	"encoding/json"
 	"errors"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
 
+	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
@@ -45,7 +46,8 @@ func NewTritonCluster() error {
 	cfg := tritonClusterTerraformConfig{}
 
 	// TODO: Move this to const or make configurable
-	cfg.Source = "github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher-k8s"
+	// cfg.Source = "github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher-k8s"
+	cfg.Source = "./terraform/modules/triton-rancher-k8s"
 
 	// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
 	cfg.EtcdNodeCount = "0"
@@ -173,12 +175,25 @@ func NewTritonCluster() error {
 		cfg.TritonURL = result
 	}
 
-	jsonBytes, err := json.MarshalIndent(&cfg, "", "\t")
+	// Load current tf config
+	currentConfigBytes, err := ioutil.ReadFile("main.tf.json")
 	if err != nil {
 		return err
 	}
 
-	fmt.Println(string(jsonBytes))
+	parsedConfig, err := gabs.ParseJSON(currentConfigBytes)
+	if err != nil {
+		return err
+	}
+
+	parsedConfig.SetP(&cfg, fmt.Sprintf("module.%s", cfg.Name))
+
+	jsonBytes := []byte(parsedConfig.StringIndent("", "\t"))
+
+	err = ioutil.WriteFile("main.tf.json", jsonBytes, 0644)
+	if err != nil {
+		return err
+	}
 
 	// Run terraform init
 	tfInit := exec.Command("terraform", []string{"init", "-force-copy"}...)

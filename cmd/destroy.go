@@ -3,6 +3,9 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
+
+	"github.com/joyent/triton-kubernetes/destroy"
 
 	"github.com/spf13/cobra"
 )
@@ -34,6 +37,11 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 	switch destroyType {
 	case "manager":
 		fmt.Println("destroy manager called")
+		err := destroy.DeleteTritonManager()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	case "cluster":
 		fmt.Println("destroy cluster called")
 	case "node":
