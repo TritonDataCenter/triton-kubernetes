@@ -1,6 +1,7 @@
 package create
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -394,10 +395,23 @@ func NewTritonManager() error {
 	}
 
 	// Create manta path so terraform can store state properly
+	clusterManagerPath := fmt.Sprintf("/stor/%s", terraformBackendConfig.Path)
 	dirInput := storage.PutDirectoryInput{
-		DirectoryName: fmt.Sprintf("/stor/%s", terraformBackendConfig.Path),
+		DirectoryName: clusterManagerPath,
 	}
 	err = tritonStorageClient.Dir().Put(context.Background(), &dirInput)
+	if err != nil {
+		return err
+	}
+
+	// Save main.tf.json to manta
+	objPath := fmt.Sprintf("%s/%s", clusterManagerPath, "main.tf.json")
+	objInput := storage.PutObjectInput{
+		ObjectPath:   objPath,
+		ContentType:  "application/json",
+		ObjectReader: bytes.NewReader(jsonBytes),
+	}
+	err = tritonStorageClient.Objects().Put(context.Background(), &objInput)
 	if err != nil {
 		return err
 	}
