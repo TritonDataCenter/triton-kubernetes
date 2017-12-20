@@ -120,6 +120,27 @@ After verification of the entries, setup will create a Kubernetes environment in
 
 #### Setup Questions: Kubernetes cluster on AWS
 
+Before getting started, you will need to find the ImageId for an Ubuntu 16.04 instance in the region you are planning on deploying.
+
+Canonical keeps a list of AMI ids here: https://cloud-images.ubuntu.com/locator/ec2/ you are looking for Ubuntu Server 16.04 amd64 with instance type of _hvm:ebs-ssd_
+
+If you have the aws cli tools installed (and jq), then you can run the following command (don't forget to modify the region, otherwise you won't get the correct AMI image id.)
+
+```bash
+aws --region us-west-2 ec2 describe-images --owners 099720109477 --filters \
+  "Name=root-device-type,Values=ebs" "Name=virtualization-type,Values=hvm" \
+  "Name=architecture, Values=x86_64" "Name=is-public,Values=true" \
+  "Name=name,Values='*hvm-ssd/ubuntu-xenial-16.04-amd64-server*'" \
+  --query 'Images[*].{ImageId:ImageId,Name:Name,CreationDate:CreationDate}' | \
+  jq '.|sort_by(.CreationDate)|last'
+```
+
+If you need more information on the AMI, you can use the following command. (Unfortunately, it doesn't tell you which region the image lives in.)
+
+```bash
+aws ec2 describe-images --image-id ami-0def3275
+```
+
 | Question | Default | Input |
 |-------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|------------------|
 | Which cloud do you want to run your environment on | 1 | 2 |
