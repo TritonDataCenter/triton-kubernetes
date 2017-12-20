@@ -383,13 +383,21 @@ func NewTritonManager() error {
 		cfg.MasterTritonMachinePackage = kvmPackages[i].Name
 	}
 
+	// Create a temporary directory
+	tempDir, err := ioutil.TempDir("", "")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
 	configObject := gabs.New()
 	configObject.SetP(cfg, "module.cluster-manager")
 	configObject.SetP(terraformBackendConfig, "terraform.backend.manta")
 
 	jsonBytes := []byte(configObject.StringIndent("", "\t"))
 
-	err = ioutil.WriteFile("main.tf.json", jsonBytes, 0644)
+	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
+	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -417,7 +425,7 @@ func NewTritonManager() error {
 	}
 
 	// Run terraform init
-	tfInit := exec.Command("terraform", []string{"init", "-force-copy"}...)
+	tfInit := exec.Command("terraform", []string{"init", "-force-copy", tempDir}...)
 	tfInit.Stdin = os.Stdin
 	tfInit.Stdout = os.Stdout
 	tfInit.Stderr = os.Stderr
@@ -432,7 +440,7 @@ func NewTritonManager() error {
 	}
 
 	// Run terraform apply
-	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve"}...)
+	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve", tempDir}...)
 	tfApply.Stdin = os.Stdin
 	tfApply.Stdout = os.Stdout
 	tfApply.Stderr = os.Stderr
