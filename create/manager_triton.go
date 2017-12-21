@@ -429,6 +429,7 @@ func NewTritonManager() error {
 	tfInit.Stdin = os.Stdin
 	tfInit.Stdout = os.Stdout
 	tfInit.Stderr = os.Stderr
+	tfInit.Dir = tempDir
 
 	if err := tfInit.Start(); err != nil {
 		return err
@@ -444,6 +445,7 @@ func NewTritonManager() error {
 	tfApply.Stdin = os.Stdin
 	tfApply.Stdout = os.Stdout
 	tfApply.Stderr = os.Stderr
+	tfApply.Dir = tempDir
 
 	if err := tfApply.Start(); err != nil {
 		return err
