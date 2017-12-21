@@ -425,7 +425,7 @@ func NewTritonManager() error {
 	}
 
 	// Run terraform init
-	tfInit := exec.Command("terraform", []string{"init", "-force-copy", tempDir}...)
+	tfInit := exec.Command("terraform", []string{"init", "-force-copy"}...)
 	tfInit.Stdin = os.Stdin
 	tfInit.Stdout = os.Stdout
 	tfInit.Stderr = os.Stderr
@@ -441,7 +441,7 @@ func NewTritonManager() error {
 	}
 
 	// Run terraform apply
-	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve", tempDir}...)
+	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve"}...)
 	tfApply.Stdin = os.Stdin
 	tfApply.Stdout = os.Stdout
 	tfApply.Stderr = os.Stderr
