@@ -148,7 +148,7 @@ func DeleteTritonManager() error {
 	targetManager = result.Entries[i].Name
 
 	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
 	if err != nil {
 		return err
 	}

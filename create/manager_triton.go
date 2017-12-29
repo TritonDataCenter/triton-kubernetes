@@ -385,7 +385,7 @@ func NewTritonManager() error {
 	}
 
 	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "")
+	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
 	if err != nil {
 		return err
 	}
