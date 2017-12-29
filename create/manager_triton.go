@@ -17,6 +17,7 @@ import (
 	"github.com/joyent/triton-go/compute"
 	"github.com/joyent/triton-go/network"
 	"github.com/joyent/triton-go/storage"
+	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
@@ -424,34 +425,19 @@ func NewTritonManager() error {
 		return err
 	}
 
-	// Run terraform init
-	tfInit := exec.Command("terraform", []string{"init", "-force-copy"}...)
-	tfInit.Stdin = os.Stdin
-	tfInit.Stdout = os.Stdout
-	tfInit.Stderr = os.Stderr
-	tfInit.Dir = tempDir
-
-	if err := tfInit.Start(); err != nil {
-		return err
+	// Use temporary directory as working directory
+	shellOptions := shell.ShellOptions{
+		WorkingDir: tempDir,
 	}
 
-	err = tfInit.Wait()
+	// Run terraform init
+	err = shell.RunShellCommand(&shellOptions, "terraform", []string{"init", "-force-copy"}...)
 	if err != nil {
 		return err
 	}
 
 	// Run terraform apply
-	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve"}...)
-	tfApply.Stdin = os.Stdin
-	tfApply.Stdout = os.Stdout
-	tfApply.Stderr = os.Stderr
-	tfApply.Dir = tempDir
-
-	if err := tfApply.Start(); err != nil {
-		return err
-	}
-
-	err = tfApply.Wait()
+	err = shell.RunShellCommand(&shellOptions, "terraform", []string{"apply", "-auto-approve"}...)
 	if err != nil {
 		return err
 	}
