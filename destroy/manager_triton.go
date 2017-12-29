@@ -128,6 +128,12 @@ func DeleteTritonManager() error {
 		return err
 	}
 
+	// Stop if there are no cluster managers
+	if result.ResultSetSize == 0 {
+		fmt.Println("No cluster managers found.")
+		return nil
+	}
+
 	// Prompt for cluster manager
 	prompt := promptui.Select{
 		Label: "Cluster Manager to delete",
