@@ -229,7 +229,6 @@ func deleteTerraformBackendFromManta(tritonStorageClient *storage.StorageClient,
 	// Deleting the cluster manager directory
 	deleteDirInput := &storage.DeleteDirectoryInput{
 		DirectoryName: managerFolderPath,
-		ForceDelete:   true,
 	}
 	err = tritonStorageClient.Dir().Delete(context.Background(), deleteDirInput)
 	if err != nil {
