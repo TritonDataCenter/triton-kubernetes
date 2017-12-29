@@ -431,13 +431,13 @@ func NewTritonManager() error {
 	}
 
 	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", []string{"init", "-force-copy"}...)
+	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", []string{"apply", "-auto-approve"}...)
+	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
 	if err != nil {
 		return err
 	}

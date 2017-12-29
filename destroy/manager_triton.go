@@ -180,13 +180,13 @@ func DeleteTritonManager() error {
 	}
 
 	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", []string{"init", "-force-copy"}...)
+	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform destroy
-	err = shell.RunShellCommand(&shellOptions, "terraform", []string{"destroy", "-force"}...)
+	err = shell.RunShellCommand(&shellOptions, "terraform", "destroy", "-force")
 	if err != nil {
 		return err
 	}
