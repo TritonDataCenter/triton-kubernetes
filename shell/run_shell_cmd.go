@@ -11,7 +11,7 @@ func RunShellCommand(options *ShellOptions, command string, args ...string) erro
 	cmd.Stdout = os.Stdout
 	cmd.Stderr = os.Stderr
 
-	if (options != nil) {
+	if options != nil {
 		cmd.Dir = options.WorkingDir
 	}
 
