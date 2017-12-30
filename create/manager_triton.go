@@ -167,20 +167,11 @@ func NewTritonManager() error {
 	if viper.IsSet("triton_key_id") {
 		cfg.TritonKeyID = viper.GetString("triton_key_id")
 	} else {
-		// ssh-keygen -E md5 -lf PATH_TO_FILE
-		// Sample output:
-		// 2048 MD5:68:9f:9a:c4:76:3a:f4:62:77:47:3e:47:d4:34:4a:b7 njalali@Nimas-MacBook-Pro.local (RSA)
-		out, err := exec.Command("ssh-keygen", "-E", "md5", "-lf", cfg.TritonKeyPath).Output()
+		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
 		if err != nil {
 			return err
 		}
-
-		parts := strings.Split(string(out), " ")
-		if len(parts) != 4 {
-			return errors.New("Could not get ssh key id")
-		}
-
-		cfg.TritonKeyID = strings.TrimPrefix(parts[1], "MD5:")
+		cfg.TritonKeyID = keyID
 	}
 
 	// Triton URL
