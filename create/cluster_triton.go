@@ -255,7 +255,11 @@ func NewTritonCluster() error {
 		return err
 	}
 
-	parsedConfig.SetP(&cfg, fmt.Sprintf("module.%s", cfg.Name))
+	// Use combination of cluster prefix and cluster name for the key
+	// The cluster prefix will be used to differentiate the clusters from the
+	// cluster manager in the tf config file
+	clusterKey := fmt.Sprintf("cluster_%s", cfg.Name)
+	parsedConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
 
 	jsonBytes := []byte(parsedConfig.StringIndent("", "\t"))
 
