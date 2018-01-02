@@ -1,13 +1,17 @@
 package create
 
 import (
+	"bytes"
+	"context"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
-	"os/exec"
 
 	"github.com/Jeffail/gabs"
+	triton "github.com/joyent/triton-go"
+	"github.com/joyent/triton-go/authentication"
+	"github.com/joyent/triton-go/storage"
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -166,8 +170,82 @@ func NewTritonCluster() error {
 		cfg.TritonURL = result
 	}
 
-	// Load current tf config
-	currentConfigBytes, err := ioutil.ReadFile("main.tf.json")
+	// We now have enough information to init a triton client
+	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
+	if err != nil {
+		return err
+	}
+
+	sshKeySigner, err := authentication.NewPrivateKeySigner(cfg.TritonKeyID, keyMaterial, cfg.TritonAccount)
+	if err != nil {
+		return err
+	}
+
+	// Create manta client
+	config := &triton.ClientConfig{
+		TritonURL:   cfg.TritonURL,
+		MantaURL:    "https://us-east.manta.joyent.com", // TODO: Make this configurable
+		AccountName: cfg.TritonAccount,
+		Signers:     []authentication.Signer{sshKeySigner},
+	}
+	tritonStorageClient, err := storage.NewClient(config)
+	if err != nil {
+		return err
+	}
+
+	input := storage.ListDirectoryInput{
+		DirectoryName: fmt.Sprintf("/stor/%s", "triton-kubernetes"),
+		Limit:         100,
+	}
+
+	result, err := tritonStorageClient.Dir().List(context.Background(), &input)
+	if err != nil {
+		return err
+	}
+
+	// Stop if there are no cluster managers
+	if result.ResultSetSize == 0 {
+		fmt.Println("No cluster managers found.")
+		return nil
+	}
+
+	// Prompt for cluster manager
+	prompt := promptui.Select{
+		Label: "Cluster Manager",
+		Items: result.Entries,
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}?",
+			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+			Inactive: " {{.Name}}",
+			Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ .Name }}`, promptui.IconGood),
+		},
+	}
+
+	i, _, err := prompt.Run()
+	if err != nil {
+		return err
+	}
+
+	targetManager := result.Entries[i].Name
+
+	// Create a temporary directory
+	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Load current tf config from manta
+	tfJSONMantaPath := fmt.Sprintf("/stor/%s/%s/%s", "triton-kubernetes", targetManager, "main.tf.json")
+	getObjectInput := &storage.GetObjectInput{
+		ObjectPath: tfJSONMantaPath,
+	}
+	output, err := tritonStorageClient.Objects().Get(context.Background(), getObjectInput)
+	if err != nil {
+		return err
+	}
+
+	currentConfigBytes, err := ioutil.ReadAll(output.ObjectReader)
 	if err != nil {
 		return err
 	}
@@ -181,37 +259,44 @@ func NewTritonCluster() error {
 
 	jsonBytes := []byte(parsedConfig.StringIndent("", "\t"))
 
-	err = ioutil.WriteFile("main.tf.json", jsonBytes, 0644)
+	// Save the main.tf.json to file on disk
+	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
+	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
 	if err != nil {
 		return err
 	}
 
-	// Run terraform init
-	tfInit := exec.Command("terraform", []string{"init", "-force-copy"}...)
-	tfInit.Stdin = os.Stdin
-	tfInit.Stdout = os.Stdout
-	tfInit.Stderr = os.Stderr
-
-	if err := tfInit.Start(); err != nil {
+	// Copying ./terraform folder to temporary directory
+	// Need to remove this once terraform modules are hosted on github
+	err = shell.RunShellCommand(nil, "cp", "-r", "./terraform", tempDir)
+	if err != nil {
 		return err
 	}
 
-	err = tfInit.Wait()
+	// Use temporary directory as working directory
+	shellOptions := shell.ShellOptions{
+		WorkingDir: tempDir,
+	}
+
+	// Run terraform init
+	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform apply
-	tfApply := exec.Command("terraform", []string{"apply", "-auto-approve"}...)
-	tfApply.Stdin = os.Stdin
-	tfApply.Stdout = os.Stdout
-	tfApply.Stderr = os.Stderr
-
-	if err := tfApply.Start(); err != nil {
+	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
+	if err != nil {
 		return err
 	}
 
-	err = tfApply.Wait()
+	// After terraform succeeds, save main.tf.json to manta
+	objInput := storage.PutObjectInput{
+		ObjectPath:   tfJSONMantaPath,
+		ContentType:  "application/json",
+		ObjectReader: bytes.NewReader(jsonBytes),
+	}
+	err = tritonStorageClient.Objects().Put(context.Background(), &objInput)
 	if err != nil {
 		return err
 	}
