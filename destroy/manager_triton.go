@@ -185,6 +185,13 @@ func DeleteTritonManager() error {
 		return err
 	}
 
+	// Copying ./terraform folder to temporary directory
+	// Need to remove this once terraform modules are hosted on github
+	err = shell.RunShellCommand(nil, "cp", "-r", "./terraform", tempDir)
+	if err != nil {
+		return err
+	}
+
 	// Run terraform init
 	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
