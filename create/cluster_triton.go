@@ -209,24 +209,29 @@ func NewTritonCluster() error {
 		return nil
 	}
 
-	// Prompt for cluster manager
-	prompt := promptui.Select{
-		Label: "Cluster Manager",
-		Items: result.Entries,
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}?",
-			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-			Inactive: " {{.Name}}",
-			Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ .Name }}`, promptui.IconGood),
-		},
-	}
+	// Cluster manager
+	var targetManager string
+	if viper.IsSet("cluster_manager") {
+		targetManager = viper.GetString("cluster_manager")
+	} else {
+		// Prompt for cluster manager
+		prompt := promptui.Select{
+			Label: "Cluster Manager",
+			Items: result.Entries,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: " {{.Name}}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ .Name }}`, promptui.IconGood),
+			},
+		}
 
-	i, _, err := prompt.Run()
-	if err != nil {
-		return err
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		targetManager = result.Entries[i].Name
 	}
-
-	targetManager := result.Entries[i].Name
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
