@@ -51,6 +51,11 @@ func createCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "node":
 		fmt.Println("create node called")
+		err := create.NewTritonNode()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 
