@@ -276,7 +276,7 @@ func DeleteTritonCluster() error {
 
 // Returns an array of cluster names from the given tf config
 func getClusterOptions(parsedConfig *gabs.Container) ([]string, error) {
-	result := make([]string, 0)
+	result := []string{}
 
 	children, err := parsedConfig.S("module").ChildrenMap()
 	if err != nil {
@@ -285,7 +285,10 @@ func getClusterOptions(parsedConfig *gabs.Container) ([]string, error) {
 
 	for key, child := range children {
 		if strings.Index(key, "cluster_") == 0 {
-			name := child.Path("name").Data().(string)
+			name, ok := child.Path("name").Data().(string)
+			if !ok {
+				continue
+			}
 			result = append(result, name)
 		}
 	}
