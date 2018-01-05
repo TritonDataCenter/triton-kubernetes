@@ -18,13 +18,18 @@ import (
 	"github.com/spf13/viper"
 )
 
+type clusterOption struct {
+	ClusterKey  string
+	ClusterName string
+}
+
 func DeleteTritonCluster() error {
 	var tritonAccount string
 	var tritonKeyPath string
 	var tritonKeyID string
 	var tritonURL string
 	var clusterManager string
-	var clusterName string
+	var clusterKey string
 
 	// Triton Account
 	if viper.IsSet("triton_account") {
@@ -194,16 +199,23 @@ func DeleteTritonCluster() error {
 	}
 
 	if viper.IsSet("name") {
-		clusterName = viper.GetString("name")
+		clusterName := viper.GetString("name")
+		// Find cluster key based on cluster name
+		for _, option := range clusterOptions {
+			if clusterName == option.ClusterName {
+				clusterKey = option.ClusterKey
+				break
+			}
+		}
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster to delete",
 			Items: clusterOptions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
-				Inactive: " {{ . }}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ . }}`, promptui.IconGood),
+				Active:   fmt.Sprintf("%s {{ .ClusterName | underline }}", promptui.IconSelect),
+				Inactive: " {{ .ClusterName }}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ .ClusterName }}`, promptui.IconGood),
 			},
 		}
 
@@ -211,10 +223,10 @@ func DeleteTritonCluster() error {
 		if err != nil {
 			return err
 		}
-		clusterName = clusterOptions[i]
+		clusterKey = clusterOptions[i].ClusterKey
 	}
 
-	if clusterName == "" {
+	if clusterKey == "" {
 		return errors.New("Invalid Name")
 	}
 
@@ -246,7 +258,6 @@ func DeleteTritonCluster() error {
 	}
 
 	// Run terraform destroy
-	clusterKey := fmt.Sprintf("cluster_%s", clusterName)
 	targetArg := fmt.Sprintf("-target=module.%s", clusterKey)
 	err = shell.RunShellCommand(&shellOptions, "terraform", "destroy", "-force", targetArg)
 	if err != nil {
@@ -275,8 +286,8 @@ func DeleteTritonCluster() error {
 }
 
 // Returns an array of cluster names from the given tf config
-func getClusterOptions(parsedConfig *gabs.Container) ([]string, error) {
-	result := []string{}
+func getClusterOptions(parsedConfig *gabs.Container) ([]*clusterOption, error) {
+	result := []*clusterOption{}
 
 	children, err := parsedConfig.S("module").ChildrenMap()
 	if err != nil {
@@ -289,7 +300,10 @@ func getClusterOptions(parsedConfig *gabs.Container) ([]string, error) {
 			if !ok {
 				continue
 			}
-			result = append(result, name)
+			result = append(result, &clusterOption{
+				ClusterKey:  key,
+				ClusterName: name,
+			})
 		}
 	}
 	return result, nil
