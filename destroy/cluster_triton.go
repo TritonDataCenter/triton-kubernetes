@@ -7,21 +7,16 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
-	"strings"
 
 	"github.com/Jeffail/gabs"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	"github.com/joyent/triton-go/storage"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
-
-type clusterOption struct {
-	ClusterKey  string
-	ClusterName string
-}
 
 func DeleteTritonCluster() error {
 	var tritonAccount string
@@ -193,7 +188,7 @@ func DeleteTritonCluster() error {
 	}
 
 	// Get existing clusters
-	clusterOptions, err := getClusterOptions(parsedConfig)
+	clusterOptions, err := util.GetClusterOptions(parsedConfig)
 	if err != nil {
 		return err
 	}
@@ -283,28 +278,4 @@ func DeleteTritonCluster() error {
 	}
 
 	return nil
-}
-
-// Returns an array of cluster names from the given tf config
-func getClusterOptions(parsedConfig *gabs.Container) ([]*clusterOption, error) {
-	result := []*clusterOption{}
-
-	children, err := parsedConfig.S("module").ChildrenMap()
-	if err != nil {
-		return nil, err
-	}
-
-	for key, child := range children {
-		if strings.Index(key, "cluster_") == 0 {
-			name, ok := child.Path("name").Data().(string)
-			if !ok {
-				continue
-			}
-			result = append(result, &clusterOption{
-				ClusterKey:  key,
-				ClusterName: name,
-			})
-		}
-	}
-	return result, nil
 }
