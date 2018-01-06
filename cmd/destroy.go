@@ -51,6 +51,11 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "node":
 		fmt.Println("destroy node called")
+		err := destroy.DeleteTritonNode()
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
 	}
 }
 
