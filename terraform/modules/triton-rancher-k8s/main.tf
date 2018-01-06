@@ -111,6 +111,16 @@ resource "triton_machine" "etcd_host" {
   user_script = "${element(data.template_file.install_rancher_agent_etcd.*.rendered, count.index)}"
 
   networks = ["${data.triton_network.networks.*.id}"]
+
+  cns = {
+    services = ["etcd.${var.name}"]
+  }
+
+  affinity = ["role!=~etcd"]
+
+  tags = {
+    role = "etcd"
+  }
 }
 
 resource "rancher_registration_token" "orchestration" {
@@ -151,6 +161,16 @@ resource "triton_machine" "orchestration_host" {
   user_script = "${element(data.template_file.install_rancher_agent_orchestration.*.rendered, count.index)}"
 
   networks = ["${data.triton_network.networks.*.id}"]
+
+  cns = {
+    services = ["orchestration.${var.name}"]
+  }
+
+  affinity = ["role!=~orchestration"]
+
+  tags = {
+    role = "orchestration"
+  }
 }
 
 resource "rancher_registration_token" "compute" {
