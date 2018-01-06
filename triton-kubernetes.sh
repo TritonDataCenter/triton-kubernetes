@@ -1027,8 +1027,17 @@ showClusterDetails() {
 	else
 		echo "This is a non-HA setup so there is only one cluster manager node."
 	fi
+
+	local __MasterCNS __name
+	__name=$_name
+	__MasterCNS=$(triton instance get "${__name}-master-1" 2>&1 | jq '.dns_names' 2>&1 | grep "${__name}.svc.*.triton.zone" | tr -d '"' | tr -d ' ' | tr -d ',' || true)
+	if [ "$__MasterCNS" ]
+	then
+		echo "    http://${__MasterCNS}:8080/"
+	else
+		echo "    http://${__MasterIP}:8080/"
+	fi
 	cat <<-EOM
-	    http://${__MasterIP}:8080/settings/env
 
 	Next step is adding Kubernetes environments to be managed here.
 	To start your first environment, run:
@@ -1047,13 +1056,32 @@ showEnvironmentDetails() {
 	else
 		echo "This is a non-HA setup so Kubernetes services could run on any of the compute nodes."
 	fi
+
+	local __MasterCNS __name
+	__name=$(triton ls -l 2>&1 | grep "$__MasterIP" | awk '{print $2}' 2>&1 | sed 's/-master-1//g' || true)
+	__MasterCNS=$(triton instance get "${__name}-master-1" 2>&1 | jq '.dns_names' 2>&1 | grep "${__name}.svc.*.triton.zone" | tr -d '"' | tr -d ' ' | tr -d ',' || true)
+	if [ "$__MasterCNS" ]
+	then
+		cat <<-EOM
+		Cluster Manager URL:
+		    http://${__MasterCNS}:8080/settings/env
+		Kubernetes Hosts URL:
+		    http://${__MasterCNS}:8080/env/$($TERRAFORM output -state=terraform/terraform.tfstate -module="${_name}" -json | jq '.environment_id.value' | tr -d '"')/infra/hosts?mode=dot
+		Kubernetes Health:
+		    http://${__MasterCNS}:8080/env/$($TERRAFORM output -state=terraform/terraform.tfstate -module="${_name}" -json | jq '.environment_id.value' | tr -d '"')/apps/stacks?which=cattle
+		EOM
+	else
+		cat <<-EOM
+		Cluster Manager URL:
+		    http://${__MasterIP}:8080/settings/env
+		Kubernetes Hosts URL:
+		    http://${__MasterIP}:8080/env/$($TERRAFORM output -state=terraform/terraform.tfstate -module="${_name}" -json | jq '.environment_id.value' | tr -d '"')/infra/hosts?mode=dot
+		Kubernetes Health:
+		    http://${__MasterIP}:8080/env/$($TERRAFORM output -state=terraform/terraform.tfstate -module="${_name}" -json | jq '.environment_id.value' | tr -d '"')/apps/stacks?which=cattle
+		EOM
+	fi
+
 	cat <<-EOM
-	Cluster Manager URL:
-	    http://${__MasterIP}:8080/settings/env
-	Kubernetes Hosts URL:
-	    http://${__MasterIP}:8080/env/$($TERRAFORM output -state=terraform/terraform.tfstate -module="${_name}" -json | jq '.environment_id.value' | tr -d '"')/infra/hosts?mode=dot
-	Kubernetes Health:
-	    http://${__MasterIP}:8080/env/$($TERRAFORM output -state=terraform/terraform.tfstate -module="${_name}" -json | jq '.environment_id.value' | tr -d '"')/apps/stacks?which=cattle
 	
 	NOTE: Nodes might take a few minutes to connect and come up.
 
