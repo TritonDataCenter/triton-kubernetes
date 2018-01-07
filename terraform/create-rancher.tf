@@ -21,6 +21,7 @@ module "create_rancher-example" {
   master_triton_machine_package  = "k4-highcpu-kvm-1.75G"
   mysqldb_triton_machine_package = "k4-highcpu-kvm-1.75G"
   ha                             = true
+  gcm_node_count                 = "2"
 
   # rancher_server_image      = "docker-registry.joyent.com:5000/rancher/server:v1.6.10"
   # rancher_agent_image       = "docker-registry.joyent.com:5000/rancher/agent:v1.2.6"

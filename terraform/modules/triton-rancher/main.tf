@@ -80,7 +80,7 @@ data "template_file" "install_rancher_master" {
 }
 
 resource "triton_machine" "rancher_master" {
-  count = "${1 + var.ha}"
+  count = "${var.gcm_node_count}"
 
   package = "${var.master_triton_machine_package}"
   image   = "${data.triton_image.image.id}"
