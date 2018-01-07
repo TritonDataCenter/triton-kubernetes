@@ -75,6 +75,11 @@ variable "ha" {
   description = "Should Rancher be deployed in HA, if true a mysqldb node and 2 Rancher master nodes will be created."
 }
 
+variable "gcm_node_count" {
+  default     = "1"
+  description = "Number of Global Cluster Managers to cluster."
+}
+
 variable "mysqldb_triton_machine_package" {
   default     = ""
   description = "The Triton machine package to use for the Rancher mysqldb node. Defaults to master_triton_machine_package."

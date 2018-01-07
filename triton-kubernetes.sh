@@ -284,8 +284,13 @@ getClusterManagerConfig() {
     #	_mysqldb_triton_machine_package
 	#   _name
 	#   _ha
+	#   _gcm_node_count
 	_name="$(getArgument "Name your Global Cluster Manager" "global-cluster")"
 	_ha="$(getVerification "Do you want to set up the Global Cluster Manager in HA mode")"
+	if [ "$_ha" == "true" ]
+	then
+		_gcm_node_count="$(getArgument "Number of cluster manager nodes for $_name Global Cluster Manager" "2")"
+	fi
 	echo "From below options:"
 	echo "Joyent-SDC-Public"
 	echo "Joyent-SDC-Private"
@@ -625,7 +630,12 @@ readConfig() {
 		then
 			docker_engine_install_url=${line//docker_engine_install_url=/}
 			echo "docker-engine Install Script: $docker_engine_install_url"
+		elif echo "$line" | grep -q ^gcm_node_count=
+		then
+			_gcm_node_count=${line//gcm_node_count=/}
+			echo "Number of cluster manager Nodes: $_gcm_node_count"
 		fi
+
 		if [ "$_ha" == "true" ]
 		then
 			_etcd_node_count=3
@@ -653,7 +663,12 @@ setModuleClusterManager() {
 			rancher_registry_username_line="rancher_registry_username = \"${rancher_registry_username}\""
 			rancher_registry_password_line="rancher_registry_password = \"${rancher_registry_password}\""
 		fi
-		
+
+		if [ "$_ha" == "false" ]
+		then
+			_gcm_node_count="1"
+		fi
+
 		cd terraform
 		cat >>create-rancher.tf <<-EOF
 		
@@ -674,6 +689,7 @@ setModuleClusterManager() {
 		  master_triton_machine_package  = "${_master_triton_machine_package}"
 		  mysqldb_triton_machine_package = "${_mysqldb_triton_machine_package}"
 		  ha                             = ${_ha}
+		  gcm_node_count                 = ${_gcm_node_count}
 		  
 		  ${rancher_server_image_line}
 		  ${rancher_agent_image_line}
