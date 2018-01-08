@@ -44,9 +44,9 @@ type tritonNodeTerraformConfig struct {
 }
 
 type rancherHostLabelsConfig struct {
-	Orchestration bool `json:"orchestration"`
-	Etcd          bool `json:"etcd"`
-	Compute       bool `json:"compute"`
+	Orchestration bool `json:"orchestration,omitempty"`
+	Etcd          bool `json:"etcd,omitempty"`
+	Compute       bool `json:"compute,omitempty"`
 }
 
 func NewTritonNode() error {
