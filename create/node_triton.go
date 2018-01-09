@@ -341,7 +341,6 @@ func NewTritonNode() error {
 	}
 
 	// Triton Network Names
-	// Triton Network Names
 	if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
 	} else {
