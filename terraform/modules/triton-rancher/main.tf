@@ -48,7 +48,7 @@ resource "triton_machine" "rancher_mysqldb" {
   }
 
   provisioner "remote-exec" {
-    inline = <<EOF
+    inline = <<-EOF
       ${data.template_file.install_rancher_mysqldb.rendered}
       EOF
   }
@@ -79,7 +79,7 @@ data "template_file" "install_rancher_master" {
 }
 
 resource "triton_machine" "rancher_master" {
-  count = "${1 + var.ha}"
+  count = "${var.gcm_node_count}"
 
   package = "${var.master_triton_machine_package}"
   image   = "${data.triton_image.image.id}"
@@ -88,6 +88,16 @@ resource "triton_machine" "rancher_master" {
   user_script = "${data.template_file.install_rancher_master.rendered}"
 
   networks = ["${data.triton_network.networks.*.id}"]
+
+  cns = {
+    services = ["${var.name}"]
+  }
+
+  affinity = ["role!=~gcm"]
+
+  tags = {
+    role = "gcm"
+  }
 }
 
 data "template_file" "setup_rancher_k8s" {
