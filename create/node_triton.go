@@ -486,34 +486,37 @@ func NewTritonNode() error {
 		cfg.RancherRegistry = result
 	}
 
-	// Rancher Registry Username
-	if viper.IsSet("rancher_registry_username") {
-		cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Rancher Registry Username",
+	// Ask for rancher registry username/password only if rancher registry is given
+	if cfg.RancherRegistry != "" {
+		// Rancher Registry Username
+		if viper.IsSet("rancher_registry_username") {
+			cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "Rancher Registry Username",
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+			cfg.RancherRegistryUsername = result
 		}
 
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.RancherRegistryUsername = result
-	}
+		// Rancher Registry Password
+		if viper.IsSet("rancher_registry_password") {
+			cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "Rancher Registry Password",
+			}
 
-	// Rancher Registry Password
-	if viper.IsSet("rancher_registry_password") {
-		cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Rancher Registry Password",
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+			cfg.RancherRegistryPassword = result
 		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.RancherRegistryPassword = result
 	}
 
 	// Add node configuration to tf config
