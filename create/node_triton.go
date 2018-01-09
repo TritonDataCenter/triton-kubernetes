@@ -7,10 +7,13 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/Jeffail/gabs"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
+	"github.com/joyent/triton-go/compute"
+	"github.com/joyent/triton-go/network"
 	"github.com/joyent/triton-go/storage"
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/util"
@@ -33,6 +36,12 @@ type tritonNodeTerraformConfig struct {
 	TritonKeyPath string `json:"triton_key_path"`
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
+
+	TritonNetworkNames   []string `json:"triton_network_names,omitempty"`
+	TritonImageName      string   `json:"triton_image_name,omitempty"`
+	TritonImageVersion   string   `json:"triton_image_version,omitempty"`
+	TritonSSHUser        string   `json:"triton_ssh_user,omitempty"`
+	TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
 
 	RancherRegistry         string `json:"rancher_registry,omitempty"`
 	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
@@ -320,6 +329,192 @@ func NewTritonNode() error {
 
 	// Rancher Environment ID
 	cfg.RancherEnvironmentID = fmt.Sprintf("${module.%s.environment_id}", clusterKey)
+
+	tritonComputeClient, err := compute.NewClient(config)
+	if err != nil {
+		return err
+	}
+
+	tritonNetworkClient, err := network.NewClient(config)
+	if err != nil {
+		return err
+	}
+
+	// Triton Network Names
+	// Triton Network Names
+	if viper.IsSet("triton_network_names") {
+		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
+	} else {
+		networks, err := tritonNetworkClient.List(context.Background(), nil)
+		if err != nil {
+			return err
+		}
+
+		prompt := promptui.Select{
+			Label: "Triton Networks to attach",
+			Items: networks,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: "  {{.Name}}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton Networks:" | bold}} {{ .Name }}`, promptui.IconGood),
+			},
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.TritonNetworkNames = []string{networks[i].Name}
+	}
+
+	// Triton Image Name and Triton Image Version
+	if viper.IsSet("triton_image_name") && viper.IsSet("triton_image_version") {
+		cfg.TritonImageName = viper.GetString("triton_image_name")
+		cfg.TritonImageVersion = viper.GetString("triton_image_version")
+	} else {
+		listImageInput := compute.ListImagesInput{}
+		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
+		if err != nil {
+			return err
+		}
+
+		searcher := func(input string, index int) bool {
+			image := images[index]
+			name := strings.Replace(strings.ToLower(image.Name), " ", "", -1)
+			input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+			return strings.Contains(name, input)
+		}
+
+		prompt := promptui.Select{
+			Label: "Triton Image to use",
+			Items: images,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ .Name | underline }}{{ "@" | underline }}{{ .Version | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .Name }}@{{ .Version }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton Image:" | bold}} {{ .Name }}{{ "@" }}{{ .Version }}`, promptui.IconGood),
+			},
+			Searcher: searcher,
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.TritonImageName = images[i].Name
+		cfg.TritonImageVersion = images[i].Version
+	}
+
+	// Triton SSH User
+	if viper.IsSet("triton_ssh_user") {
+		cfg.TritonSSHUser = viper.GetString("triton_ssh_user")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Triton SSH User",
+			Default: "root",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.TritonSSHUser = result
+	}
+
+	// Triton Machine Package
+	if viper.IsSet("triton_machine_package") {
+		cfg.TritonMachinePackage = viper.GetString("triton_machine_package")
+	} else {
+		listPackageInput := compute.ListPackagesInput{}
+		packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)
+		if err != nil {
+			return err
+		}
+
+		// Filter to only kvm packages
+		kvmPackages := []*compute.Package{}
+		for _, pkg := range packages {
+			if strings.Contains(pkg.Name, "kvm") {
+				kvmPackages = append(kvmPackages, pkg)
+			}
+		}
+
+		searcher := func(input string, index int) bool {
+			pkg := kvmPackages[index]
+			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
+			input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+			return strings.Contains(name, input)
+		}
+
+		prompt := promptui.Select{
+			Label: "Triton Machine Package to use for node",
+			Items: kvmPackages,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .Name }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton Machine Package:" | bold}} {{ .Name }}`, promptui.IconGood),
+			},
+			Searcher: searcher,
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.TritonMachinePackage = kvmPackages[i].Name
+	}
+
+	// Rancher Registry
+	if viper.IsSet("rancher_registry") {
+		cfg.RancherRegistry = viper.GetString("rancher_registry")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Rancher Registry",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherRegistry = result
+	}
+
+	// Rancher Registry Username
+	if viper.IsSet("rancher_registry_username") {
+		cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Rancher Registry Username",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherRegistryUsername = result
+	}
+
+	// Rancher Registry Password
+	if viper.IsSet("rancher_registry_password") {
+		cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Rancher Registry Password",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherRegistryPassword = result
+	}
 
 	// Add node configuration to tf config
 	nodeKey := fmt.Sprintf("node_%s", cfg.Hostname)
