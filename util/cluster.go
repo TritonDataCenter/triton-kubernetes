@@ -12,8 +12,8 @@ type ClusterOption struct {
 }
 
 // Returns an array of cluster names from the given tf config
-func GetClusterOptions(parsedConfig *gabs.Container) ([]*ClusterOption, error) {
-	result := []*ClusterOption{}
+func GetClusterOptions(parsedConfig *gabs.Container) ([]ClusterOption, error) {
+	result := []ClusterOption{}
 
 	children, err := parsedConfig.S("module").ChildrenMap()
 	if err != nil {
@@ -26,7 +26,7 @@ func GetClusterOptions(parsedConfig *gabs.Container) ([]*ClusterOption, error) {
 			if !ok {
 				continue
 			}
-			result = append(result, &ClusterOption{
+			result = append(result, ClusterOption{
 				ClusterKey:  key,
 				ClusterName: name,
 			})

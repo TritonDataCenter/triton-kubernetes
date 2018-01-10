@@ -13,8 +13,8 @@ type NodeOption struct {
 }
 
 // Returns nodes associated with the given cluster key
-func GetNodeOptions(parsedConfig *gabs.Container, clusterKey string) ([]*NodeOption, error) {
-	result := []*NodeOption{}
+func GetNodeOptions(parsedConfig *gabs.Container, clusterKey string) ([]NodeOption, error) {
+	result := []NodeOption{}
 
 	children, err := parsedConfig.S("module").ChildrenMap()
 	if err != nil {
@@ -35,7 +35,7 @@ func GetNodeOptions(parsedConfig *gabs.Container, clusterKey string) ([]*NodeOpt
 				continue
 			}
 
-			result = append(result, &NodeOption{
+			result = append(result, NodeOption{
 				NodeKey:  key,
 				Hostname: hostname,
 			})
