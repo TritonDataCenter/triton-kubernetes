@@ -117,8 +117,10 @@ resource "rancher_registry_credential" "k8s_registry" {
 }
 
 resource "rancher_registration_token" "etcd" {
-  name           = "etcd_host_tokens"
-  description    = "Registration token for ${var.name} etcd hosts"
+  count = "${var.etcd_node_count}"
+
+  name           = "${var.name}-etcd-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-etcd-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -133,7 +135,7 @@ data "template_file" "install_rancher_agent_etcd" {
 
   vars {
     hostname                  = "${var.name}-etcd-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.etcd.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.etcd.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -219,8 +221,10 @@ resource "azurerm_virtual_machine" "etcd" {
 }
 
 resource "rancher_registration_token" "orchestration" {
-  name           = "orchestration_host_tokens"
-  description    = "Registration token for ${var.name} orchestration hosts"
+  count = "${var.orchestration_node_count}"
+
+  name           = "${var.name}-orchestration-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-orchestration-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -235,7 +239,7 @@ data "template_file" "install_rancher_agent_orchestration" {
 
   vars {
     hostname                  = "${var.name}-orchestration-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.orchestration.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.orchestration.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -321,8 +325,10 @@ resource "azurerm_virtual_machine" "orchestration" {
 }
 
 resource "rancher_registration_token" "compute" {
-  name           = "compute_host_tokens"
-  description    = "Registration token for ${var.name} compute hosts"
+  count = "${var.compute_node_count}"
+
+  name           = "${var.name}-compute-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-compute-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -337,7 +343,7 @@ data "template_file" "install_rancher_agent_compute" {
 
   vars {
     hostname                  = "${var.name}-compute-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.compute.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.compute.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
