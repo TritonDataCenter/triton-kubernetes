@@ -44,14 +44,14 @@ func createCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "cluster":
 		fmt.Println("create cluster called")
-		err := create.NewTritonCluster()
+		err := create.NewCluster()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "node":
 		fmt.Println("create node called")
-		err := create.NewTritonNode()
+		err := create.NewNode()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

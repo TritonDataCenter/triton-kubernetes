@@ -37,21 +37,21 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 	switch destroyType {
 	case "manager":
 		fmt.Println("destroy manager called")
-		err := destroy.DeleteTritonManager()
+		err := destroy.DeleteManager()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "cluster":
 		fmt.Println("destroy cluster called")
-		err := destroy.DeleteTritonCluster()
+		err := destroy.DeleteCluster()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "node":
 		fmt.Println("destroy node called")
-		err := destroy.DeleteTritonNode()
+		err := destroy.DeleteNode()
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

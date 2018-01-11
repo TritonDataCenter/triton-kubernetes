@@ -1,7 +1,6 @@
 package create
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -9,17 +8,19 @@ import (
 	"os"
 	"strings"
 
+	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/shell"
+
 	"github.com/Jeffail/gabs"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	"github.com/joyent/triton-go/compute"
 	"github.com/joyent/triton-go/network"
-	"github.com/joyent/triton-go/storage"
-	"github.com/joyent/triton-kubernetes/shell"
-	"github.com/joyent/triton-kubernetes/util"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
+
+const tritonNodeKeyFormat = "node_triton_%s"
 
 type tritonNodeTerraformConfig struct {
 	Source string `json:"source"`
@@ -53,20 +54,73 @@ type tritonNodeTerraformConfig struct {
 }
 
 type rancherHostLabelsConfig struct {
-	Orchestration bool `json:"orchestration,omitempty"`
-	Etcd          bool `json:"etcd,omitempty"`
-	Compute       bool `json:"compute,omitempty"`
+	Orchestration string `json:"orchestration,omitempty"`
+	Etcd          string `json:"etcd,omitempty"`
+	Compute       string `json:"compute,omitempty"`
 }
 
-func NewTritonNode() error {
-	var hostLabel string
-	var clusterManager string
-	var clusterKey string
-
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
 	cfg := tritonNodeTerraformConfig{}
 
-	// TODO: Move this to const or make configurable
-	cfg.Source = "./terraform/modules/triton-rancher-k8s-host"
+	cfg.TritonAccount = tritonAccount
+	cfg.TritonKeyPath = tritonKeyPath
+	cfg.TritonKeyID = tritonKeyID
+	cfg.TritonURL = tritonURL
+
+	baseSource := "github.com/joyent/triton-kubernetes"
+	if viper.IsSet("source_url") {
+		baseSource = viper.GetString("source_url")
+	}
+
+	cfg.Source = fmt.Sprintf("%s//terraform/modules/triton-rancher-k8s-host", baseSource)
+
+	// Rancher API URL
+	cfg.RancherAPIURL = "http://${element(module.cluster-manager.masters, 0)}:8080"
+
+	// Rancher Environment ID
+	cfg.RancherEnvironmentID = fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster)
+
+	// Rancher Host Label
+	selectedHostLabel := ""
+	hostLabelOptions := []string{
+		"compute",
+		"etcd",
+		"orchestration",
+	}
+	if viper.IsSet("rancher_host_label") {
+		selectedHostLabel = viper.GetString("rancher_host_label")
+	} else {
+		prompt := promptui.Select{
+			Label: "Which type of node?",
+			Items: hostLabelOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: "  {{ . }}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Host Type:" | bold}} {{ . }}`, promptui.IconGood),
+			},
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		selectedHostLabel = hostLabelOptions[i]
+	}
+
+	switch selectedHostLabel {
+	case "compute":
+		cfg.RancherHostLabels.Compute = "true"
+	case "etcd":
+		cfg.RancherHostLabels.Etcd = "true"
+	case "orchestration":
+		cfg.RancherHostLabels.Orchestration = "true"
+	default:
+		return fmt.Errorf("Invalid rancher_host_label '%s', must be 'compute', 'etcd' or 'orchestration'", selectedHostLabel)
+	}
+
+	// TODO: Allow user to specify number of nodes to be created.
 
 	// hostname
 	if viper.IsSet("hostname") {
@@ -87,121 +141,6 @@ func NewTritonNode() error {
 		return errors.New("Invalid Hostname")
 	}
 
-	// Rancher Host Label
-	hostLabelOptions := []string{
-		"compute",
-		"etcd",
-		"orchestration",
-	}
-	if viper.IsSet("rancher_host_label") {
-		hostLabel = viper.GetString("rancher_host_label")
-	} else {
-		prompt := promptui.Select{
-			Label: "Which type of node?",
-			Items: hostLabelOptions,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
-				Inactive: "  {{ . }}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Highly Available:" | bold}} {{ . }}`, promptui.IconGood),
-			},
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		hostLabel = hostLabelOptions[i]
-	}
-
-	if hostLabel == "compute" {
-		cfg.RancherHostLabels.Compute = true
-	} else if hostLabel == "etcd" {
-		cfg.RancherHostLabels.Etcd = true
-	} else if hostLabel == "orchestration" {
-		cfg.RancherHostLabels.Orchestration = true
-	} else {
-		return errors.New("Invalid rancher host label")
-	}
-
-	// Rancher API URL
-	cfg.RancherAPIURL = "http://${element(module.cluster-manager.masters, 0)}:8080"
-
-	// Triton account
-	if viper.IsSet("triton_account") {
-		cfg.TritonAccount = viper.GetString("triton_account")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Triton Account Name (usually your email)",
-			Validate: func(input string) error {
-				if len(input) == 0 {
-					return errors.New("Invalid Triton Account")
-				}
-				return nil
-			},
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.TritonAccount = result
-	}
-
-	// Triton Key Path
-	if viper.IsSet("triton_key_path") {
-		cfg.TritonKeyPath = viper.GetString("triton_key_path")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Triton Key Path",
-			Validate: func(input string) error {
-				_, err := os.Stat(input)
-				if err != nil {
-					if os.IsNotExist(err) {
-						return errors.New("File not found")
-					}
-				}
-				return nil
-			},
-			Default: "~/.ssh/id_rsa",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.TritonKeyPath = result
-	}
-
-	// Triton Key ID
-	if viper.IsSet("triton_key_id") {
-		cfg.TritonKeyID = viper.GetString("triton_key_id")
-	} else {
-		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
-		if err != nil {
-			return err
-		}
-		cfg.TritonKeyID = keyID
-	}
-
-	// Triton URL
-	if viper.IsSet("triton_url") {
-		cfg.TritonURL = viper.GetString("triton_url")
-	} else {
-		prompt := promptui.Prompt{
-			Label:   "Triton URL",
-			Default: "https://us-east-1.api.joyent.com",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.TritonURL = result
-	}
-
-	// We now have enough information to init a triton client
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
 	if err != nil {
 		return err
@@ -212,127 +151,11 @@ func NewTritonNode() error {
 		return err
 	}
 
-	// Create manta client
 	config := &triton.ClientConfig{
 		TritonURL:   cfg.TritonURL,
-		MantaURL:    "https://us-east.manta.joyent.com", // TODO: Make this configurable
+		MantaURL:    mantaURL,
 		AccountName: cfg.TritonAccount,
 		Signers:     []authentication.Signer{sshKeySigner},
-	}
-	tritonStorageClient, err := storage.NewClient(config)
-	if err != nil {
-		return err
-	}
-
-	input := storage.ListDirectoryInput{
-		DirectoryName: fmt.Sprintf("/stor/%s", "triton-kubernetes"),
-		Limit:         100,
-	}
-
-	result, err := tritonStorageClient.Dir().List(context.Background(), &input)
-	if err != nil {
-		return err
-	}
-
-	// Stop if there are no cluster managers
-	if result.ResultSetSize == 0 {
-		fmt.Println("No cluster managers found.")
-		return nil
-	}
-
-	// Cluster Manager
-	if viper.IsSet("cluster_manager") {
-		clusterManager = viper.GetString("cluster_manager")
-	} else {
-		prompt := promptui.Select{
-			Label: "Cluster Manager",
-			Items: result.Entries,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-				Inactive: " {{.Name}}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ .Name }}`, promptui.IconGood),
-			},
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		clusterManager = result.Entries[i].Name
-	}
-
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Load current tf config from manta
-	tfJSONMantaPath := fmt.Sprintf("/stor/%s/%s/%s", "triton-kubernetes", clusterManager, "main.tf.json")
-	getObjectInput := &storage.GetObjectInput{
-		ObjectPath: tfJSONMantaPath,
-	}
-	output, err := tritonStorageClient.Objects().Get(context.Background(), getObjectInput)
-	if err != nil {
-		return err
-	}
-
-	currentConfigBytes, err := ioutil.ReadAll(output.ObjectReader)
-	if err != nil {
-		return err
-	}
-
-	parsedConfig, err := gabs.ParseJSON(currentConfigBytes)
-	if err != nil {
-		return err
-	}
-
-	// Get existing clusters
-	clusterOptions, err := util.GetClusterOptions(parsedConfig)
-	if err != nil {
-		return err
-	}
-
-	// Cluster Name
-	if viper.IsSet("cluster_name") {
-		clusterName := viper.GetString("cluster_name")
-		for _, option := range clusterOptions {
-			if clusterName == option.ClusterName {
-				clusterKey = option.ClusterKey
-				break
-			}
-		}
-	} else {
-		prompt := promptui.Select{
-			Label: "Cluster",
-			Items: clusterOptions,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ .ClusterName | underline }}", promptui.IconSelect),
-				Inactive: " {{ .ClusterName }}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ .ClusterName }}`, promptui.IconGood),
-			},
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		clusterKey = clusterOptions[i].ClusterKey
-	}
-
-	if clusterKey == "" {
-		return errors.New("Invalid Cluster Name")
-	}
-
-	// Rancher Environment ID
-	cfg.RancherEnvironmentID = fmt.Sprintf("${module.%s.environment_id}", clusterKey)
-
-	tritonComputeClient, err := compute.NewClient(config)
-	if err != nil {
-		return err
 	}
 
 	tritonNetworkClient, err := network.NewClient(config)
@@ -343,6 +166,8 @@ func NewTritonNode() error {
 	// Triton Network Names
 	if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
+
+		// TODO: Verify triton network names.
 	} else {
 		networks, err := tritonNetworkClient.List(context.Background(), nil)
 		if err != nil {
@@ -368,10 +193,17 @@ func NewTritonNode() error {
 		cfg.TritonNetworkNames = []string{networks[i].Name}
 	}
 
+	tritonComputeClient, err := compute.NewClient(config)
+	if err != nil {
+		return err
+	}
+
 	// Triton Image Name and Triton Image Version
 	if viper.IsSet("triton_image_name") && viper.IsSet("triton_image_version") {
 		cfg.TritonImageName = viper.GetString("triton_image_name")
 		cfg.TritonImageVersion = viper.GetString("triton_image_version")
+
+		// TODO: Verify Triton Image Name/Version
 	} else {
 		listImageInput := compute.ListImagesInput{}
 		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
@@ -427,6 +259,8 @@ func NewTritonNode() error {
 	// Triton Machine Package
 	if viper.IsSet("triton_machine_package") {
 		cfg.TritonMachinePackage = viper.GetString("triton_machine_package")
+
+		// TODO: Verify triton_machine_package
 	} else {
 		listPackageInput := compute.ListPackagesInput{}
 		packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)
@@ -475,14 +309,18 @@ func NewTritonNode() error {
 		cfg.RancherRegistry = viper.GetString("rancher_registry")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Rancher Registry",
+			Label:   "Rancher Registry",
+			Default: "None",
 		}
 
 		result, err := prompt.Run()
 		if err != nil {
 			return err
 		}
-		cfg.RancherRegistry = result
+
+		if result != "None" {
+			cfg.RancherRegistry = result
+		}
 	}
 
 	// Ask for rancher registry username/password only if rancher registry is given
@@ -518,22 +356,32 @@ func NewTritonNode() error {
 		}
 	}
 
-	// Add node configuration to tf config
-	nodeKey := fmt.Sprintf("node_%s", cfg.Hostname)
-	parsedConfig.SetP(&cfg, fmt.Sprintf("module.%s", nodeKey))
-
-	jsonBytes := []byte(parsedConfig.StringIndent("", "\t"))
-
-	// Save the main.tf.json to file on disk
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	// Load current cluster manager config
+	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
 	if err != nil {
 		return err
 	}
 
-	// Copying ./terraform folder to temporary directory
-	// Need to remove this once terraform modules are hosted on github
-	err = shell.RunShellCommand(nil, "cp", "-r", "./terraform", tempDir)
+	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
+	if err != nil {
+		return err
+	}
+
+	// Add new node to terraform config
+	nodeKey := fmt.Sprintf(tritonNodeKeyFormat, cfg.Hostname)
+	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", nodeKey))
+
+	// Create a temporary directory
+	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Save the terraform config to the temporary directory
+	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
+	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
+	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
 	if err != nil {
 		return err
 	}
@@ -555,13 +403,8 @@ func NewTritonNode() error {
 		return err
 	}
 
-	// After terraform succeeds, save main.tf.json to manta
-	objInput := storage.PutObjectInput{
-		ObjectPath:   tfJSONMantaPath,
-		ContentType:  "application/json",
-		ObjectReader: bytes.NewReader(jsonBytes),
-	}
-	err = tritonStorageClient.Objects().Put(context.Background(), &objInput)
+	// After terraform succeeds, commit state
+	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
 	if err != nil {
 		return err
 	}
