@@ -12,6 +12,12 @@ import (
 	"github.com/spf13/viper"
 )
 
+type rancherHostLabelsConfig struct {
+	Orchestration string `json:"orchestration,omitempty"`
+	Etcd          string `json:"etcd,omitempty"`
+	Compute       string `json:"compute,omitempty"`
+}
+
 func NewNode() error {
 	tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL, err := util.GetTritonAccountVariables()
 	if err != nil {

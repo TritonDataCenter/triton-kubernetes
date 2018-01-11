@@ -19,6 +19,11 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	azureClusterKeyFormat                     = "cluster_azure_%s"
+	azureRancherKubernetesTerraformModulePath = "terraform/modules/azure-rancher-k8s"
+)
+
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
 type azureClusterTerraformConfig struct {
@@ -56,22 +61,22 @@ type azureClusterTerraformConfig struct {
 }
 
 func newAzureCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {
-	cfg := azureClusterTerraformConfig{}
+	cfg := azureClusterTerraformConfig{
+		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
+
+		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
+		EtcdNodeCount:          "0",
+		OrchestrationNodeCount: "0",
+		ComputeNodeCount:       "0",
+	}
 
 	baseSource := "github.com/joyent/triton-kubernetes"
 	if viper.IsSet("source_url") {
 		baseSource = viper.GetString("source_url")
 	}
 
-	cfg.Source = fmt.Sprintf("%s//terraform/modules/azure-rancher-k8s", baseSource)
-
-	// Rancher API URL
-	cfg.RancherAPIURL = "http://${element(module.cluster-manager.masters, 0)}:8080"
-
-	// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-	cfg.EtcdNodeCount = "0"
-	cfg.OrchestrationNodeCount = "0"
-	cfg.ComputeNodeCount = "0"
+	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s
+	cfg.Source = fmt.Sprintf("%s//%s", baseSource, azureRancherKubernetesTerraformModulePath)
 
 	// Name
 	if viper.IsSet("name") {
@@ -273,7 +278,7 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 		cfg.AzureLocation = value
 	}
 
-	// Verify selected auzre location exists
+	// Verify selected azure location exists
 	found := false
 	for _, location := range azureLocations {
 		if cfg.AzureLocation == location {
@@ -297,7 +302,7 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 	}
 
 	// Add new cluster to terraform config
-	clusterKey := fmt.Sprintf("cluster_%s", cfg.Name)
+	clusterKey := fmt.Sprintf(azureClusterKeyFormat, cfg.Name)
 	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
 
 	// Create a temporary directory

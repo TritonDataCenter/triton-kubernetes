@@ -21,6 +21,10 @@ import (
 	"github.com/spf13/viper"
 )
 
+const (
+	tritonRancherTerraformModulePath = "terraform/modules/triton-rancher"
+)
+
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
 type tritonManagerTerraformConfig struct {
@@ -76,7 +80,8 @@ func NewTritonManager() error {
 		baseSource = viper.GetString("source_url")
 	}
 
-	cfg.Source = fmt.Sprintf("%s//terraform/modules/triton-rancher", baseSource)
+	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher
+	cfg.Source = fmt.Sprintf("%s//%s", baseSource, tritonRancherTerraformModulePath)
 
 	// Name
 	if viper.IsSet("name") {

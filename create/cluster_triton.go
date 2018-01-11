@@ -14,7 +14,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const tritonClusterKeyFormat = "cluster_triton_%s"
+const (
+	tritonClusterKeyFormat                     = "cluster_triton_%s"
+	tritonRancherKubernetesTerraformModulePath = "terraform/modules/triton-rancher-k8s"
+)
 
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
@@ -48,27 +51,27 @@ type tritonClusterTerraformConfig struct {
 }
 
 func newTritonCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
-	cfg := tritonClusterTerraformConfig{}
+	cfg := tritonClusterTerraformConfig{
+		TritonAccount: tritonAccount,
+		TritonKeyPath: tritonKeyPath,
+		TritonKeyID:   tritonKeyID,
+		TritonURL:     tritonURL,
 
-	cfg.TritonAccount = tritonAccount
-	cfg.TritonKeyPath = tritonKeyPath
-	cfg.TritonKeyID = tritonKeyID
-	cfg.TritonURL = tritonURL
+		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
+
+		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
+		EtcdNodeCount:          "0",
+		OrchestrationNodeCount: "0",
+		ComputeNodeCount:       "0",
+	}
 
 	baseSource := "github.com/joyent/triton-kubernetes"
 	if viper.IsSet("source_url") {
 		baseSource = viper.GetString("source_url")
 	}
 
-	cfg.Source = fmt.Sprintf("%s//terraform/modules/triton-rancher-k8s", baseSource)
-
-	// Rancher API URL
-	cfg.RancherAPIURL = "http://${element(module.cluster-manager.masters, 0)}:8080"
-
-	// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-	cfg.EtcdNodeCount = "0"
-	cfg.OrchestrationNodeCount = "0"
-	cfg.ComputeNodeCount = "0"
+	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher-k8s
+	cfg.Source = fmt.Sprintf("%s//%s", baseSource, azureRancherKubernetesTerraformModulePath)
 
 	// Name
 	if viper.IsSet("name") {

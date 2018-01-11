@@ -53,12 +53,6 @@ type tritonNodeTerraformConfig struct {
 	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
 }
 
-type rancherHostLabelsConfig struct {
-	Orchestration string `json:"orchestration,omitempty"`
-	Etcd          string `json:"etcd,omitempty"`
-	Compute       string `json:"compute,omitempty"`
-}
-
 func newTritonNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
 	cfg := tritonNodeTerraformConfig{}
 
@@ -304,6 +298,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 		cfg.TritonMachinePackage = kvmPackages[i].Name
 	}
 
+	// TODO: move this to cluster creating, then refer to it for node creation
 	// Rancher Registry
 	if viper.IsSet("rancher_registry") {
 		cfg.RancherRegistry = viper.GetString("rancher_registry")
