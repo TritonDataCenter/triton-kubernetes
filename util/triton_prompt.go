@@ -7,6 +7,7 @@ import (
 	"github.com/joyent/triton-kubernetes/shell"
 
 	"github.com/manifoldco/promptui"
+	"github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -34,13 +35,19 @@ func GetTritonAccountVariables() (tritonAccount, tritonKeyPath, tritonKeyID, tri
 	}
 
 	// Triton Key Path
+	rawTritonKeyPath := ""
 	if viper.IsSet("triton_key_path") {
-		tritonKeyPath = viper.GetString("triton_key_path")
+		rawTritonKeyPath = viper.GetString("triton_key_path")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Triton Key Path",
 			Validate: func(input string) error {
-				_, err := os.Stat(input)
+				expandedPath, err := homedir.Expand(input)
+				if err != nil {
+					return err
+				}
+
+				_, err = os.Stat(expandedPath)
 				if err != nil {
 					if os.IsNotExist(err) {
 						return errors.New("File not found")
@@ -56,8 +63,15 @@ func GetTritonAccountVariables() (tritonAccount, tritonKeyPath, tritonKeyID, tri
 			funcErr = err
 			return
 		}
-		tritonKeyPath = result
+		rawTritonKeyPath = result
 	}
+
+	expandedTritonKeyPath, err := homedir.Expand(rawTritonKeyPath)
+	if err != nil {
+		funcErr = err
+		return
+	}
+	tritonKeyPath = expandedTritonKeyPath
 
 	// Triton Key ID
 	if viper.IsSet("triton_key_id") {
