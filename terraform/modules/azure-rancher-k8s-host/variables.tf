@@ -51,6 +51,10 @@ variable "azure_client_secret" {}
 
 variable "azure_tenant_id" {}
 
+variable "azure_environment" {
+  default = "public"
+}
+
 variable "azure_location" {}
 
 variable "azure_resource_group_name" {}

@@ -41,10 +41,11 @@ resource "triton_machine" "rancher_mysqldb" {
   networks = ["${data.triton_network.networks.*.id}"]
 
   connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
-    host        = "${triton_machine.rancher_mysqldb.primaryip}"
-    private_key = "${file(var.triton_key_path)}"
+    type = "ssh"
+    user = "${var.triton_ssh_user}"
+    host = "${triton_machine.rancher_mysqldb.primaryip}"
+
+    # private_key = "${file(var.triton_key_path)}"
   }
 
   provisioner "remote-exec" {

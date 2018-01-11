@@ -55,6 +55,10 @@ variable "azure_tenant_id" {
   default = ""
 }
 
+variable "azure_environment" {
+  default = "public"
+}
+
 variable "azure_location" {
   default = "West US 2"
 }
