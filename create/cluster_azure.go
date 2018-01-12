@@ -41,7 +41,7 @@ type azureClusterTerraformConfig struct {
 	RancherAccessKey string `json:"rancher_access_key"`
 	RancherSecretKey string `json:"rancher_secret_key"`
 
-	AzureSubscriptionID string `json:"azure_subscription_id`
+	AzureSubscriptionID string `json:"azure_subscription_id"`
 	AzureClientID       string `json:"azure_client_id"`
 	AzureClientSecret   string `json:"azure_client_secret"`
 	AzureTenantID       string `json:"azure_tenant_id"`
