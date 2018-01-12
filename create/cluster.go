@@ -12,6 +12,8 @@ import (
 	"github.com/spf13/viper"
 )
 
+const defaultSourceURL = "github.com/joyent/triton-kubernetes"
+
 type baseClusterTerraformConfig struct {
 	Source string `json:"source"`
 
@@ -136,7 +138,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		ComputeNodeCount:       "0",
 	}
 
-	baseSource := "github.com/joyent/triton-kubernetes"
+	baseSource := defaultSourceURL
 	if viper.IsSet("source_url") {
 		baseSource = viper.GetString("source_url")
 	}

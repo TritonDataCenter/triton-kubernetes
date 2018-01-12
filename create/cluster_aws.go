@@ -32,14 +32,14 @@ const (
 type awsClusterTerraformConfig struct {
 	baseClusterTerraformConfig
 
-	AWSAccessKey     string `json:"aws_access_key"`
-	AWSSecretKey     string `json:"aws_secret_key"`
+	AWSAccessKey string `json:"aws_access_key"`
+	AWSSecretKey string `json:"aws_secret_key"`
+
+	AWSRegion        string `json:"aws_region"`
+	AWSVPCCIDR       string `json:"aws_vpc_cidr"`
+	AWSSubnetCIDR    string `json:"aws_subnet_cidr"`
 	AWSPublicKeyPath string `json:"aws_public_key_path"`
 	AWSKeyName       string `json:"aws_key_name"`
-
-	AWSRegion     string `json:"aws_region"`
-	AWSVPCCIDR    string `json:"aws_vpc_cidr"`
-	AWSSubnetCIDR string `json:"aws_subnet_cidr"`
 }
 
 func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {

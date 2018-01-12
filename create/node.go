@@ -181,7 +181,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, clu
 		cfg.RancherRegistryPassword = rancherRegistryPassword
 	}
 
-	baseSource := "github.com/joyent/triton-kubernetes"
+	baseSource := defaultSourceURL
 	if viper.IsSet("source_url") {
 		baseSource = viper.GetString("source_url")
 	}
