@@ -198,25 +198,48 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 
 		keyPairs := []string{}
 		for _, key := range rawKeyPairs.KeyPairs {
-			fmt.Println(*key.KeyName)
 			keyPairs = append(keyPairs, *key.KeyName)
 		}
 
-		prompt := promptui.SelectWithAdd{
-			Label:    "AWS Key to use",
-			Items:    keyPairs,
-			AddLabel: "Upload new key",
+		// If there are no key pairs ask the user to create a new public key
+		createNewKeyPair := false
+		if len(keyPairs) == 0 {
+			createNewKeyPair = true
+
+			prompt := promptui.Prompt{
+				Label:   "Name for new aws public key",
+				Default: "triton-kubernetes_public_key",
+			}
+
+			value, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			cfg.AWSKeyName = value
+
+		} else {
+			prompt := promptui.SelectWithAdd{
+				Label:    "AWS Key to use",
+				Items:    keyPairs,
+				AddLabel: "Upload new key",
+			}
+
+			i, value, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			// i == -1 when user selects "Upload new key"
+			if i == -1 {
+				createNewKeyPair = true
+			}
+
+			cfg.AWSKeyName = value
 		}
 
-		i, value, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.AWSKeyName = value
-
-		if i == -1 {
-			// User chose to upload new key, ask for aws_public_key_path
+		if createNewKeyPair {
+			// User chose to create new key, ask for aws_public_key_path
 			prompt := promptui.Prompt{
 				Label: "AWS Public Key Path",
 				Validate: func(input string) error {

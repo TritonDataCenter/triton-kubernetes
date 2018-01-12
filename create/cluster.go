@@ -65,6 +65,12 @@ func NewCluster() error {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
 			Items: clusterManagers,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ . }}`, promptui.IconGood),
+			},
 		}
 
 		_, value, err := prompt.Run()
@@ -95,6 +101,12 @@ func NewCluster() error {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
 			Items: []string{"Triton", "AWS", "GCP", "Azure"},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cloud Provider:" | bold}} {{ . }}`, promptui.IconGood),
+			},
 		}
 
 		_, value, err := prompt.Run()
@@ -172,6 +184,12 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		prompt := promptui.Select{
 			Label: "Kubernetes Plane Isolation",
 			Items: []string{"required", "none"},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "k8s Plane Isolation:" | bold}} {{ . }}`, promptui.IconGood),
+			},
 		}
 
 		_, value, err := prompt.Run()
@@ -229,6 +247,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Rancher Registry Password",
+				Mask:  '*',
 			}
 
 			result, err := prompt.Run()
@@ -281,6 +300,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		} else {
 			prompt := promptui.Prompt{
 				Label: "k8s Registry Password",
+				Mask:  '*',
 			}
 
 			result, err := prompt.Run()

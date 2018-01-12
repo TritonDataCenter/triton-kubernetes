@@ -104,7 +104,22 @@ func NewTritonManager() error {
 		return errors.New("Invalid Cluster Manager Name")
 	}
 
-	// TODO: Validate that a cluster manager with the same name doesn't already exist.
+	// Validate that a cluster manager with the same name doesn't already exist.
+	existingClusterManagers, err := remoteClusterManagerState.List()
+	if err != nil {
+		return err
+	}
+
+	found := false
+	for _, clusterManagerName := range existingClusterManagers {
+		if cfg.Name == clusterManagerName {
+			found = true
+			break
+		}
+	}
+	if found {
+		return fmt.Errorf("A Cluster Manager with the name '%s' already exists.", cfg.Name)
+	}
 
 	// HA
 	if viper.IsSet("ha") {

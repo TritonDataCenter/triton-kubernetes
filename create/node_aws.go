@@ -115,7 +115,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 				Label:    "{{ .Name }}?",
 				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
 				Inactive: `  {{ .Name }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ .Name }}`, promptui.IconGood),
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "AWS AMI:" | bold}} {{ .Name }}`, promptui.IconGood),
 			},
 			Searcher: searcher,
 		}

@@ -76,17 +76,29 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 		return err
 	}
 
+	networks, err := tritonNetworkClient.List(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
 	// Triton Network Names
 	if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
 
-		// TODO: Verify triton network names.
-	} else {
-		networks, err := tritonNetworkClient.List(context.Background(), nil)
-		if err != nil {
-			return err
+		// Verify triton network names
+		validNetworksMap := map[string]struct{}{}
+		validNetworksSlice := []string{}
+		for _, validNetwork := range networks {
+			validNetworksMap[validNetwork.Name] = struct{}{}
+			validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
 		}
 
+		for _, network := range cfg.TritonNetworkNames {
+			if _, ok := validNetworksMap[network]; !ok {
+				return fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
+			}
+		}
+	} else {
 		prompt := promptui.Select{
 			Label: "Triton Networks to attach",
 			Items: networks,

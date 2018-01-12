@@ -138,6 +138,12 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 		prompt := promptui.Select{
 			Label: "Azure Environment",
 			Items: []string{"public", "government", "german", "china"},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Azure Environment:" | bold}} {{ . }}`, promptui.IconGood),
+			},
 		}
 
 		_, value, err := prompt.Run()
@@ -187,6 +193,18 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 	// Azure Location
 	if viper.IsSet("azure_location") {
 		cfg.AzureLocation = viper.GetString("azure_location")
+
+		// Verify selected azure location exists
+		found := false
+		for _, location := range azureLocations {
+			if cfg.AzureLocation == location {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("Invalid azure_location '%s', must be one of the following: %s", cfg.AzureLocation, strings.Join(azureLocations, ", "))
+		}
 	} else {
 		prompt := promptui.Select{
 			Label: "Azure Location",
@@ -196,6 +214,12 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 				input = strings.Replace(strings.ToLower(input), " ", "", -1)
 				return strings.Contains(name, input)
 			},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Azure Location:" | bold}} {{ . }}`, promptui.IconGood),
+			},
 		}
 
 		_, value, err := prompt.Run()
@@ -204,18 +228,6 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 		}
 
 		cfg.AzureLocation = value
-	}
-
-	// Verify selected azure location exists
-	found := false
-	for _, location := range azureLocations {
-		if cfg.AzureLocation == location {
-			found = true
-			break
-		}
-	}
-	if !found {
-		return fmt.Errorf("Invalid azure_location '%s', must be one of the following: %s", cfg.AzureLocation, strings.Join(azureLocations, ", "))
 	}
 
 	// Load current cluster manager config
