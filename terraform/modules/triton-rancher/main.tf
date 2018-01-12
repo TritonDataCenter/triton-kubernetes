@@ -41,11 +41,10 @@ resource "triton_machine" "rancher_mysqldb" {
   networks = ["${data.triton_network.networks.*.id}"]
 
   connection {
-    type = "ssh"
-    user = "${var.triton_ssh_user}"
-    host = "${triton_machine.rancher_mysqldb.primaryip}"
-
-    # private_key = "${file(var.triton_key_path)}"
+    type        = "ssh"
+    user        = "${var.triton_ssh_user}"
+    host        = "${triton_machine.rancher_mysqldb.primaryip}"
+    private_key = "${file(var.triton_key_path)}"
   }
 
   provisioner "remote-exec" {
@@ -59,20 +58,16 @@ data "template_file" "install_rancher_master" {
   template = "${file("${path.module}/files/install_rancher_master.sh.tpl")}"
 
   vars {
-    ha                  = "${var.ha}"
-    triton_key_material = "${file(var.triton_key_path)}"
+    ha = "${var.ha}"
 
     mysqldb_host          = "${coalesce(join("", triton_machine.rancher_mysqldb.*.primaryip), "")}"
     mysqldb_port          = "${var.mysqldb_port}"
     mysqldb_user          = "${var.mysqldb_username}"
     mysqldb_password      = "${var.mysqldb_password}"
     mysqldb_database_name = "${var.mysqldb_database_name}"
-
     docker_engine_install_url = "${var.docker_engine_install_url}"
-
     rancher_server_image = "${var.rancher_server_image}"
     rancher_agent_image  = "${var.rancher_agent_image}"
-
     rancher_registry          = "${var.rancher_registry}"
     rancher_registry_username = "${var.rancher_registry_username}"
     rancher_registry_password = "${var.rancher_registry_password}"

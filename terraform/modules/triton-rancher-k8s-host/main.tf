@@ -51,4 +51,14 @@ resource "triton_machine" "host" {
   user_script = "${data.template_file.install_rancher_agent.rendered}"
 
   networks = ["${data.triton_network.networks.*.id}"]
+
+  cns = {
+    services = ["${element(keys(var.rancher_host_labels), 0)}.${var.hostname}"]
+  }
+
+  affinity = ["role!=~${element(keys(var.rancher_host_labels), 0)}"]
+
+  tags = {
+    role = "${element(keys(var.rancher_host_labels), 0)}"
+  }
 }

@@ -29,13 +29,3 @@ if [ "${ha}" = 1 ]; then
 else
 	container_id=$(sudo docker run -d --restart=unless-stopped -p 8080:8080 -e CATTLE_BOOTSTRAP_REQUIRED_IMAGE=${rancher_agent_image} ${rancher_server_image})
 fi
-
-# Copy private key to Rancher host
-# Removed for security implications. This was originally added to support creating hosts
-# in triton from Rancher UI. The triton-docker-machine-driver requires a private key to
-# authenticate with Triton APIs.
-# echo "${triton_key_material}" > triton_key
-# sudo docker exec $container_id mkdir -p /root/.ssh/
-# sudo docker cp triton_key $container_id:/root/.ssh/id_rsa
-# sudo docker exec $container_id chmod 0700 /root/.ssh/id_rsa
-# rm triton_key

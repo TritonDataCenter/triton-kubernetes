@@ -31,7 +31,7 @@ func DeleteCluster() error {
 	}
 
 	if len(clusterManagers) == 0 {
-		return fmt.Errorf("No cluster managers, please create a cluster manager before creating a kubernetes cluster.")
+		return fmt.Errorf("No cluster managers.")
 	}
 
 	selectedClusterManager := ""

@@ -71,7 +71,7 @@ func newTritonCluster(selectedClusterManager string, remoteClusterManagerState r
 	}
 
 	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher-k8s
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, azureRancherKubernetesTerraformModulePath)
+	cfg.Source = fmt.Sprintf("%s//%s", baseSource, tritonRancherKubernetesTerraformModulePath)
 
 	// Name
 	if viper.IsSet("name") {

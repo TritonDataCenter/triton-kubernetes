@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/remote"
@@ -30,8 +31,9 @@ const (
 type tritonManagerTerraformConfig struct {
 	Source string `json:"source"`
 
-	Name string `json:"name"`
-	HA   bool   `json:"ha"`
+	Name            string `json:"name"`
+	HA              bool   `json:"ha"`
+	MasterNodeCount int    `json:"gcm_node_count"`
 
 	TritonAccount string `json:"triton_account"`
 	TritonKeyPath string `json:"triton_key_path"`
@@ -139,6 +141,44 @@ func NewTritonManager() error {
 		}
 
 		cfg.HA = options[i].Value
+	}
+
+	if !cfg.HA {
+		cfg.MasterNodeCount = 1
+	} else {
+		// HA enabled, ask user how many master nodes
+		if viper.IsSet("gcm_node_count") {
+			cfg.MasterNodeCount = viper.GetInt("gcm_node_count")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "How many master nodes",
+				Validate: func(input string) error {
+					masterNodeCount, err := strconv.Atoi(input)
+					if err != nil {
+						return err
+					}
+
+					if masterNodeCount < 2 {
+						return errors.New("Minimum nodes for HA is 2")
+					}
+
+					return nil
+				},
+				Default: "2",
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			masterNodeCount, err := strconv.Atoi(result)
+			if err != nil {
+				return err
+			}
+
+			cfg.MasterNodeCount = masterNodeCount
+		}
 	}
 
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
