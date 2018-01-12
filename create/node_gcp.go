@@ -16,7 +16,7 @@ type gcpNodeTerraformConfig struct {
 }
 
 func newGCPNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
-	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster)
+	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, clusterManagerTerraformConfig)
 	if err != nil {
 		return err
 	}

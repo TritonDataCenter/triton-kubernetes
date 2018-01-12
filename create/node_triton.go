@@ -40,7 +40,7 @@ type tritonNodeTerraformConfig struct {
 }
 
 func newTritonNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
-	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster)
+	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, clusterManagerTerraformConfig)
 	if err != nil {
 		return err
 	}

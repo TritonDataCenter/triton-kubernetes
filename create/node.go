@@ -159,15 +159,26 @@ func NewNode() error {
 	return nil
 }
 
-func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string) (baseNodeTerraformConfig, error) {
+func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, clusterManagerTerraformConfig *gabs.Container) (baseNodeTerraformConfig, error) {
 	cfg := baseNodeTerraformConfig{
 		RancherAPIURL:        "http://${element(module.cluster-manager.masters, 0)}:8080",
 		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
+	}
 
-		// TODO: Grab registry variables from cluster config
-		// RancherRegistry:         clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)).Data().(string),
-		// RancherRegistryUsername: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)).Data().(string),
-		// RancherRegistryPassword: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)).Data().(string),
+	// Grab registry variables from cluster config
+	rancherRegistry, ok := clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)).Data().(string)
+	if ok {
+		cfg.RancherRegistry = rancherRegistry
+	}
+
+	rancherRegistryUsername, ok := clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)).Data().(string)
+	if ok {
+		cfg.RancherRegistryUsername = rancherRegistryUsername
+	}
+
+	rancherRegistryPassword, ok := clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)).Data().(string)
+	if ok {
+		cfg.RancherRegistryPassword = rancherRegistryPassword
 	}
 
 	baseSource := "github.com/joyent/triton-kubernetes"
