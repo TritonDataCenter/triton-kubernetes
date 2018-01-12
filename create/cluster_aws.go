@@ -28,20 +28,10 @@ const (
 	awsRancherKubernetesTerraformModulePath = "terraform/modules/aws-rancher-k8s"
 )
 
+// This struct represents the definition of a Terraform .tf file.
+// Marshalled into json this struct can be passed directly to Terraform.
 type awsClusterTerraformConfig struct {
-	Source string `json:"source"`
-
-	Name string `json:"name"`
-
-	EtcdNodeCount          string `json:"etcd_node_count"`
-	OrchestrationNodeCount string `json:"orchestration_node_count"`
-	ComputeNodeCount       string `json:"compute_node_count"`
-
-	KubernetesPlaneIsolation string `json:"k8s_plane_isolation"`
-
-	RancherAPIURL    string `json:"rancher_api_url"`
-	RancherAccessKey string `json:"rancher_access_key"`
-	RancherSecretKey string `json:"rancher_secret_key"`
+	baseClusterTerraformConfig
 
 	AWSAccessKey     string `json:"aws_access_key"`
 	AWSSecretKey     string `json:"aws_secret_key"`
@@ -52,73 +42,16 @@ type awsClusterTerraformConfig struct {
 	AWSAMIID      string `json:"aws_ami_id"`
 	AWSVPCCIDR    string `json:"aws_vpc_cidr"`
 	AWSSubnetCIDR string `json:"aws_subnet_cidr"`
-
-	RancherRegistry         string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
-
-	KubernetesRegistry         string `json:"k8s_registry,omitempty"`
-	KubernetesRegistryUsername string `json:"k8s_registry_username,omitempty"`
-	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
 }
 
-func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
+func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {
+	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
+	if err != nil {
+		return err
+	}
+
 	cfg := awsClusterTerraformConfig{
-		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
-
-		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-		EtcdNodeCount:          "0",
-		OrchestrationNodeCount: "0",
-		ComputeNodeCount:       "0",
-	}
-
-	baseSource := "github.com/joyent/triton-kubernetes"
-	if viper.IsSet("source_url") {
-		baseSource = viper.GetString("source_url")
-	}
-
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher-k8s
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, awsRancherKubernetesTerraformModulePath)
-
-	// Name
-	if viper.IsSet("name") {
-		cfg.Name = viper.GetString("name")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Cluster Name",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.Name = result
-	}
-
-	if cfg.Name == "" {
-		return errors.New("Invalid Cluster Name")
-	}
-
-	// Kubernetes Plane Isolation
-	if viper.IsSet("k8s_plane_isolation") {
-		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
-	} else {
-		prompt := promptui.Select{
-			Label: "Kubernetes Plane Isolation",
-			Items: []string{"required", "none"},
-		}
-
-		_, value, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.KubernetesPlaneIsolation = value
-	}
-
-	// Verify selected plane isolation is valid
-	if cfg.KubernetesPlaneIsolation != "required" && cfg.KubernetesPlaneIsolation != "none" {
-		return fmt.Errorf("Invalid k8s_plane_isolation '%s', must be 'required' or 'none'", cfg.KubernetesPlaneIsolation)
+		baseClusterTerraformConfig: baseConfig,
 	}
 
 	// AWS Access Key
@@ -346,102 +279,6 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 			return err
 		}
 		cfg.AWSSubnetCIDR = result
-	}
-
-	// Rancher Registry
-	if viper.IsSet("rancher_registry") {
-		cfg.RancherRegistry = viper.GetString("rancher_registry")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Rancher Registry",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.RancherRegistry = result
-	}
-
-	// Ask for rancher registry username/password only if rancher registry is given
-	if cfg.RancherRegistry != "" {
-		// Rancher Registry Username
-		if viper.IsSet("rancher_registry_username") {
-			cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "Rancher Registry Username",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.RancherRegistryUsername = result
-		}
-
-		// Rancher Registry Password
-		if viper.IsSet("rancher_registry_password") {
-			cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "Rancher Registry Password",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.RancherRegistryPassword = result
-		}
-	}
-
-	// Kubernetes Registry
-	if viper.IsSet("kubernetes_registry") {
-		cfg.KubernetesRegistry = viper.GetString("kubernetes_registry")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Kubernetes Registry",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.KubernetesRegistry = result
-	}
-
-	// Ask for kubernetes registry username/password only if kubernetes registry is given
-	if cfg.KubernetesRegistry != "" {
-		// Kubernetes Registry Username
-		if viper.IsSet("kubernetes_registry_username") {
-			cfg.KubernetesRegistryUsername = viper.GetString("kubernetes_registry_username")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "Kubernetes Registry Username",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.KubernetesRegistryUsername = result
-		}
-
-		// Kubernetes Registry Password
-		if viper.IsSet("kubernetes_registry_password") {
-			cfg.KubernetesRegistryPassword = viper.GetString("kubernetes_registry_password")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "Kubernetes Registry Password",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.KubernetesRegistryPassword = result
-		}
 	}
 
 	// Load current cluster manager config

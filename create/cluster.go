@@ -108,7 +108,7 @@ func NewCluster() error {
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
 		err = newTritonCluster(selectedClusterManager, remoteClusterManagerState, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
 	case "aws":
-		err = newAWSCluster(selectedClusterManager, remoteClusterManagerState, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
+		err = newAWSCluster(selectedClusterManager, remoteClusterManagerState)
 	case "gcp":
 		err = newGCPCluster(selectedClusterManager, remoteClusterManagerState)
 	case "azure":
