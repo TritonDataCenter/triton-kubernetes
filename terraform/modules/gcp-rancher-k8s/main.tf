@@ -4,9 +4,14 @@ provider "google" {
   region      = "${var.gcp_compute_region}"
 }
 
+resource "google_compute_network" "default" {
+  name                    = "${var.name}"
+  auto_create_subnetworks = "true"
+}
+
 resource "google_compute_firewall" "default" {
-  name          = "${var.compute_firewall}"
-  network       = "default"
+  name          = "${var.name}"
+  network       = "${google_compute_network.default.name}"
   source_ranges = ["0.0.0.0/0"]
 
   allow {
@@ -16,16 +21,16 @@ resource "google_compute_firewall" "default" {
 }
 
 provider "rancher" {
-  api_url    = "${var.api_url}"
-  access_key = "${var.access_key}"
-  secret_key = "${var.secret_key}"
+  api_url    = "${var.rancher_api_url}"
+  access_key = "${var.rancher_access_key}"
+  secret_key = "${var.rancher_secret_key}"
 }
 
 data "external" "rancher_environment_template" {
   program = ["bash", "${path.module}/files/rancher_environment_template.sh"]
 
   query = {
-    rancher_api_url     = "${var.api_url}"
+    rancher_api_url     = "${var.rancher_api_url}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"
@@ -105,7 +110,7 @@ resource "google_compute_instance" "etcd" {
   count = "${var.etcd_node_count}"
 
   name         = "${var.name}-etcd-${count.index + 1}"
-  machine_type = "${var.etcd_gcp_instance_type}"
+  machine_type = "${var.etcd_gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -115,7 +120,7 @@ resource "google_compute_instance" "etcd" {
   }
 
   network_interface {
-    network = "default"
+    network = "${google_compute_network.default.name}"
 
     access_config {
       // Ephemeral IP
@@ -161,7 +166,7 @@ resource "google_compute_instance" "orchestration" {
   count = "${var.orchestration_node_count}"
 
   name         = "${var.name}-orchestration-${count.index + 1}"
-  machine_type = "${var.orchestration_gcp_instance_type}"
+  machine_type = "${var.orchestration_gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -171,7 +176,7 @@ resource "google_compute_instance" "orchestration" {
   }
 
   network_interface {
-    network = "default"
+    network = "${google_compute_network.default.name}"
 
     access_config {
       // Ephemeral IP
@@ -217,7 +222,7 @@ resource "google_compute_instance" "compute" {
   count = "${var.compute_node_count}"
 
   name         = "${var.name}-compute-${count.index + 1}"
-  machine_type = "${var.compute_gcp_instance_type}"
+  machine_type = "${var.compute_gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -227,7 +232,7 @@ resource "google_compute_instance" "compute" {
   }
 
   network_interface {
-    network = "default"
+    network = "${google_compute_network.default.name}"
 
     access_config {
       // Ephemeral IP

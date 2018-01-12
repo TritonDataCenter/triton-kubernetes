@@ -55,7 +55,7 @@ variable "gcp_project_id" {
   description = "GCP project ID that will be running the instances and managing the network"
 }
 
-variable gcp_instance_type {
+variable gcp_machine_type {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the instance with"
 }
@@ -67,4 +67,8 @@ variable "gcp_instance_zone" {
 variable "gcp_image" {
   description = "GCP image to be used for instance"
   default     = "ubuntu-1604-xenial-v20171121a"
+}
+
+variable "gcp_compute_network_name" {
+  description = "Network to deploy GCP machine in"
 }

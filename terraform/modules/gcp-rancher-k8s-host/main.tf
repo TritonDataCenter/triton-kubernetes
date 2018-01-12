@@ -34,7 +34,7 @@ data "template_file" "install_rancher_agent" {
 
 resource "google_compute_instance" "host" {
   name         = "${var.hostname}"
-  machine_type = "${var.gcp_instance_type}"
+  machine_type = "${var.gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -44,7 +44,7 @@ resource "google_compute_instance" "host" {
   }
 
   network_interface {
-    network = "default"
+    network = "${var.gcp_compute_network_name}"
 
     access_config {
       // Ephemeral IP

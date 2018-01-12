@@ -1,10 +1,13 @@
 package create
 
 import (
+	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strings"
 
 	"github.com/joyent/triton-kubernetes/remote"
 	"github.com/joyent/triton-kubernetes/shell"
@@ -13,6 +16,8 @@ import (
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
+	"golang.org/x/oauth2/google"
+	compute "google.golang.org/api/compute/v1"
 )
 
 const (
@@ -76,28 +81,78 @@ func newGCPCluster(selectedClusterManager string, remoteClusterManagerState remo
 	}
 	cfg.GCPPathToCredentials = expandedGCPPathToCredentials
 
-	// GCP Project ID
-	if viper.IsSet("gcp_project_id") {
-		cfg.GCPProjectID = viper.GetString("gcp_project_id")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "GCP Project ID",
-			Validate: func(input string) error {
-				if len(input) == 0 {
-					return errors.New("GCP Project ID")
-				}
-				return nil
-			},
+	gcpCredentials, err := ioutil.ReadFile(cfg.GCPPathToCredentials)
+	if err != nil {
+		return err
+	}
+
+	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly")
+	if err != nil {
+		return err
+	}
+
+	// jwt.Config does not expose the project ID, so re-unmarshal to get it.
+	var pid struct {
+		ProjectID string `json:"project_id"`
+	}
+	if err := json.Unmarshal(gcpCredentials, &pid); err != nil {
+		return err
+	}
+	cfg.GCPProjectID = pid.ProjectID
+
+	service, err := compute.New(jwtCfg.Client(context.Background()))
+	if err != nil {
+		return err
+	}
+
+	regions, err := service.Regions.List(cfg.GCPProjectID).Do()
+	if err != nil {
+		return err
+	}
+
+	// GCP Compute Region
+	if viper.IsSet("gcp_compute_region") {
+		cfg.GCPComputeRegion = viper.GetString("gcp_compute_region")
+
+		found := false
+		for _, region := range regions.Items {
+			if region.Name == cfg.GCPComputeRegion {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("Selected GCP Compute Region '%s' does not exist.", cfg.GCPComputeRegion)
 		}
 
-		result, err := prompt.Run()
+	} else {
+		searcher := func(input string, index int) bool {
+			region := regions.Items[index]
+			name := strings.Replace(strings.ToLower(region.Name), " ", "", -1)
+			input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+			return strings.Contains(name, input)
+		}
+
+		prompt := promptui.Select{
+			Label: "GCP Compute Region",
+			Items: regions.Items,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ .Name }}?",
+				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .Name }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "GCP Compute Region:" | bold}} {{ .Name }}`, promptui.IconGood),
+			},
+			Searcher: searcher,
+		}
+
+		i, _, err := prompt.Run()
 		if err != nil {
 			return err
 		}
-		cfg.GCPProjectID = result
-	}
 
-	// TODO: GCP Compute Region
+		cfg.GCPComputeRegion = regions.Items[i].Name
+	}
 
 	// Load current cluster manager config
 	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
@@ -111,7 +166,7 @@ func newGCPCluster(selectedClusterManager string, remoteClusterManagerState remo
 	}
 
 	// Add new cluster to terraform config
-	clusterKey := fmt.Sprintf(azureClusterKeyFormat, cfg.Name)
+	clusterKey := fmt.Sprintf(gcpClusterKeyFormat, cfg.Name)
 	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
 
 	// Create a temporary directory
