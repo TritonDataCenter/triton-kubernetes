@@ -41,6 +41,12 @@ func DeleteCluster() error {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
 			Items: clusterManagers,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ . }}`, promptui.IconGood),
+			},
 		}
 
 		_, value, err := prompt.Run()

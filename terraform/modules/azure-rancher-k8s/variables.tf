@@ -87,10 +87,6 @@ variable "azure_public_key_path" {
   default = "~/.ssh/id_rsa.pub"
 }
 
-variable "azure_resource_group_name" {
-  default = "k8s"
-}
-
 variable "azure_virtual_network_name" {
   default = "k8s-network"
 }
