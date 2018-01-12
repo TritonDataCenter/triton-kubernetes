@@ -1,7 +1,6 @@
 package create
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -10,8 +9,6 @@ import (
 	"github.com/joyent/triton-kubernetes/shell"
 
 	"github.com/Jeffail/gabs"
-	"github.com/manifoldco/promptui"
-	"github.com/spf13/viper"
 )
 
 const (
@@ -22,96 +19,27 @@ const (
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
 type tritonClusterTerraformConfig struct {
-	Source string `json:"source"`
-
-	Name string `json:"name"`
-
-	EtcdNodeCount          string `json:"etcd_node_count"`
-	OrchestrationNodeCount string `json:"orchestration_node_count"`
-	ComputeNodeCount       string `json:"compute_node_count"`
-
-	KubernetesPlaneIsolation string `json:"k8s_plane_isolation"`
-
-	RancherAPIURL    string `json:"rancher_api_url"`
-	RancherAccessKey string `json:"rancher_access_key"`
-	RancherSecretKey string `json:"rancher_secret_key"`
+	baseClusterTerraformConfig
 
 	TritonAccount string `json:"triton_account"`
 	TritonKeyPath string `json:"triton_key_path"`
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
-
-	RancherRegistry         string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
-
-	KubernetesRegistry         string `json:"k8s_registry,omitempty"`
-	KubernetesRegistryUsername string `json:"k8s_registry_username,omitempty"`
-	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
 }
 
 func newTritonCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
+	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
+	if err != nil {
+		return err
+	}
+
 	cfg := tritonClusterTerraformConfig{
+		baseClusterTerraformConfig: baseConfig,
+
 		TritonAccount: tritonAccount,
 		TritonKeyPath: tritonKeyPath,
 		TritonKeyID:   tritonKeyID,
 		TritonURL:     tritonURL,
-
-		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
-
-		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-		EtcdNodeCount:          "0",
-		OrchestrationNodeCount: "0",
-		ComputeNodeCount:       "0",
-	}
-
-	baseSource := "github.com/joyent/triton-kubernetes"
-	if viper.IsSet("source_url") {
-		baseSource = viper.GetString("source_url")
-	}
-
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher-k8s
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, tritonRancherKubernetesTerraformModulePath)
-
-	// Name
-	if viper.IsSet("name") {
-		cfg.Name = viper.GetString("name")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Cluster Name",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.Name = result
-	}
-
-	if cfg.Name == "" {
-		return errors.New("Invalid Cluster Name")
-	}
-
-	// Kubernetes Plane Isolation
-	if viper.IsSet("k8s_plane_isolation") {
-		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
-	} else {
-		prompt := promptui.Select{
-			Label: "Kubernetes Plane Isolation",
-			Items: []string{"required", "none"},
-		}
-
-		_, value, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.KubernetesPlaneIsolation = value
-	}
-
-	// Verify selected plane isolation is valid
-	if cfg.KubernetesPlaneIsolation != "required" && cfg.KubernetesPlaneIsolation != "none" {
-		return fmt.Errorf("Invalid k8s_plane_isolation '%s', must be 'required' or 'none'", cfg.KubernetesPlaneIsolation)
 	}
 
 	// Load current cluster manager config

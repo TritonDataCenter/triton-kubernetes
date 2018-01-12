@@ -2,7 +2,6 @@ package create
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -20,18 +19,13 @@ import (
 	"github.com/spf13/viper"
 )
 
-const tritonNodeKeyFormat = "node_triton_%s"
+const (
+	tritonNodeKeyFormat                            = "node_triton_%s"
+	tritonRancherKubernetesHostTerraformModulePath = "terraform/modules/triton-rancher-k8s-host"
+)
 
 type tritonNodeTerraformConfig struct {
-	Source string `json:"source"`
-
-	Hostname string `json:"hostname"`
-
-	RancherAPIURL        string                  `json:"rancher_api_url"`
-	RancherAccessKey     string                  `json:"rancher_access_key"`
-	RancherSecretKey     string                  `json:"rancher_secret_key"`
-	RancherEnvironmentID string                  `json:"rancher_environment_id"`
-	RancherHostLabels    rancherHostLabelsConfig `json:"rancher_host_labels"`
+	baseNodeTerraformConfig
 
 	TritonAccount string `json:"triton_account"`
 	TritonKeyPath string `json:"triton_key_path"`
@@ -43,96 +37,22 @@ type tritonNodeTerraformConfig struct {
 	TritonImageVersion   string   `json:"triton_image_version,omitempty"`
 	TritonSSHUser        string   `json:"triton_ssh_user,omitempty"`
 	TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
-
-	RancherRegistry         string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
-
-	KubernetesRegistry         string `json:"k8s_registry,omitempty"`
-	KubernetesRegistryUsername string `json:"k8s_registry_username,omitempty"`
-	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
 }
 
-func newTritonNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
-	cfg := tritonNodeTerraformConfig{}
-
-	cfg.TritonAccount = tritonAccount
-	cfg.TritonKeyPath = tritonKeyPath
-	cfg.TritonKeyID = tritonKeyID
-	cfg.TritonURL = tritonURL
-
-	baseSource := "github.com/joyent/triton-kubernetes"
-	if viper.IsSet("source_url") {
-		baseSource = viper.GetString("source_url")
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
+	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster)
+	if err != nil {
+		return err
 	}
 
-	cfg.Source = fmt.Sprintf("%s//terraform/modules/triton-rancher-k8s-host", baseSource)
+	cfg := tritonNodeTerraformConfig{
+		baseNodeTerraformConfig: baseConfig,
 
-	// Rancher API URL
-	cfg.RancherAPIURL = "http://${element(module.cluster-manager.masters, 0)}:8080"
-
-	// Rancher Environment ID
-	cfg.RancherEnvironmentID = fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster)
-
-	// Rancher Host Label
-	selectedHostLabel := ""
-	hostLabelOptions := []string{
-		"compute",
-		"etcd",
-		"orchestration",
-	}
-	if viper.IsSet("rancher_host_label") {
-		selectedHostLabel = viper.GetString("rancher_host_label")
-	} else {
-		prompt := promptui.Select{
-			Label: "Which type of node?",
-			Items: hostLabelOptions,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
-				Inactive: "  {{ . }}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Host Type:" | bold}} {{ . }}`, promptui.IconGood),
-			},
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		selectedHostLabel = hostLabelOptions[i]
-	}
-
-	switch selectedHostLabel {
-	case "compute":
-		cfg.RancherHostLabels.Compute = "true"
-	case "etcd":
-		cfg.RancherHostLabels.Etcd = "true"
-	case "orchestration":
-		cfg.RancherHostLabels.Orchestration = "true"
-	default:
-		return fmt.Errorf("Invalid rancher_host_label '%s', must be 'compute', 'etcd' or 'orchestration'", selectedHostLabel)
-	}
-
-	// TODO: Allow user to specify number of nodes to be created.
-
-	// hostname
-	if viper.IsSet("hostname") {
-		cfg.Hostname = viper.GetString("hostname")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Hostname",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.Hostname = result
-	}
-
-	if cfg.Hostname == "" {
-		return errors.New("Invalid Hostname")
+		// Grab variables from cluster config
+		TritonAccount: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_account", selectedCluster)).Data().(string),
+		TritonKeyPath: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)).Data().(string),
+		TritonKeyID:   clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)).Data().(string),
+		TritonURL:     clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_url", selectedCluster)).Data().(string),
 	}
 
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
@@ -147,7 +67,6 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 
 	config := &triton.ClientConfig{
 		TritonURL:   cfg.TritonURL,
-		MantaURL:    mantaURL,
 		AccountName: cfg.TritonAccount,
 		Signers:     []authentication.Signer{sshKeySigner},
 	}
@@ -296,70 +215,6 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 		}
 
 		cfg.TritonMachinePackage = kvmPackages[i].Name
-	}
-
-	// TODO: move this to cluster creating, then refer to it for node creation
-	// Rancher Registry
-	if viper.IsSet("rancher_registry") {
-		cfg.RancherRegistry = viper.GetString("rancher_registry")
-	} else {
-		prompt := promptui.Prompt{
-			Label:   "Rancher Registry",
-			Default: "None",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		if result != "None" {
-			cfg.RancherRegistry = result
-		}
-	}
-
-	// Ask for rancher registry username/password only if rancher registry is given
-	if cfg.RancherRegistry != "" {
-		// Rancher Registry Username
-		if viper.IsSet("rancher_registry_username") {
-			cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "Rancher Registry Username",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.RancherRegistryUsername = result
-		}
-
-		// Rancher Registry Password
-		if viper.IsSet("rancher_registry_password") {
-			cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "Rancher Registry Password",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.RancherRegistryPassword = result
-		}
-	}
-
-	// Load current cluster manager config
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
 	}
 
 	// Add new node to terraform config

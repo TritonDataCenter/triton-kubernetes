@@ -5,10 +5,11 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/Jeffail/gabs"
 	"github.com/joyent/triton-kubernetes/remote"
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/util"
+
+	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
@@ -30,7 +31,7 @@ func DeleteNode() error {
 	}
 
 	if len(clusterManagers) == 0 {
-		return fmt.Errorf("No cluster managers, please create a cluster manager before creating a kubernetes cluster.")
+		return fmt.Errorf("No cluster managers, please create a cluster manager before creating a kubernetes node.")
 	}
 
 	selectedClusterManager := ""

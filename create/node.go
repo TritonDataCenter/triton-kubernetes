@@ -1,6 +1,7 @@
 package create
 
 import (
+	"errors"
 	"fmt"
 	"strings"
 
@@ -11,6 +12,22 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
+
+type baseNodeTerraformConfig struct {
+	Source string `json:"source"`
+
+	Hostname string `json:"hostname"`
+
+	RancherAPIURL        string                  `json:"rancher_api_url"`
+	RancherAccessKey     string                  `json:"rancher_access_key"`
+	RancherSecretKey     string                  `json:"rancher_secret_key"`
+	RancherEnvironmentID string                  `json:"rancher_environment_id"`
+	RancherHostLabels    rancherHostLabelsConfig `json:"rancher_host_labels"`
+
+	RancherRegistry         string `json:"rancher_registry,omitempty"`
+	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
+	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
+}
 
 type rancherHostLabelsConfig struct {
 	Orchestration string `json:"orchestration,omitempty"`
@@ -124,13 +141,13 @@ func NewNode() error {
 
 	switch parts[1] {
 	case "triton":
-		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
+		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
 	case "aws":
 		err = nil
 	case "gcp":
-		err = nil
+		err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
 	case "azure":
-		err = nil
+		err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
@@ -140,4 +157,86 @@ func NewNode() error {
 	}
 
 	return nil
+}
+
+func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string) (baseNodeTerraformConfig, error) {
+	cfg := baseNodeTerraformConfig{
+		RancherAPIURL:        "http://${element(module.cluster-manager.masters, 0)}:8080",
+		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
+
+		// TODO: Grab registry variables from cluster config
+		// RancherRegistry:         clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)).Data().(string),
+		// RancherRegistryUsername: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)).Data().(string),
+		// RancherRegistryPassword: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)).Data().(string),
+	}
+
+	baseSource := "github.com/joyent/triton-kubernetes"
+	if viper.IsSet("source_url") {
+		baseSource = viper.GetString("source_url")
+	}
+
+	cfg.Source = fmt.Sprintf("%s//%s", baseSource, terraformModulePath)
+
+	// Rancher Host Label
+	selectedHostLabel := ""
+	hostLabelOptions := []string{
+		"compute",
+		"etcd",
+		"orchestration",
+	}
+	if viper.IsSet("rancher_host_label") {
+		selectedHostLabel = viper.GetString("rancher_host_label")
+	} else {
+		prompt := promptui.Select{
+			Label: "Which type of node?",
+			Items: hostLabelOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: "  {{ . }}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Host Type:" | bold}} {{ . }}`, promptui.IconGood),
+			},
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return baseNodeTerraformConfig{}, err
+		}
+
+		selectedHostLabel = hostLabelOptions[i]
+	}
+
+	switch selectedHostLabel {
+	case "compute":
+		cfg.RancherHostLabels.Compute = "true"
+	case "etcd":
+		cfg.RancherHostLabels.Etcd = "true"
+	case "orchestration":
+		cfg.RancherHostLabels.Orchestration = "true"
+	default:
+		return baseNodeTerraformConfig{}, fmt.Errorf("Invalid rancher_host_label '%s', must be 'compute', 'etcd' or 'orchestration'", selectedHostLabel)
+	}
+
+	// TODO: Allow user to specify number of nodes to be created.
+
+	// hostname
+	if viper.IsSet("hostname") {
+		cfg.Hostname = viper.GetString("hostname")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Hostname",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return baseNodeTerraformConfig{}, err
+		}
+		cfg.Hostname = result
+	}
+
+	if cfg.Hostname == "" {
+		return baseNodeTerraformConfig{}, errors.New("Invalid Hostname")
+	}
+
+	return cfg, nil
 }

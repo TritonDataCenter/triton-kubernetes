@@ -2,15 +2,15 @@ variable "name" {
   description = "Human readable name used as prefix to generated names."
 }
 
-variable "api_url" {
+variable "rancher_api_url" {
   description = ""
 }
 
-variable "access_key" {
+variable "rancher_access_key" {
   description = ""
 }
 
-variable "secret_key" {
+variable "rancher_secret_key" {
   description = ""
 }
 

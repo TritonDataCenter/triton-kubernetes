@@ -60,16 +60,16 @@ resource "azurerm_network_security_rule" "port4500" {
 }
 
 provider "rancher" {
-  api_url    = "${var.api_url}"
-  access_key = "${var.access_key}"
-  secret_key = "${var.secret_key}"
+  api_url    = "${var.rancher_api_url}"
+  access_key = "${var.rancher_access_key}"
+  secret_key = "${var.rancher_secret_key}"
 }
 
 data "external" "rancher_environment_template" {
   program = ["bash", "${path.module}/files/rancher_environment_template.sh"]
 
   query = {
-    rancher_api_url     = "${var.api_url}"
+    rancher_api_url     = "${var.rancher_api_url}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"

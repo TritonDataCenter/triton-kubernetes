@@ -27,96 +27,24 @@ const (
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
 type azureClusterTerraformConfig struct {
-	Source string `json:"source"`
-
-	Name string `json:"name"`
-
-	EtcdNodeCount          string `json:"etcd_node_count"`
-	OrchestrationNodeCount string `json:"orchestration_node_count"`
-	ComputeNodeCount       string `json:"compute_node_count"`
-
-	KubernetesPlaneIsolation string `json:"k8s_plane_isolation"`
-
-	RancherAPIURL    string `json:"rancher_api_url"`
-	RancherAccessKey string `json:"rancher_access_key"`
-	RancherSecretKey string `json:"rancher_secret_key"`
+	baseClusterTerraformConfig
 
 	AzureSubscriptionID string `json:"azure_subscription_id"`
 	AzureClientID       string `json:"azure_client_id"`
 	AzureClientSecret   string `json:"azure_client_secret"`
 	AzureTenantID       string `json:"azure_tenant_id"`
 	AzureEnvironment    string `json:"azure_environment"`
-
-	AzureLocation      string `json:"azure_location"`
-	AzureSSHUser       string `json:"azure_ssh_user"`
-	AzurePublicKeyPath string `json:"azure_public_key_path"`
-
-	RancherRegistry         string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
-
-	KubernetesRegistry         string `json:"k8s_registry,omitempty"`
-	KubernetesRegistryUsername string `json:"k8s_registry_username,omitempty"`
-	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
+	AzureLocation       string `json:"azure_location"`
 }
 
 func newAzureCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {
+	baseConfig, err := getBaseClusterTerraformConfig(azureRancherKubernetesTerraformModulePath)
+	if err != nil {
+		return err
+	}
+
 	cfg := azureClusterTerraformConfig{
-		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
-
-		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-		EtcdNodeCount:          "0",
-		OrchestrationNodeCount: "0",
-		ComputeNodeCount:       "0",
-	}
-
-	baseSource := "github.com/joyent/triton-kubernetes"
-	if viper.IsSet("source_url") {
-		baseSource = viper.GetString("source_url")
-	}
-
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, azureRancherKubernetesTerraformModulePath)
-
-	// Name
-	if viper.IsSet("name") {
-		cfg.Name = viper.GetString("name")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "Cluster Name",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.Name = result
-	}
-
-	if cfg.Name == "" {
-		return errors.New("Invalid Cluster Name")
-	}
-
-	// Kubernetes Plane Isolation
-	if viper.IsSet("k8s_plane_isolation") {
-		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
-	} else {
-		prompt := promptui.Select{
-			Label: "Kubernetes Plane Isolation",
-			Items: []string{"required", "none"},
-		}
-
-		_, value, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.KubernetesPlaneIsolation = value
-	}
-
-	// Verify selected plane isolation is valid
-	if cfg.KubernetesPlaneIsolation != "required" && cfg.KubernetesPlaneIsolation != "none" {
-		return fmt.Errorf("Invalid k8s_plane_isolation '%s', must be 'required' or 'none'", cfg.KubernetesPlaneIsolation)
+		baseClusterTerraformConfig: baseConfig,
 	}
 
 	// Azure Subscription ID
