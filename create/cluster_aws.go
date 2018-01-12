@@ -1,8 +1,6 @@
 package create
 
 import (
-	// "bytes"
-	// "context"
 	"errors"
 	"fmt"
 	"io/ioutil"
