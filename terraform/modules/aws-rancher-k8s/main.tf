@@ -15,14 +15,14 @@ resource "aws_vpc" "default" {
 }
 
 provider "rancher" {
-  api_url = "${var.api_url}"
+  api_url = "${var.rancher_api_url}"
 }
 
 data "external" "rancher_environment_template" {
   program = ["bash", "${path.module}/files/rancher_environment_template.sh"]
 
   query = {
-    rancher_api_url     = "${var.api_url}"
+    rancher_api_url     = "${var.rancher_api_url}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"
