@@ -143,7 +143,7 @@ func NewNode() error {
 	case "triton":
 		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
 	case "aws":
-		err = nil
+		err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
 	case "gcp":
 		err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
 	case "azure":
