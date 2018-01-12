@@ -139,9 +139,24 @@ func DeleteCluster() error {
 		return err
 	}
 
+	nodes, err := util.GetNodeOptions(clusterManagerTerraformConfig, selectedClusterKey)
+	if err != nil {
+		return err
+	}
+
+	args := []string{
+		"destroy",
+		"-force",
+		fmt.Sprintf("-target=module.%s", selectedClusterKey),
+	}
+
+	// Delete all nodes in the selected cluster
+	for _, node := range nodes {
+		args = append(args, fmt.Sprintf("-target=module.%s", node.NodeKey))
+	}
+
 	// Run terraform destroy
-	targetArg := fmt.Sprintf("-target=module.%s", selectedClusterKey)
-	err = shell.RunShellCommand(&shellOptions, "terraform", "destroy", "-force", targetArg)
+	err = shell.RunShellCommand(&shellOptions, "terraform", args...)
 	if err != nil {
 		return err
 	}
@@ -153,11 +168,6 @@ func DeleteCluster() error {
 	}
 
 	// Remove all nodes associated to this cluster from terraform config
-	nodes, err := util.GetNodeOptions(clusterManagerTerraformConfig, selectedClusterKey)
-	if err != nil {
-		return err
-	}
-
 	for _, node := range nodes {
 		err = clusterManagerTerraformConfig.Delete("module", node.NodeKey)
 		if err != nil {
