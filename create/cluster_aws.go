@@ -18,6 +18,7 @@ import (
 	"github.com/aws/aws-sdk-go/aws/session"
 	"github.com/aws/aws-sdk-go/service/ec2"
 	"github.com/manifoldco/promptui"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -37,7 +38,6 @@ type awsClusterTerraformConfig struct {
 	AWSKeyName       string `json:"aws_key_name"`
 
 	AWSRegion     string `json:"aws_region"`
-	AWSAMIID      string `json:"aws_ami_id"`
 	AWSVPCCIDR    string `json:"aws_vpc_cidr"`
 	AWSSubnetCIDR string `json:"aws_subnet_cidr"`
 }
@@ -92,47 +92,6 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 			return err
 		}
 		cfg.AWSSecretKey = result
-	}
-
-	// AWS Public Key Path
-	if viper.IsSet("aws_public_key_path") {
-		cfg.AWSPublicKeyPath = viper.GetString("aws_public_key_path")
-	} else {
-		prompt := promptui.Prompt{
-			Label: "AWS Public Key Path",
-			Validate: func(input string) error {
-				_, err := os.Stat(input)
-				if err != nil {
-					if os.IsNotExist(err) {
-						return errors.New("File not found")
-					}
-				}
-				return nil
-			},
-			Default: "~/.ssh/id_rsa.pub",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.AWSPublicKeyPath = result
-	}
-
-	// AWS Key Name
-	if viper.IsSet("aws_key_name") {
-		cfg.AWSKeyName = viper.GetString("aws_key_name")
-	} else {
-		prompt := promptui.Prompt{
-			Label:   "AWS Key Name",
-			Default: "rancher_public_key",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.AWSKeyName = result
 	}
 
 	// We now have enough information to init an aws client
@@ -209,6 +168,88 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 		cfg.AWSRegion = *regions[i].RegionName
 	}
 
+	// Reinit ec2 client with selected region
+	awsConfig = aws.NewConfig().WithCredentials(creds).WithRegion(cfg.AWSRegion)
+	sess, err = session.NewSession(awsConfig)
+	if err != nil {
+		return err
+	}
+	ec2Client = ec2.New(sess)
+
+	// AWS Key
+	// If either aws_key_name or aws_public_key_path is set use it
+	// Otherwise ask the user if they'd like to upload a key or use an existing key
+	if viper.IsSet("aws_key_name") {
+		cfg.AWSKeyName = viper.GetString("aws_key_name")
+		if viper.IsSet("aws_public_key_path") {
+			expandedAWSPublicKeyPath, err := homedir.Expand(viper.GetString("aws_public_key_path"))
+			if err != nil {
+				return err
+			}
+			cfg.AWSPublicKeyPath = expandedAWSPublicKeyPath
+		}
+	} else {
+		// List all available aws keys
+		input := ec2.DescribeKeyPairsInput{}
+		rawKeyPairs, err := ec2Client.DescribeKeyPairs(&input)
+		if err != nil {
+			return err
+		}
+
+		keyPairs := []string{}
+		for _, key := range rawKeyPairs.KeyPairs {
+			fmt.Println(*key.KeyName)
+			keyPairs = append(keyPairs, *key.KeyName)
+		}
+
+		prompt := promptui.SelectWithAdd{
+			Label:    "AWS Key to use",
+			Items:    keyPairs,
+			AddLabel: "Upload new key",
+		}
+
+		i, value, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.AWSKeyName = value
+
+		if i == -1 {
+			// User chose to upload new key, ask for aws_public_key_path
+			prompt := promptui.Prompt{
+				Label: "AWS Public Key Path",
+				Validate: func(input string) error {
+					expandedPath, err := homedir.Expand(input)
+					if err != nil {
+						return err
+					}
+
+					_, err = os.Stat(expandedPath)
+					if err != nil {
+						if os.IsNotExist(err) {
+							return errors.New("File not found")
+						}
+					}
+					return nil
+				},
+				Default: "~/.ssh/id_rsa.pub",
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			expandedKeyPath, err := homedir.Expand(result)
+			if err != nil {
+				return err
+			}
+
+			cfg.AWSPublicKeyPath = expandedKeyPath
+		}
+	}
+
 	// AWS VPC CIDR
 	if viper.IsSet("aws_vpc_cidr") {
 		cfg.AWSVPCCIDR = viper.GetString("aws_vpc_cidr")
@@ -224,8 +265,8 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 					return fmt.Errorf("Invalid CIDR address: %s", input)
 				}
 				prefixLength, _ := ipNet.Mask.Size()
-				if prefixLength > 16 {
-					return fmt.Errorf("Prefix length must be 16 or less. Found %d.", prefixLength)
+				if prefixLength < 16 {
+					return fmt.Errorf("Prefix length must be 16 or greater. Found %d.", prefixLength)
 				}
 				return nil
 			},

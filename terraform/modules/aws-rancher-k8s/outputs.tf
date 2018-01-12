@@ -11,5 +11,5 @@ output "aws_security_group_id" {
 }
 
 output "aws_key_name" {
-  value = "${aws_key_pair.deployer.key_name}"
+  value = "${var.aws_key_name}"
 }
