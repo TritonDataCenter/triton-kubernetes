@@ -149,5 +149,14 @@ func NewRemoteClusterManagerStateManta(tritonAccount, tritonKeyPath, tritonKeyID
 		return RemoteClusterManagerStateManta{}, err
 	}
 
+	// Create root directory if it doesn't exist
+	putDirInput := &storage.PutDirectoryInput{
+		DirectoryName: rootDirectory,
+	}
+	err = tritonStorageClient.Dir().Put(context.Background(), putDirInput)
+	if err != nil {
+		return RemoteClusterManagerStateManta{}, err
+	}
+
 	return RemoteClusterManagerStateManta{tritonStorageClient}, nil
 }
