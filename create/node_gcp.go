@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/google"
@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	gcpNodeKeyFormat                            = "node_gcp_%s"
+	gcpNodeKeyFormat                            = "module.node_gcp_%s"
 	gcpRancherKubernetesHostTerraformModulePath = "terraform/modules/gcp-rancher-k8s-host"
 )
 
@@ -36,8 +36,8 @@ type gcpNodeTerraformConfig struct {
 	GCPImage        string `json:"gcp_image"`
 }
 
-func newGCPNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
-	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, clusterManagerTerraformConfig)
+func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
+	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
 		return err
 	}
@@ -46,9 +46,9 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		GCPPathToCredentials: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.gcp_path_to_credentials", selectedCluster)).Data().(string),
-		GCPProjectID:         clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.gcp_project_id", selectedCluster)).Data().(string),
-		GCPComputeRegion:     clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.gcp_compute_region", selectedCluster)).Data().(string),
+		GCPPathToCredentials: state.Get(fmt.Sprintf("module.%s.gcp_path_to_credentials", selectedCluster)),
+		GCPProjectID:         state.Get(fmt.Sprintf("module.%s.gcp_project_id", selectedCluster)),
+		GCPComputeRegion:     state.Get(fmt.Sprintf("module.%s.gcp_compute_region", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		GCPComputeNetworkName: fmt.Sprintf("${module.%s.gcp_compute_network_name}", selectedCluster),
@@ -217,8 +217,10 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 	}
 
 	// Add new node to terraform config
-	nodeKey := fmt.Sprintf(gcpNodeKeyFormat, cfg.Hostname)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", nodeKey))
+	err = state.Add(fmt.Sprintf(gcpNodeKeyFormat, cfg.Hostname), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -228,9 +230,8 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -253,7 +254,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

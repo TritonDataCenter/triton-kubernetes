@@ -5,27 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
-	"github.com/joyent/triton-kubernetes/util"
 
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
 
-func DeleteManager() error {
-	tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL, err := util.GetTritonAccountVariables()
-	if err != nil {
-		return err
-	}
-
-	remoteClusterManagerState, err := remote.NewRemoteClusterManagerStateManta(tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
-	if err != nil {
-		return err
-	}
-
-	clusterManagers, err := remoteClusterManagerState.List()
+func DeleteManager(remoteBackend backend.Backend) error {
+	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
 	}
@@ -69,13 +57,7 @@ func DeleteManager() error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
-	// Load current cluster manager config
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
+	state, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
 	}
@@ -88,9 +70,8 @@ func DeleteManager() error {
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -113,7 +94,7 @@ func DeleteManager() error {
 	}
 
 	// After terraform succeeds, delete remote state
-	err = remoteClusterManagerState.Delete(selectedClusterManager)
+	err = remoteBackend.DeleteState(selectedClusterManager)
 	if err != nil {
 		return err
 	}

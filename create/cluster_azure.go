@@ -7,20 +7,20 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/Azure/azure-sdk-for-go/arm/resources/subscriptions"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
 
 const (
-	azureClusterKeyFormat                     = "cluster_azure_%s"
+	azureClusterKeyFormat                     = "module.cluster_azure_%s"
 	azureRancherKubernetesTerraformModulePath = "terraform/modules/azure-rancher-k8s"
 )
 
@@ -37,7 +37,7 @@ type azureClusterTerraformConfig struct {
 	AzureLocation       string `json:"azure_location"`
 }
 
-func newAzureCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {
+func newAzureCluster(remoteBackend backend.Backend, state state.State) error {
 	baseConfig, err := getBaseClusterTerraformConfig(azureRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return err
@@ -230,20 +230,11 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 		cfg.AzureLocation = value
 	}
 
-	// Load current cluster manager config
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
-	}
-
 	// Add new cluster to terraform config
-	clusterKey := fmt.Sprintf(azureClusterKeyFormat, cfg.Name)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
+	err = state.Add(fmt.Sprintf(azureClusterKeyFormat, cfg.Name), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -253,9 +244,8 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -278,7 +268,7 @@ func newAzureCluster(selectedClusterManager string, remoteClusterManagerState re
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

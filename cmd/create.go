@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joyent/triton-kubernetes/create"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/spf13/cobra"
 )
@@ -33,25 +34,31 @@ var createCmd = &cobra.Command{
 }
 
 func createCmdFunc(cmd *cobra.Command, args []string) {
+	remoteBackend, err := util.PromptForBackend()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	createType := args[0]
 	switch createType {
 	case "manager":
 		fmt.Println("create manager called")
-		err := create.NewTritonManager()
+		err := create.NewTritonManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "cluster":
 		fmt.Println("create cluster called")
-		err := create.NewCluster()
+		err := create.NewCluster(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "node":
 		fmt.Println("create node called")
-		err := create.NewNode()
+		err := create.NewNode(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

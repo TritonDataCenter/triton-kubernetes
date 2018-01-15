@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Jeffail/gabs"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	"github.com/joyent/triton-go/compute"
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	tritonNodeKeyFormat                            = "node_triton_%s"
+	tritonNodeKeyFormat                            = "module.node_triton_%s"
 	tritonRancherKubernetesHostTerraformModulePath = "terraform/modules/triton-rancher-k8s-host"
 )
 
@@ -39,8 +39,8 @@ type tritonNodeTerraformConfig struct {
 	TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
 }
 
-func newTritonNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
-	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, clusterManagerTerraformConfig)
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
+	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
 		return err
 	}
@@ -49,10 +49,10 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		TritonAccount: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_account", selectedCluster)).Data().(string),
-		TritonKeyPath: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)).Data().(string),
-		TritonKeyID:   clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)).Data().(string),
-		TritonURL:     clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.triton_url", selectedCluster)).Data().(string),
+		TritonAccount: state.Get(fmt.Sprintf("module.%s.triton_account", selectedCluster)),
+		TritonKeyPath: state.Get(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)),
+		TritonKeyID:   state.Get(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)),
+		TritonURL:     state.Get(fmt.Sprintf("module.%s.triton_url", selectedCluster)),
 	}
 
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
@@ -230,8 +230,10 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 	}
 
 	// Add new node to terraform config
-	nodeKey := fmt.Sprintf(tritonNodeKeyFormat, cfg.Hostname)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", nodeKey))
+	err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, cfg.Hostname), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -241,9 +243,8 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -266,7 +267,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteCluster
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

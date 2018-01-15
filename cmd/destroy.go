@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joyent/triton-kubernetes/destroy"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/spf13/cobra"
 )
@@ -33,25 +34,31 @@ var destroyCmd = &cobra.Command{
 }
 
 func destroyCmdFunc(cmd *cobra.Command, args []string) {
+	remoteBackend, err := util.PromptForBackend()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	destroyType := args[0]
 	switch destroyType {
 	case "manager":
 		fmt.Println("destroy manager called")
-		err := destroy.DeleteManager()
+		err := destroy.DeleteManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "cluster":
 		fmt.Println("destroy cluster called")
-		err := destroy.DeleteCluster()
+		err := destroy.DeleteCluster(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "node":
 		fmt.Println("destroy node called")
-		err := destroy.DeleteNode()
+		err := destroy.DeleteNode(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

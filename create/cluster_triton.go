@@ -1,14 +1,17 @@
 package create
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
-
-	"github.com/Jeffail/gabs"
+	"github.com/joyent/triton-kubernetes/state"
+	"github.com/manifoldco/promptui"
+	homedir "github.com/mitchellh/go-homedir"
+	"github.com/spf13/viper"
 )
 
 const (
@@ -27,7 +30,7 @@ type tritonClusterTerraformConfig struct {
 	TritonURL     string `json:"triton_url,omitempty"`
 }
 
-func newTritonCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) error {
+func newTritonCluster(remoteBackend backend.Backend, state state.State) error {
 	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return err
@@ -35,27 +38,98 @@ func newTritonCluster(selectedClusterManager string, remoteClusterManagerState r
 
 	cfg := tritonClusterTerraformConfig{
 		baseClusterTerraformConfig: baseConfig,
-
-		TritonAccount: tritonAccount,
-		TritonKeyPath: tritonKeyPath,
-		TritonKeyID:   tritonKeyID,
-		TritonURL:     tritonURL,
 	}
 
-	// Load current cluster manager config
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
+	// Triton Account
+	if viper.IsSet("triton_account") {
+		cfg.TritonAccount = viper.GetString("triton_account")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Triton Account Name (usually your email)",
+			Validate: func(input string) error {
+				if len(input) == 0 {
+					return errors.New("Invalid Triton Account")
+				}
+				return nil
+			},
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.TritonAccount = result
+	}
+
+	// Triton Key Path
+	rawTritonKeyPath := ""
+	if viper.IsSet("triton_key_path") {
+		rawTritonKeyPath = viper.GetString("triton_key_path")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Triton Key Path",
+			Validate: func(input string) error {
+				expandedPath, err := homedir.Expand(input)
+				if err != nil {
+					return err
+				}
+
+				_, err = os.Stat(expandedPath)
+				if err != nil {
+					if os.IsNotExist(err) {
+						return errors.New("File not found")
+					}
+				}
+				return nil
+			},
+			Default: "~/.ssh/id_rsa",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		rawTritonKeyPath = result
+	}
+
+	expandedTritonKeyPath, err := homedir.Expand(rawTritonKeyPath)
 	if err != nil {
 		return err
 	}
+	cfg.TritonKeyPath = expandedTritonKeyPath
 
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
+	// Triton Key ID
+	if viper.IsSet("triton_key_id") {
+		cfg.TritonKeyID = viper.GetString("triton_key_id")
+	} else {
+		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
+		if err != nil {
+			return err
+		}
+		cfg.TritonKeyID = keyID
+	}
+
+	// Triton URL
+	if viper.IsSet("triton_url") {
+		cfg.TritonURL = viper.GetString("triton_url")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Triton URL",
+			Default: "https://us-east-1.api.joyent.com",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.TritonURL = result
 	}
 
 	// Add new cluster to terraform config
-	clusterKey := fmt.Sprintf(tritonClusterKeyFormat, cfg.Name)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
+	err = state.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -65,9 +139,8 @@ func newTritonCluster(selectedClusterManager string, remoteClusterManagerState r
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -90,7 +163,7 @@ func newTritonCluster(selectedClusterManager string, remoteClusterManagerState r
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

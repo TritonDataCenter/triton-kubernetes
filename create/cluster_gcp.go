@@ -9,10 +9,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -21,7 +21,7 @@ import (
 )
 
 const (
-	gcpClusterKeyFormat                     = "cluster_gcp_%s"
+	gcpClusterKeyFormat                     = "module.cluster_gcp_%s"
 	gcpRancherKubernetesTerraformModulePath = "terraform/modules/gcp-rancher-k8s"
 )
 
@@ -35,7 +35,7 @@ type gcpClusterTerraformConfig struct {
 	GCPComputeRegion     string `json:"gcp_compute_region"`
 }
 
-func newGCPCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {
+func newGCPCluster(remoteBackend backend.Backend, state state.State) error {
 	baseConfig, err := getBaseClusterTerraformConfig(gcpRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return err
@@ -154,20 +154,11 @@ func newGCPCluster(selectedClusterManager string, remoteClusterManagerState remo
 		cfg.GCPComputeRegion = regions.Items[i].Name
 	}
 
-	// Load current cluster manager config
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
-	}
-
 	// Add new cluster to terraform config
-	clusterKey := fmt.Sprintf(gcpClusterKeyFormat, cfg.Name)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
+	err = state.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -177,9 +168,8 @@ func newGCPCluster(selectedClusterManager string, remoteClusterManagerState remo
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -202,7 +192,7 @@ func newGCPCluster(selectedClusterManager string, remoteClusterManagerState remo
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

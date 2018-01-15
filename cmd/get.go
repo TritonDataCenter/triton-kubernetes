@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joyent/triton-kubernetes/get"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/spf13/cobra"
 )
@@ -33,11 +34,17 @@ var getCmd = &cobra.Command{
 }
 
 func getCmdFunc(cmd *cobra.Command, args []string) {
+	remoteBackend, err := util.PromptForBackend()
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
 	getType := args[0]
 	switch getType {
 	case "manager":
 		fmt.Println("get manager called")
-		err := get.GetManager()
+		err := get.GetManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
