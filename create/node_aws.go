@@ -7,10 +7,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Jeffail/gabs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/session"
@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	awsNodeKeyFormat                            = "node_aws_%s"
+	awsNodeKeyFormat                            = "module.node_aws_%s"
 	awsRancherKubernetesHostTerraformModulePath = "terraform/modules/aws-rancher-k8s-host"
 )
 
@@ -39,8 +39,8 @@ type awsNodeTerraformConfig struct {
 	AWSInstanceType string `json:"aws_instance_type"`
 }
 
-func newAWSNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
-	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, clusterManagerTerraformConfig)
+func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
+	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
 		return err
 	}
@@ -49,9 +49,9 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		AWSAccessKey: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.aws_access_key", selectedCluster)).Data().(string),
-		AWSSecretKey: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.aws_secret_key", selectedCluster)).Data().(string),
-		AWSRegion:    clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.aws_region", selectedCluster)).Data().(string),
+		AWSAccessKey: state.Get(fmt.Sprintf("module.%s.aws_access_key", selectedCluster)),
+		AWSSecretKey: state.Get(fmt.Sprintf("module.%s.aws_secret_key", selectedCluster)),
+		AWSRegion:    state.Get(fmt.Sprintf("module.%s.aws_region", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		AWSSubnetID:        fmt.Sprintf("${module.%s.aws_subnet_id}", selectedCluster),
@@ -153,8 +153,10 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 	}
 
 	// Add new node to terraform config
-	nodeKey := fmt.Sprintf(awsNodeKeyFormat, cfg.Hostname)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", nodeKey))
+	err = state.Add(fmt.Sprintf(awsNodeKeyFormat, cfg.Hostname), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -164,9 +166,8 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -189,7 +190,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteClusterMan
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

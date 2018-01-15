@@ -5,10 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/joyent/triton-kubernetes/backend"
+	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
@@ -35,18 +34,8 @@ type rancherHostLabelsConfig struct {
 	Compute       string `json:"compute,omitempty"`
 }
 
-func NewNode() error {
-	tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL, err := util.GetTritonAccountVariables()
-	if err != nil {
-		return err
-	}
-
-	remoteClusterManagerState, err := remote.NewRemoteClusterManagerStateManta(tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
-	if err != nil {
-		return err
-	}
-
-	clusterManagers, err := remoteClusterManagerState.List()
+func NewNode(remoteBackend backend.Backend) error {
+	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
 	}
@@ -90,18 +79,13 @@ func NewNode() error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
+	state, err := remoteBackend.State(selectedClusterManager)
+	if err != nil {
+		return err
+	}
+
 	// Get existing clusters
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
-	}
-
-	clusterOptions, err := util.GetClusterOptions(clusterManagerTerraformConfig)
+	clusters, err := state.Clusters()
 	if err != nil {
 		return err
 	}
@@ -109,33 +93,33 @@ func NewNode() error {
 	selectedClusterKey := ""
 	if viper.IsSet("cluster_name") {
 		clusterName := viper.GetString("cluster_name")
-		for _, option := range clusterOptions {
-			if clusterName == option.ClusterName {
-				selectedClusterKey = option.ClusterKey
-				break
-			}
-		}
-
-		if selectedClusterKey == "" {
+		clusterKey, ok := clusters[clusterName]
+		if !ok {
 			return fmt.Errorf("A cluster named '%s', does not exist.", clusterName)
 		}
+
+		selectedClusterKey = clusterKey
 	} else {
+		clusterNames := make([]string, 0, len(clusters))
+		for name := range clusters {
+			clusterNames = append(clusterNames, name)
+		}
 		prompt := promptui.Select{
-			Label: "Cluster to create node in",
-			Items: clusterOptions,
+			Label: "Cluster to deploy node to",
+			Items: clusterNames,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ .ClusterName | underline }}", promptui.IconSelect),
-				Inactive: " {{ .ClusterName }}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ .ClusterName }}`, promptui.IconGood),
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: " {{ . }}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ . }}`, promptui.IconGood),
 			},
 		}
 
-		i, _, err := prompt.Run()
+		_, value, err := prompt.Run()
 		if err != nil {
 			return err
 		}
-		selectedClusterKey = clusterOptions[i].ClusterKey
+		selectedClusterKey = clusters[value]
 	}
 
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
@@ -147,13 +131,13 @@ func NewNode() error {
 
 	switch parts[1] {
 	case "triton":
-		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
+		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
 	case "aws":
-		err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
+		err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
 	case "gcp":
-		err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
+		err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
 	case "azure":
-		err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteClusterManagerState, clusterManagerTerraformConfig)
+		err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
@@ -165,26 +149,15 @@ func NewNode() error {
 	return nil
 }
 
-func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, clusterManagerTerraformConfig *gabs.Container) (baseNodeTerraformConfig, error) {
+func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, state state.State) (baseNodeTerraformConfig, error) {
 	cfg := baseNodeTerraformConfig{
 		RancherAPIURL:        "http://${element(module.cluster-manager.masters, 0)}:8080",
 		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
-	}
 
-	// Grab registry variables from cluster config
-	rancherRegistry, ok := clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)).Data().(string)
-	if ok {
-		cfg.RancherRegistry = rancherRegistry
-	}
-
-	rancherRegistryUsername, ok := clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)).Data().(string)
-	if ok {
-		cfg.RancherRegistryUsername = rancherRegistryUsername
-	}
-
-	rancherRegistryPassword, ok := clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)).Data().(string)
-	if ok {
-		cfg.RancherRegistryPassword = rancherRegistryPassword
+		// Grab registry variables from cluster config
+		RancherRegistry:         state.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
+		RancherRegistryUsername: state.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
+		RancherRegistryPassword: state.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
 	}
 
 	baseSource := defaultSourceURL

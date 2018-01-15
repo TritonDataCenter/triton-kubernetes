@@ -9,11 +9,10 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
-	"github.com/joyent/triton-kubernetes/util"
+	homedir "github.com/mitchellh/go-homedir"
 
-	"github.com/Jeffail/gabs"
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	"github.com/joyent/triton-go/compute"
@@ -53,29 +52,8 @@ type tritonManagerTerraformConfig struct {
 	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
 }
 
-type mantaTerraformBackendConfig struct {
-	Account     string `json:"account"`
-	KeyMaterial string `json:"key_material"`
-	KeyID       string `json:"key_id"`
-	Path        string `json:"path"`
-}
-
-func NewTritonManager() error {
+func NewTritonManager(remoteBackend backend.Backend) error {
 	cfg := tritonManagerTerraformConfig{}
-
-	tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL, err := util.GetTritonAccountVariables()
-	if err != nil {
-		return err
-	}
-	cfg.TritonAccount = tritonAccount
-	cfg.TritonKeyPath = tritonKeyPath
-	cfg.TritonKeyID = tritonKeyID
-	cfg.TritonURL = tritonURL
-
-	remoteClusterManagerState, err := remote.NewRemoteClusterManagerStateManta(tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
-	if err != nil {
-		return err
-	}
 
 	baseSource := defaultSourceURL
 	if viper.IsSet("source_url") {
@@ -105,7 +83,7 @@ func NewTritonManager() error {
 	}
 
 	// Validate that a cluster manager with the same name doesn't already exist.
-	existingClusterManagers, err := remoteClusterManagerState.List()
+	existingClusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
 	}
@@ -196,6 +174,91 @@ func NewTritonManager() error {
 		}
 	}
 
+	// Triton Account
+	if viper.IsSet("triton_account") {
+		cfg.TritonAccount = viper.GetString("triton_account")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Triton Account Name (usually your email)",
+			Validate: func(input string) error {
+				if len(input) == 0 {
+					return errors.New("Invalid Triton Account")
+				}
+				return nil
+			},
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.TritonAccount = result
+	}
+
+	// Triton Key Path
+	rawTritonKeyPath := ""
+	if viper.IsSet("triton_key_path") {
+		rawTritonKeyPath = viper.GetString("triton_key_path")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Triton Key Path",
+			Validate: func(input string) error {
+				expandedPath, err := homedir.Expand(input)
+				if err != nil {
+					return err
+				}
+
+				_, err = os.Stat(expandedPath)
+				if err != nil {
+					if os.IsNotExist(err) {
+						return errors.New("File not found")
+					}
+				}
+				return nil
+			},
+			Default: "~/.ssh/id_rsa",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		rawTritonKeyPath = result
+	}
+
+	expandedTritonKeyPath, err := homedir.Expand(rawTritonKeyPath)
+	if err != nil {
+		return err
+	}
+	cfg.TritonKeyPath = expandedTritonKeyPath
+
+	// Triton Key ID
+	if viper.IsSet("triton_key_id") {
+		cfg.TritonKeyID = viper.GetString("triton_key_id")
+	} else {
+		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
+		if err != nil {
+			return err
+		}
+		cfg.TritonKeyID = keyID
+	}
+
+	// Triton URL
+	if viper.IsSet("triton_url") {
+		cfg.TritonURL = viper.GetString("triton_url")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Triton URL",
+			Default: "https://us-east-1.api.joyent.com",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.TritonURL = result
+	}
+
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
 	if err != nil {
 		return err
@@ -208,16 +271,9 @@ func NewTritonManager() error {
 
 	config := &triton.ClientConfig{
 		TritonURL:   cfg.TritonURL,
-		MantaURL:    mantaURL,
+		MantaURL:    "https://us-east.manta.joyent.com",
 		AccountName: cfg.TritonAccount,
 		Signers:     []authentication.Signer{sshKeySigner},
-	}
-
-	terraformBackendConfig := mantaTerraformBackendConfig{
-		Account:     cfg.TritonAccount,
-		KeyMaterial: cfg.TritonKeyPath,
-		KeyID:       cfg.TritonKeyID,
-		Path:        fmt.Sprintf("/triton-kubernetes/%s/", cfg.Name),
 	}
 
 	tritonComputeClient, err := compute.NewClient(config)
@@ -357,9 +413,13 @@ func NewTritonManager() error {
 		cfg.MasterTritonMachinePackage = kvmPackages[i].Name
 	}
 
-	clusterManagerTerraformConfig := gabs.New()
-	clusterManagerTerraformConfig.SetP(cfg, "module.cluster-manager")
-	clusterManagerTerraformConfig.SetP(terraformBackendConfig, "terraform.backend.manta")
+	state, err := remoteBackend.State(cfg.Name)
+	if err != nil {
+		return err
+	}
+
+	state.Add("module.cluster-manager", &cfg)
+	state.Add(remoteBackend.StateTerraformConfig(cfg.Name))
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -369,9 +429,8 @@ func NewTritonManager() error {
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -394,7 +453,7 @@ func NewTritonManager() error {
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(cfg.Name, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

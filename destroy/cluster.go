@@ -5,27 +5,15 @@ import (
 	"io/ioutil"
 	"os"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
-	"github.com/joyent/triton-kubernetes/util"
 
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
 
-func DeleteCluster() error {
-	tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL, err := util.GetTritonAccountVariables()
-	if err != nil {
-		return err
-	}
-
-	remoteClusterManagerState, err := remote.NewRemoteClusterManagerStateManta(tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
-	if err != nil {
-		return err
-	}
-
-	clusterManagers, err := remoteClusterManagerState.List()
+func DeleteCluster(remoteBackend backend.Backend) error {
+	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
 	}
@@ -69,18 +57,13 @@ func DeleteCluster() error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
+	state, err := remoteBackend.State(selectedClusterManager)
+	if err != nil {
+		return err
+	}
+
 	// Get existing clusters
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
-	}
-
-	clusterOptions, err := util.GetClusterOptions(clusterManagerTerraformConfig)
+	clusters, err := state.Clusters()
 	if err != nil {
 		return err
 	}
@@ -88,33 +71,33 @@ func DeleteCluster() error {
 	selectedClusterKey := ""
 	if viper.IsSet("cluster_name") {
 		clusterName := viper.GetString("cluster_name")
-		for _, option := range clusterOptions {
-			if clusterName == option.ClusterName {
-				selectedClusterKey = option.ClusterKey
-				break
-			}
-		}
-
-		if selectedClusterKey == "" {
+		clusterKey, ok := clusters[clusterName]
+		if !ok {
 			return fmt.Errorf("A cluster named '%s', does not exist.", clusterName)
 		}
+
+		selectedClusterKey = clusterKey
 	} else {
+		clusterNames := make([]string, 0, len(clusters))
+		for name := range clusters {
+			clusterNames = append(clusterNames, name)
+		}
 		prompt := promptui.Select{
 			Label: "Cluster to delete",
-			Items: clusterOptions,
+			Items: clusterNames,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ .ClusterName | underline }}", promptui.IconSelect),
-				Inactive: " {{ .ClusterName }}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ .ClusterName }}`, promptui.IconGood),
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: " {{ . }}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ . }}`, promptui.IconGood),
 			},
 		}
 
-		i, _, err := prompt.Run()
+		_, value, err := prompt.Run()
 		if err != nil {
 			return err
 		}
-		selectedClusterKey = clusterOptions[i].ClusterKey
+		selectedClusterKey = clusters[value]
 	}
 
 	// TODO: Prompt confirmation to delete cluster?
@@ -127,9 +110,8 @@ func DeleteCluster() error {
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -145,7 +127,7 @@ func DeleteCluster() error {
 		return err
 	}
 
-	nodes, err := util.GetNodeOptions(clusterManagerTerraformConfig, selectedClusterKey)
+	nodes, err := state.Nodes(selectedClusterKey)
 	if err != nil {
 		return err
 	}
@@ -158,7 +140,7 @@ func DeleteCluster() error {
 
 	// Delete all nodes in the selected cluster
 	for _, node := range nodes {
-		args = append(args, fmt.Sprintf("-target=module.%s", node.NodeKey))
+		args = append(args, fmt.Sprintf("-target=module.%s", node))
 	}
 
 	// Run terraform destroy
@@ -168,21 +150,21 @@ func DeleteCluster() error {
 	}
 
 	// Remove cluster from terraform config
-	err = clusterManagerTerraformConfig.Delete("module", selectedClusterKey)
+	err = state.Delete(fmt.Sprintf("module.%s", selectedClusterKey))
 	if err != nil {
 		return err
 	}
 
 	// Remove all nodes associated to this cluster from terraform config
 	for _, node := range nodes {
-		err = clusterManagerTerraformConfig.Delete("module", node.NodeKey)
+		err = state.Delete(fmt.Sprintf("module.%s", node))
 		if err != nil {
 			return err
 		}
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, clusterManagerTerraformConfig.BytesIndent("", "\t"))
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

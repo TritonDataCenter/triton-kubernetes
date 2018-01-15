@@ -5,8 +5,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/joyent/triton-kubernetes/backend"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -38,18 +37,8 @@ type baseClusterTerraformConfig struct {
 	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
 }
 
-func NewCluster() error {
-	tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL, err := util.GetTritonAccountVariables()
-	if err != nil {
-		return err
-	}
-
-	remoteClusterManagerState, err := remote.NewRemoteClusterManagerStateManta(tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
-	if err != nil {
-		return err
-	}
-
-	clusterManagers, err := remoteClusterManagerState.List()
+func NewCluster(remoteBackend backend.Backend) error {
+	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
 	}
@@ -93,6 +82,11 @@ func NewCluster() error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
+	state, err := remoteBackend.State(selectedClusterManager)
+	if err != nil {
+		return err
+	}
+
 	// Ask user what cloud provider the new cluster should be created in
 	selectedCloudProvider := ""
 	if viper.IsSet("cluster_cloud_provider") {
@@ -120,13 +114,13 @@ func NewCluster() error {
 	switch selectedCloudProvider {
 	case "triton":
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
-		err = newTritonCluster(selectedClusterManager, remoteClusterManagerState, tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL)
+		err = newTritonCluster(remoteBackend, state)
 	case "aws":
-		err = newAWSCluster(selectedClusterManager, remoteClusterManagerState)
+		err = newAWSCluster(remoteBackend, state)
 	case "gcp":
-		err = newGCPCluster(selectedClusterManager, remoteClusterManagerState)
+		err = newGCPCluster(remoteBackend, state)
 	case "azure":
-		err = newAzureCluster(selectedClusterManager, remoteClusterManagerState)
+		err = newAzureCluster(remoteBackend, state)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}

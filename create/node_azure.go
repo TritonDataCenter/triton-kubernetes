@@ -7,21 +7,21 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/Azure/azure-sdk-for-go/arm/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
-	"github.com/Jeffail/gabs"
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
 const (
-	azureNodeKeyFormat                            = "node_azure_%s"
+	azureNodeKeyFormat                            = "module.node_azure_%s"
 	azureRancherKubernetesHostTerraformModulePath = "terraform/modules/azure-rancher-k8s-host"
 )
 
@@ -48,8 +48,8 @@ type azureNodeTerraformConfig struct {
 	AzurePublicKeyPath  string `json:"azure_public_key_path"`
 }
 
-func newAzureNode(selectedClusterManager, selectedCluster string, remoteClusterManagerState remote.RemoteClusterManagerStateManta, clusterManagerTerraformConfig *gabs.Container) error {
-	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, clusterManagerTerraformConfig)
+func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
+	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
 		return err
 	}
@@ -58,12 +58,12 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteClusterM
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		AzureSubscriptionID: clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.azure_subscription_id", selectedCluster)).Data().(string),
-		AzureClientID:       clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.azure_client_id", selectedCluster)).Data().(string),
-		AzureClientSecret:   clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.azure_client_secret", selectedCluster)).Data().(string),
-		AzureTenantID:       clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.azure_tenant_id", selectedCluster)).Data().(string),
-		AzureEnvironment:    clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.azure_environment", selectedCluster)).Data().(string),
-		AzureLocation:       clusterManagerTerraformConfig.Path(fmt.Sprintf("module.%s.azure_location", selectedCluster)).Data().(string),
+		AzureSubscriptionID: state.Get(fmt.Sprintf("module.%s.azure_subscription_id", selectedCluster)),
+		AzureClientID:       state.Get(fmt.Sprintf("module.%s.azure_client_id", selectedCluster)),
+		AzureClientSecret:   state.Get(fmt.Sprintf("module.%s.azure_client_secret", selectedCluster)),
+		AzureTenantID:       state.Get(fmt.Sprintf("module.%s.azure_tenant_id", selectedCluster)),
+		AzureEnvironment:    state.Get(fmt.Sprintf("module.%s.azure_environment", selectedCluster)),
+		AzureLocation:       state.Get(fmt.Sprintf("module.%s.azure_location", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		AzureResourceGroupName:      fmt.Sprintf("${module.%s.azure_resource_group_name}", selectedCluster),
@@ -219,8 +219,10 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteClusterM
 	}
 
 	// Add new node to terraform config
-	nodeKey := fmt.Sprintf(azureNodeKeyFormat, cfg.Hostname)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", nodeKey))
+	err = state.Add(fmt.Sprintf(azureNodeKeyFormat, cfg.Hostname), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -230,9 +232,8 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteClusterM
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -255,7 +256,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteClusterM
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}

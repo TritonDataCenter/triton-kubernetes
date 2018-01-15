@@ -8,10 +8,10 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/remote"
+	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Jeffail/gabs"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
 	"github.com/aws/aws-sdk-go/aws/endpoints"
@@ -23,7 +23,7 @@ import (
 )
 
 const (
-	awsClusterKeyFormat                     = "cluster_aws_%s"
+	awsClusterKeyFormat                     = "module.cluster_aws_%s"
 	awsRancherKubernetesTerraformModulePath = "terraform/modules/aws-rancher-k8s"
 )
 
@@ -42,7 +42,7 @@ type awsClusterTerraformConfig struct {
 	AWSKeyName       string `json:"aws_key_name"`
 }
 
-func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remote.RemoteClusterManagerStateManta) error {
+func newAWSCluster(remoteBackend backend.Backend, state state.State) error {
 	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return err
@@ -343,20 +343,11 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 		cfg.AWSSubnetCIDR = result
 	}
 
-	// Load current cluster manager config
-	clusterManagerTerraformConfigBytes, err := remoteClusterManagerState.GetTerraformConfig(selectedClusterManager)
-	if err != nil {
-		return err
-	}
-
-	clusterManagerTerraformConfig, err := gabs.ParseJSON(clusterManagerTerraformConfigBytes)
-	if err != nil {
-		return err
-	}
-
 	// Add new cluster to terraform config
-	clusterKey := fmt.Sprintf(awsClusterKeyFormat, cfg.Name)
-	clusterManagerTerraformConfig.SetP(&cfg, fmt.Sprintf("module.%s", clusterKey))
+	err = state.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
+	if err != nil {
+		return err
+	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -366,9 +357,8 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 	defer os.RemoveAll(tempDir)
 
 	// Save the terraform config to the temporary directory
-	jsonBytes := []byte(clusterManagerTerraformConfig.StringIndent("", "\t"))
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, jsonBytes, 0644)
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
 		return err
 	}
@@ -391,7 +381,7 @@ func newAWSCluster(selectedClusterManager string, remoteClusterManagerState remo
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteClusterManagerState.CommitTerraformConfig(selectedClusterManager, jsonBytes)
+	err = remoteBackend.PersistState(state)
 	if err != nil {
 		return err
 	}
