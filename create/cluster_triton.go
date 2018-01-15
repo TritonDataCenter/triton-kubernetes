@@ -15,7 +15,7 @@ import (
 )
 
 const (
-	tritonClusterKeyFormat                     = "cluster_triton_%s"
+	tritonClusterKeyFormat                     = "module.cluster_triton_%s"
 	tritonRancherKubernetesTerraformModulePath = "terraform/modules/triton-rancher-k8s"
 )
 
