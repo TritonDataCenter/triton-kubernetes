@@ -95,7 +95,7 @@ startProvisioning() {
 		cd terraform
 		$TERRAFORM init
 		$TERRAFORM get
-		$TERRAFORM apply -target "module.${1}"
+		$TERRAFORM apply -auto-approve=true -target "module.${1}"
 	)
 }
 deleteEnvironment() {
@@ -318,7 +318,7 @@ getClusterManagerConfig() {
 	then
 		_mysqldb_triton_machine_package="$(getArgument "Which Triton package should be used for Global Cluster Manager database server" "k4-highcpu-kvm-1.75G")"
 	fi
-	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/17.03.sh")"
 }
 getAWSEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "aws-test")"
@@ -342,7 +342,7 @@ getAWSEnvironmentConfig() {
 	fi
 	_compute_aws_instance_type="$(getArgument "What size hosts should be used for $_name environment compute nodes" "t2.micro")"
 	_aws_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
-	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/17.03.sh")"
 }
 getAzureEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "azure-test")"
@@ -365,7 +365,7 @@ getAzureEnvironmentConfig() {
 	fi
 	_compute_azure_size="$(getArgument "What size hosts should be used for $_name environment compute nodes" "Standard_A1")"
 	_azure_public_key_path="$(getArgument "Which ssh public key should these hosts be set up with" "${HOME}/.ssh/id_rsa.pub")"
-	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/17.03.sh")"
 }
 getGCPEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "gcp-test")"
@@ -388,7 +388,7 @@ getGCPEnvironmentConfig() {
 		_orchestration_gcp_instance_type="$(getArgument "What size hosts should be used for $_name environment orchestration nodes running apiserver/scheduler/controllermanager/..." "n1-standard-1")"
 	fi
 	_compute_gcp_instance_type="$(getArgument "What size hosts should be used for $_name environment compute nodes" "n1-standard-1")"
-	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/17.03.sh")"
 }
 getTritonEnvironmentConfig() {
 	_name="$(getArgument "Name your environment" "triton-test")"
@@ -430,10 +430,10 @@ getTritonEnvironmentConfig() {
 		_orchestration_triton_machine_package="$(getArgument "Which Triton package should be used for $_name environment orchestration nodes running apiserver/scheduler/controllermanager/..." "k4-highcpu-kvm-1.75G")"
 	fi
 	_compute_triton_machine_package="$(getArgument "Which Triton package should be used for $_name environment compute nodes" "k4-highcpu-kvm-1.75G")"
-	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/1.12.sh")"
+	docker_engine_install_url="$(getArgument "docker-engine install script" "https://releases.rancher.com/install-docker/17.03.sh")"
 }
 readConfig() {
-	docker_engine_install_url=https://releases.rancher.com/install-docker/1.12.sh
+	docker_engine_install_url=https://releases.rancher.com/install-docker/17.03.sh
 	while read -r line || [[ -n "$line" ]]
 	do
 		line=$(echo "$line" | tr -d ' ')
@@ -1109,17 +1109,13 @@ showEnvironmentDetails() {
 
 getTERRAFORM() {
 	local __TERRAFORM
-	local __TERRAFORM_VERSION
 	local __TERRAFORM_URL
 	local __TERRAFORM_ZIP_FILE
 
 	if [ -n "$(command -v terraform)" ]
 	then
 		__TERRAFORM="$(command -v terraform)"
-		__TERRAFORM_VERSION="$(terraform version | grep 'Terraform v' | sed 's/Terraform v//')"
-	fi
-	if [ "$__TERRAFORM_VERSION" != "$(curl -s https://checkpoint-api.hashicorp.com/v1/check/terraform | jq -r -M '.current_version')" ]
-	then
+	else
 		(
 			__TERRAFORM_ZIP_FILE="terraform_""$(uname | tr '[:upper:]' '[:lower:]')""_amd64.zip"
 			__TERRAFORM_URL="https://releases.hashicorp.com/terraform/0.10.8/terraform_0.10.8_$(uname | tr '[:upper:]' '[:lower:]')_amd64.zip"
@@ -1138,7 +1134,6 @@ getTERRAFORM() {
 			fi
 		)
 		__TERRAFORM="$(pwd)/bin/terraform"
-		__TERRAFORM_VERSION="$("$__TERRAFORM" version | grep 'Terraform v' | sed 's/Terraform v//')"
 	fi
 	TERRAFORM=$__TERRAFORM
 }

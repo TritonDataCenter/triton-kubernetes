@@ -89,7 +89,7 @@ Follow the on screen instructions answering questions about the cluster. You can
 | Which Triton networks should be used for this environment                      | Joyent-SDC-Public                                     | <kbd>enter</kbd>     |
 | Which Triton package should be used for Global Cluster Manager server(s)       | k4-highcpu-kvm-1.75G                                  | k4-highcpu-kvm-3.75G |
 | Which Triton package should be used for Global Cluster Manager database server | k4-highcpu-kvm-1.75G                                  | k4-highcpu-kvm-3.75G |
-| docker-engine install script                                                   | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd>     |
+| docker-engine install script                                                   | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd>     |
 
 After verification of the entries, setup will start Cluster Manager in HA mode on Joyent Cloud. This will be a two node HA configuration with a shared database node.
 
@@ -114,7 +114,7 @@ The Triton credentials are pulled from environment variables. If `eval "$(triton
 | Which Triton package should be used for triton-test environment etcd nodes | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
 | Which Triton package should be used for triton-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
 | Which Triton package should be used for triton-test environment compute nodes | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
-| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
 
 After verification of the entries, setup will create a Kubernetes environment in HA mode on Joyent Cloud. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
 
@@ -155,7 +155,7 @@ aws ec2 describe-images --image-id ami-0def3275
 | What size hosts should be used for aws-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | t2.micro | t2.small |
 | What size hosts should be used for aws-test environment compute nodes | t2.micro | t2.small |
 | Which ssh public key should these hosts be set up with |  | \[your public ssh key] |
-| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
 
 After verification of the entries, setup will create a Kubernetes environment in HA mode running on AWS. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
 
@@ -176,7 +176,7 @@ After verification of the entries, setup will create a Kubernetes environment in
 | What size hosts should be used for azure-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | Standard_A1 | Standard_A2 |
 | What size hosts should be used for azure-test environment compute nodes | Standard_A1 | Standard_A2 |
 | Which ssh public key should these hosts be set up with |  | \[public ssh key] |
-| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
 
 After verification of the entries, setup will create a Kubernetes environment in HA mode running on Azure. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
 
@@ -195,6 +195,6 @@ After verification of the entries, setup will create a Kubernetes environment in
 | What size hosts should be used for gcp-test environment etcd nodes | n1-standard-1 | n1-standard-2 |
 | What size hosts should be used for gcp-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | n1-standard-1 | n1-standard-2 |
 | What size hosts should be used for gcp-test environment compute nodes | n1-standard-1 | n1-standard-2 |
-| docker-engine install script | <https://releases.rancher.com/install-docker/1.12.sh> | <kbd>enter</kbd> |
+| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
 
 After verification of the entries, setup will create a Kubernetes environment in HA mode running on GCP. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
