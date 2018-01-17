@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -234,10 +235,25 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		cfg.TritonMachinePackage = kvmPackages[i].Name
 	}
 
-	// Add new node to terraform config
-	err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, cfg.Hostname), &cfg)
+	// Get existing node names
+	nodes, err := state.Nodes(selectedCluster)
 	if err != nil {
 		return err
+	}
+	existingNames := []string{}
+	for nodeName := range nodes {
+		existingNames = append(existingNames, nodeName)
+	}
+
+	// Determine what the hostnames should be for the new node(s)
+	newHostnames := getNewHostnames(existingNames, cfg.Hostname, cfg.NodeCount)
+
+	// Add new node to terraform config with the new hostnames
+	for _, newHostname := range newHostnames {
+		err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), &cfg)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Create a temporary directory
@@ -278,4 +294,52 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	}
 
 	return nil
+}
+
+// Returns the hostnames that should be used when adding new nodes. Prevents naming collisions.
+func getNewHostnames(existingNames []string, nodeName string, nodesToAdd int) []string {
+	if nodesToAdd < 1 {
+		return []string{}
+	}
+
+	// If there's only one node to add, and the name doesn't exist
+	// just return the node name itself.
+	if nodesToAdd == 1 {
+		nodeNameUsed := false
+		for _, existingName := range existingNames {
+			if existingName == nodeName {
+				nodeNameUsed = true
+				break
+			}
+		}
+		if !nodeNameUsed {
+			return []string{nodeName}
+		}
+	}
+
+	// Find the number at which the series of hostnames should start.
+	startNum := 1
+	targetPrefix := nodeName + "-"
+	for _, existingName := range existingNames {
+		if !strings.HasPrefix(existingName, targetPrefix) {
+			continue
+		}
+
+		suffix := existingName[len(targetPrefix):]
+		numSuffix, err := strconv.Atoi(suffix)
+		if err != nil {
+			continue
+		}
+		if numSuffix >= startNum {
+			startNum = numSuffix + 1
+		}
+	}
+
+	// Build the list of hostnames
+	result := []string{}
+	for i := 0; i < nodesToAdd; i++ {
+		result = append(result, fmt.Sprintf("%s-%d", nodeName, startNum+i))
+	}
+
+	return result
 }

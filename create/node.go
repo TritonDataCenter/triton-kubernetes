@@ -17,7 +17,7 @@ type baseNodeTerraformConfig struct {
 	Source string `json:"source"`
 
 	Hostname  string `json:"hostname"`
-	NodeCount int64
+	NodeCount int
 
 	RancherAPIURL        string                  `json:"rancher_api_url"`
 	RancherAccessKey     string                  `json:"rancher_access_key"`
@@ -239,7 +239,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 	}
 
 	// Verifying node count
-	nodeCount, err := strconv.ParseInt(countInput, 10, 64)
+	nodeCount, err := strconv.Atoi(countInput)
 	if err != nil {
 		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be a valid number. Found '%s'.", countInput)
 	}
