@@ -17,7 +17,7 @@ type baseNodeTerraformConfig struct {
 	Source string `json:"source"`
 
 	Hostname  string `json:"hostname"`
-	NodeCount int
+	NodeCount int    `json:"-"`
 
 	RancherAPIURL        string                  `json:"rancher_api_url"`
 	RancherAccessKey     string                  `json:"rancher_access_key"`
