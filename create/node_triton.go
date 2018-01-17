@@ -250,7 +250,9 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 	// Add new node to terraform config with the new hostnames
 	for _, newHostname := range newHostnames {
-		err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), &cfg)
+		cfgCopy := *(&cfg)
+		cfgCopy.Hostname = newHostname
+		err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
 			return err
 		}
