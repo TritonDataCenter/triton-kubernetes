@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -15,7 +16,8 @@ import (
 type baseNodeTerraformConfig struct {
 	Source string `json:"source"`
 
-	Hostname string `json:"hostname"`
+	Hostname  string `json:"hostname"`
+	NodeCount int64
 
 	RancherAPIURL        string                  `json:"rancher_api_url"`
 	RancherAccessKey     string                  `json:"rancher_access_key"`
@@ -212,7 +214,36 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 		return baseNodeTerraformConfig{}, fmt.Errorf("Invalid rancher_host_label '%s', must be 'compute', 'etcd' or 'orchestration'", selectedHostLabel)
 	}
 
-	// TODO: Allow user to specify number of nodes to be created.
+	// Allow user to specify number of nodes to be created.
+	var countInput string
+	if viper.IsSet("node_count") {
+		countInput = viper.GetString("node_count")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Number of nodes to create",
+			Validate: func(input string) error {
+				_, err := strconv.ParseInt(input, 10, 64)
+				if err != nil {
+					return errors.New("Invalid number")
+				}
+				return nil
+			},
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return baseNodeTerraformConfig{}, err
+		}
+
+		countInput = result
+	}
+
+	// Verifying node count
+	nodeCount, err := strconv.ParseInt(countInput, 10, 64)
+	if err != nil {
+		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be a valid number. Found '%s'.", countInput)
+	}
+	cfg.NodeCount = nodeCount
 
 	// hostname
 	if viper.IsSet("hostname") {
