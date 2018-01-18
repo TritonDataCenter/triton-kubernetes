@@ -216,10 +216,27 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		cfg.GCPImage = images.Items[i].Name
 	}
 
-	// Add new node to terraform config
-	err = state.Add(fmt.Sprintf(gcpNodeKeyFormat, cfg.Hostname), &cfg)
+	// Get existing node names
+	nodes, err := state.Nodes(selectedCluster)
 	if err != nil {
 		return err
+	}
+	existingNames := []string{}
+	for nodeName := range nodes {
+		existingNames = append(existingNames, nodeName)
+	}
+
+	// Determine what the hostnames should be for the new node(s)
+	newHostnames := getNewHostnames(existingNames, cfg.Hostname, cfg.NodeCount)
+
+	// Add new node to terraform config with the new hostnames
+	for _, newHostname := range newHostnames {
+		cfgCopy := *(&cfg)
+		cfgCopy.Hostname = newHostname
+		err = state.Add(fmt.Sprintf(gcpNodeKeyFormat, newHostname), cfgCopy)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Create a temporary directory
