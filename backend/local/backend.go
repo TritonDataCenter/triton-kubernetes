@@ -27,7 +27,15 @@ type localTerraformBackendConfig struct {
 
 func New() (backend.Backend, error) {
 	// Create root directory
-	os.MkdirAll(rootDirectory, os.ModePerm)
+	expandedRootDirectory, err := homedir.Expand(rootDirectory)
+	if err != nil {
+		return localBackend{}, err
+	}
+
+	err = os.MkdirAll(expandedRootDirectory, os.ModePerm)
+	if err != nil {
+		return localBackend{}, err
+	}
 
 	return localBackend{}, nil
 }
