@@ -2,15 +2,15 @@ variable "name" {
   description = "Human readable name used as prefix to generated names."
 }
 
-variable "api_url" {
+variable "rancher_api_url" {
   description = ""
 }
 
-variable "access_key" {
+variable "rancher_access_key" {
   description = ""
 }
 
-variable "secret_key" {
+variable "rancher_secret_key" {
   description = ""
 }
 
@@ -63,16 +63,16 @@ variable "aws_subnet_cidr" {
 
 variable "aws_ami_id" {
   description = "Base AMI to launch the instances with"
+  default     = ""
 }
 
 variable "aws_public_key_path" {
-  description = "Value of the public key"
-  default     = "~/.ssh/id_rsa.pub"
+  description = "Path to a public key. If set, a key_pair will be made in AWS named aws_key_name"
+  default     = ""
 }
 
 variable "aws_key_name" {
   description = "Name of the public key to be used for provisioning"
-  default     = "rancher_public_key"
 }
 
 variable "etcd_aws_instance_type" {

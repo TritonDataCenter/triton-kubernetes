@@ -15,14 +15,14 @@ resource "aws_vpc" "default" {
 }
 
 provider "rancher" {
-  api_url = "${var.api_url}"
+  api_url = "${var.rancher_api_url}"
 }
 
 data "external" "rancher_environment_template" {
   program = ["bash", "${path.module}/files/rancher_environment_template.sh"]
 
   query = {
-    rancher_api_url     = "${var.api_url}"
+    rancher_api_url     = "${var.rancher_api_url}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"
@@ -100,8 +100,10 @@ resource "aws_route_table_association" "public" {
 }
 
 resource "aws_key_pair" "deployer" {
-  key_name = "${var.aws_key_name}"
+  // Only attempt to create the key pair if the public key was provided
+  count = "${var.aws_public_key_path != "" ? 1 : 0}"
 
+  key_name   = "${var.aws_key_name}"
   public_key = "${file("${var.aws_public_key_path}")}"
 }
 
@@ -147,8 +149,10 @@ resource "aws_security_group" "rancher" {
 }
 
 resource "rancher_registration_token" "etcd" {
-  name           = "etcd_host_tokens"
-  description    = "Registration token for ${var.name} etcd hosts"
+  count = "${var.etcd_node_count}"
+
+  name           = "${var.name}-etcd-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-etcd-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -163,7 +167,7 @@ data "template_file" "install_rancher_agent_etcd" {
 
   vars {
     hostname                  = "${var.name}-etcd-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.etcd.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.etcd.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -179,7 +183,7 @@ resource "aws_instance" "etcd" {
   instance_type          = "${var.etcd_aws_instance_type}"
   subnet_id              = "${aws_subnet.public.id}"
   vpc_security_group_ids = ["${aws_security_group.rancher.id}"]
-  key_name               = "${aws_key_pair.deployer.key_name}"
+  key_name               = "${var.aws_public_key_path != "" ? aws_key_pair.deployer.key_name : var.aws_key_name}"
 
   tags = {
     Name = "${var.name}-etcd-${count.index + 1}"
@@ -189,8 +193,10 @@ resource "aws_instance" "etcd" {
 }
 
 resource "rancher_registration_token" "orchestration" {
-  name           = "orchestration_host_tokens"
-  description    = "Registration token for ${var.name} orchestration hosts"
+  count = "${var.orchestration_node_count}"
+
+  name           = "${var.name}-orchestration-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-orchestration-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -205,7 +211,7 @@ data "template_file" "install_rancher_agent_orchestration" {
 
   vars {
     hostname                  = "${var.name}-orchestration-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.orchestration.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.orchestration.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -221,7 +227,7 @@ resource "aws_instance" "orchestration" {
   instance_type          = "${var.orchestration_aws_instance_type}"
   subnet_id              = "${aws_subnet.public.id}"
   vpc_security_group_ids = ["${aws_security_group.rancher.id}"]
-  key_name               = "${aws_key_pair.deployer.key_name}"
+  key_name               = "${var.aws_public_key_path != "" ? aws_key_pair.deployer.key_name : var.aws_key_name}"
 
   tags = {
     Name = "${var.name}-orchestration-${count.index + 1}"
@@ -231,8 +237,10 @@ resource "aws_instance" "orchestration" {
 }
 
 resource "rancher_registration_token" "compute" {
-  name           = "compute_host_tokens"
-  description    = "Registration token for ${var.name} compute hosts"
+  count = "${var.compute_node_count}"
+
+  name           = "${var.name}-compute-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-compute-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -247,7 +255,7 @@ data "template_file" "install_rancher_agent_compute" {
 
   vars {
     hostname                  = "${var.name}-compute-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.compute.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.compute.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -263,7 +271,7 @@ resource "aws_instance" "compute" {
   instance_type          = "${var.compute_aws_instance_type}"
   subnet_id              = "${aws_subnet.public.id}"
   vpc_security_group_ids = ["${aws_security_group.rancher.id}"]
-  key_name               = "${aws_key_pair.deployer.key_name}"
+  key_name               = "${var.aws_public_key_path != "" ? aws_key_pair.deployer.key_name : var.aws_key_name}"
 
   tags = {
     Name = "${var.name}-compute-${count.index + 1}"
