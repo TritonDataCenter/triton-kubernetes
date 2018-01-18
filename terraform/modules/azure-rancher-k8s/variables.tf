@@ -2,15 +2,15 @@ variable "name" {
   description = "Human readable name used as prefix to generated names."
 }
 
-variable "api_url" {
+variable "rancher_api_url" {
   description = ""
 }
 
-variable "access_key" {
+variable "rancher_access_key" {
   description = ""
 }
 
-variable "secret_key" {
+variable "rancher_secret_key" {
   description = ""
 }
 
@@ -55,6 +55,10 @@ variable "azure_tenant_id" {
   default = ""
 }
 
+variable "azure_environment" {
+  default = "public"
+}
+
 variable "azure_location" {
   default = "West US 2"
 }
@@ -81,10 +85,6 @@ variable "azure_ssh_user" {
 
 variable "azure_public_key_path" {
   default = "~/.ssh/id_rsa.pub"
-}
-
-variable "azure_resource_group_name" {
-  default = "k8s"
 }
 
 variable "azure_virtual_network_name" {

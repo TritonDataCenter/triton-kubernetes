@@ -2,15 +2,15 @@ variable "name" {
   description = "Human readable name used as prefix to generated names."
 }
 
-variable "api_url" {
+variable "rancher_api_url" {
   description = ""
 }
 
-variable "access_key" {
+variable "rancher_access_key" {
   description = ""
 }
 
-variable "secret_key" {
+variable "rancher_secret_key" {
   description = ""
 }
 
@@ -51,28 +51,24 @@ variable "gcp_project_id" {
   description = "GCP project ID that will be running the instances and managing the network"
 }
 
-variable etcd_gcp_instance_type {
+variable etcd_gcp_machine_type {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the etcd instance with"
 }
 
-variable orchestration_gcp_instance_type {
+variable orchestration_gcp_machine_type {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the orchestration instance with"
 }
 
-variable compute_gcp_instance_type {
+variable compute_gcp_machine_type {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the compute instance with"
 }
 
 variable "gcp_instance_zone" {
   description = "Zone to deploy GCP machine in"
-}
-
-variable "compute_firewall" {
-  default     = "rancher"
-  description = "Google compute firewall"
+  default     = ""
 }
 
 variable "gcp_image" {
