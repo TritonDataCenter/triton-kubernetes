@@ -1,6 +1,5 @@
 #!/bin/sh
-# This script just wraps https://releases.rancher.com/install-docker/1.12.sh
-# It disables firewalld on CentOS.
+# Disable firewalld on CentOS.
 # TODO: Replace firewalld with iptables.
 
 if [ -n "$(command -v firewalld)" ]; then

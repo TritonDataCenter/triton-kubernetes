@@ -53,7 +53,12 @@ func New(tritonAccount, tritonKeyPath, tritonKeyID, tritonURL, mantaURL string) 
 		return nil, err
 	}
 
-	sshKeySigner, err := authentication.NewPrivateKeySigner(tritonKeyID, keyMaterial, tritonAccount)
+	privateKeySignerInput := authentication.PrivateKeySignerInput{
+		KeyID:              tritonKeyID,
+		PrivateKeyMaterial: keyMaterial,
+		AccountName:        tritonAccount,
+	}
+	sshKeySigner, err := authentication.NewPrivateKeySigner(privateKeySignerInput)
 	if err != nil {
 		return nil, err
 	}

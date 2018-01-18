@@ -264,7 +264,12 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	sshKeySigner, err := authentication.NewPrivateKeySigner(cfg.TritonKeyID, keyMaterial, cfg.TritonAccount)
+	privateKeySignerInput := authentication.PrivateKeySignerInput{
+		KeyID:              cfg.TritonKeyID,
+		PrivateKeyMaterial: keyMaterial,
+		AccountName:        cfg.TritonAccount,
+	}
+	sshKeySigner, err := authentication.NewPrivateKeySigner(privateKeySignerInput)
 	if err != nil {
 		return err
 	}
