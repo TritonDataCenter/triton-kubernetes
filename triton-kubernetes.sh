@@ -1124,7 +1124,7 @@ getTERRAFORM() {
     else
         # Get URLs for most recent versions
         (
-            TERRAFORM_URL=$(curl -s https://releases.hashicorp.com/index.json| jq '{terraform}' | grep -i "$(uname -s).*64" | sort --version-sort -r | awk -F[\"] '{print $4}' | head -1)
+            TERRAFORM_URL=https://releases.hashicorp.com/terraform/0.11.2/terraform_0.11.2_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.zip
             mkdir bin || true
             cd bin
             curl -o terraform.zip "$TERRAFORM_URL"
