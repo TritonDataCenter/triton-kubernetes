@@ -39,7 +39,7 @@
 
 [[constraint]]
   name = "github.com/joyent/triton-go"
-  version = "0.4.2"
+  version = "0.5.2"
 
 [[constraint]]
   name = "github.com/manifoldco/promptui"

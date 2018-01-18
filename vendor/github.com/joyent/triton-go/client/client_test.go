@@ -33,6 +33,7 @@ func TestNew(t *testing.T) {
 	}
 
 	for _, test := range tests {
+		os.Unsetenv("TRITON_KEY_ID")
 		os.Unsetenv("SDC_KEY_ID")
 		os.Unsetenv("MANTA_KEY_ID")
 		os.Unsetenv("SSH_AUTH_SOCK")
@@ -72,8 +73,8 @@ func TestNew(t *testing.T) {
 
 	t.Run("default SSH agent auth", func(t *testing.T) {
 		os.Unsetenv("SSH_AUTH_SOCK")
-		err := os.Setenv("SDC_KEY_ID", auth.Dummy.Fingerprint)
-		defer os.Unsetenv("SDC_KEY_ID")
+		err := os.Setenv("TRITON_KEY_ID", auth.Dummy.Fingerprint)
+		defer os.Unsetenv("TRITON_KEY_ID")
 		if err != nil {
 			t.Errorf("expected error to not be nil: received %v", err)
 		}

@@ -87,8 +87,8 @@
 [[projects]]
   name = "github.com/joyent/triton-go"
   packages = [".","authentication","client","compute","network","storage"]
-  revision = "48924aec2e8d78dc32d7965ecfb059031a01edf1"
-  version = "0.4.2"
+  revision = "1559c2f66119311ccce922e881d36cfd11f3aa96"
+  version = "0.5.2"
 
 [[projects]]
   branch = "master"
@@ -230,6 +230,6 @@
 [solve-meta]
   analyzer-name = "dep"
   analyzer-version = 1
-  inputs-digest = "1e062cc2106e2ac2a4d838a08d2f21e550c10225e080e690cff0b2382238ab6e"
+  inputs-digest = "53331a70ccf732082e2cc106783cd40f8f9dc3cc7aec2e8b14d0b39a64221869"
   solver-name = "gps-cdcl"
   solver-version = 1
