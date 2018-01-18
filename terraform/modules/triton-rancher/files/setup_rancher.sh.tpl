@@ -1,13 +1,13 @@
 #!/bin/bash
 
+sudo apt-get install jq -y || sudo yum install jq -y
+
 # Wait for Rancher UI to boot
 printf 'Waiting for Rancher to start'
 until $(curl --output /dev/null --silent --head --fail ${rancher_host}); do
     printf '.'
     sleep 5
 done
-
-sudo apt-get install jq -y || sudo yum install jq -y
 
 # Install docker-machine-driver-triton
 driver_id=$(curl -X POST \

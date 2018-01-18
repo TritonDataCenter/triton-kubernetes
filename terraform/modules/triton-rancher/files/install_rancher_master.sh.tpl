@@ -1,24 +1,18 @@
 #!/bin/bash
 
-# Install Docker
-sudo curl "${docker_engine_install_url}" | sh
+# Wait for docker to be installed
+printf 'Waiting for docker to be installed'
+while [ -z "$(command -v docker)" ]; do
+	printf '.'
+	sleep 5
+done
 
-# Needed on CentOS, TODO: Replace firewalld with iptables.
-sudo service firewalld stop
-
-sudo service docker stop
-DOCKER_SERVICE=$(systemctl status docker.service --no-pager | grep Loaded | sed 's~\(.*\)loaded (\(.*\)docker.service\(.*\)$~\2docker.service~g')
-sed 's~ExecStart=/usr/bin/dockerd -H\(.*\)~ExecStart=/usr/bin/dockerd --graph="/mnt/docker" -H\1~g' $DOCKER_SERVICE > /home/ubuntu/docker.conf && sudo mv /home/ubuntu/docker.conf $DOCKER_SERVICE
-sudo mkdir /mnt/docker
-sudo bash -c "mv /var/lib/docker/* /mnt/docker/"
-sudo rm -rf /var/lib/docker
-sudo systemctl daemon-reload
-sudo systemctl restart docker
-
-# Run docker login if requested
-if [ "${rancher_registry_username}" != "" ]; then
-	sudo docker login -u ${rancher_registry_username} -p ${rancher_registry_password} ${rancher_registry}
-fi
+# Wait for rancher_server_image to finish downloading
+printf 'Waiting for Rancher Server Image to download'
+while [ -z "$(sudo docker images -q ${rancher_server_image})" ]; do
+	printf '.'
+	sleep 5
+done
 
 # Run Rancher docker container
 container_id=""
