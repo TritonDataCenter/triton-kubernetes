@@ -1045,8 +1045,8 @@ showClusterDetails() {
 	fi
 
 	local __MasterCNS __name
-	__name=$_name
-	__MasterCNS=$(triton instance get "${__name}-master-1" 2>&1 | jq '.dns_names' 2>&1 | grep "${__name}.svc.*.triton.zone" | tr -d '"' | tr -d ' ' | tr -d ',' || true)
+	__name=$(triton ls -l 2>&1 | grep "${_name}-master" | grep \ running\ | head -1 | awk '{print $2}')
+	__MasterCNS=$(triton instance get "${__name}" 2>&1 | jq '.dns_names' 2>&1 | grep "${_name}.svc.*.triton.zone" | tr -d '"' | tr -d ' ' | tr -d ',' || true)
 	if [ "$__MasterCNS" ]
 	then
 		echo "    http://${__MasterCNS}:8080/"
@@ -1108,34 +1108,30 @@ showEnvironmentDetails() {
 }
 
 getTERRAFORM() {
-	local __TERRAFORM
-	local __TERRAFORM_URL
-	local __TERRAFORM_ZIP_FILE
+    if ! command -v jq >/dev/null 2>&1
+    then
+        # install jq if doesn't exist
+        if [ "$(uname -s)" == "Darwin" ]; then
+            brew install jq
+        elif [ "$(uname -s)" == "Linux" ]; then
+            sudo apt-get install jq -y || sudo yum install jq -y
+        fi
+    fi
 
-	if [ -n "$(command -v terraform)" ]
-	then
-		__TERRAFORM="$(command -v terraform)"
-	else
-		(
-			__TERRAFORM_ZIP_FILE="terraform_""$(uname | tr '[:upper:]' '[:lower:]')""_amd64.zip"
-			__TERRAFORM_URL="https://releases.hashicorp.com/terraform/0.10.8/terraform_0.10.8_$(uname | tr '[:upper:]' '[:lower:]')_amd64.zip"
-			mkdir bin >/dev/null 2>&1 || true
-			cd bin
-
-			if [ ! -e "$__TERRAFORM_ZIP_FILE" ]
-			then
-				echo ""
-				echo "Downloading Terraform v0.10.8 ..."
-				curl -s -o "$__TERRAFORM_ZIP_FILE" "$__TERRAFORM_URL"
-
-				echo ""
-				echo "Extracting Terraform executable"
-				unzip -q -o "$__TERRAFORM_ZIP_FILE"
-			fi
-		)
-		__TERRAFORM="$(pwd)/bin/terraform"
-	fi
-	TERRAFORM=$__TERRAFORM
+    if command -v terraform >/dev/null 2>&1
+    then
+        TERRAFORM=terraform
+    else
+        # Get URLs for most recent versions
+        (
+            TERRAFORM_URL=https://releases.hashicorp.com/terraform/0.11.2/terraform_0.11.2_$(uname -s | tr '[:upper:]' '[:lower:]')_amd64.zip
+            mkdir bin || true
+            cd bin
+            curl -o terraform.zip "$TERRAFORM_URL"
+            unzip terraform.zip
+        )
+        TERRAFORM=$(pwd)/bin/terraform
+    fi
 }
 USAGE() {
 	echo "
