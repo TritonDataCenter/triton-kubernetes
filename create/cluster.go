@@ -11,7 +11,10 @@ import (
 	"github.com/spf13/viper"
 )
 
-const defaultSourceURL = "github.com/joyent/triton-kubernetes"
+const (
+	defaultSourceURL = "github.com/joyent/triton-kubernetes"
+	defaultSourceRef = "master"
+)
 
 type baseClusterTerraformConfig struct {
 	Source string `json:"source"`
@@ -149,8 +152,13 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		baseSource = viper.GetString("source_url")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, terraformModulePath)
+	baseSourceRef := defaultSourceRef
+	if viper.IsSet("source_ref") {
+		baseSourceRef = viper.GetString("source_ref")
+	}
+
+	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
+	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	// Name
 	if viper.IsSet("name") {
