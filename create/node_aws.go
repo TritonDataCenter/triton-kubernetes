@@ -167,7 +167,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	// Add new node to terraform config with the new hostnames
 	for _, newHostname := range newHostnames {
-		cfgCopy := *(&cfg)
+		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
 		err = state.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
