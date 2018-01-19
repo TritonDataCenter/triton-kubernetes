@@ -12,6 +12,9 @@ sed 's~ExecStart=/usr/bin/dockerd -H\(.*\)~ExecStart=/usr/bin/dockerd --graph="/
 sudo mkdir /mnt/docker
 sudo bash -c "mv /var/lib/docker/* /mnt/docker/"
 sudo rm -rf /var/lib/docker
+sudo bash -c 'echo "{
+  \"storage-driver\": \"overlay2\"
+}" > /etc/docker/daemon.json'
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 
