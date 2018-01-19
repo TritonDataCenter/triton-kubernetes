@@ -104,23 +104,60 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 			}
 		}
 	} else {
-		prompt := promptui.Select{
+		networkPrompt := promptui.Select{
 			Label: "Triton Networks to attach",
 			Items: networks,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
 				Inactive: "  {{.Name}}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton Networks:" | bold}} {{ .Name }}`, promptui.IconGood),
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton Network Attached:" | bold}} {{ .Name }}`, promptui.IconGood),
 			},
 		}
 
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
+		continueOptions := []struct {
+			Name  string
+			Value bool
+		}{
+			{"Yes", true},
+			{"No", false},
 		}
 
-		cfg.TritonNetworkNames = []string{networks[i].Name}
+		continuePrompt := promptui.Select{
+			Label: "Attach another?",
+			Items: continueOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: "  {{.Name}}",
+				Selected: "  Attach another? {{.Name}}",
+			},
+		}
+
+		networksChosen := []string{}
+		shouldPrompt := true
+		for shouldPrompt {
+			// Network Prompt
+			i, _, err := networkPrompt.Run()
+			if err != nil {
+				return err
+			}
+			networksChosen = append(networksChosen, networks[i].Name)
+
+			// Remove the chosen network from the list of choices
+			networkChoices := networkPrompt.Items.([]*network.Network)
+			remainingChoices := append(networkChoices[:i], networkChoices[i+1:]...)
+			networkPrompt.Items = remainingChoices
+
+			// Continue Prompt
+			i, _, err = continuePrompt.Run()
+			if err != nil {
+				return err
+			}
+			shouldPrompt = continueOptions[i].Value
+		}
+
+		cfg.TritonNetworkNames = networksChosen
 	}
 
 	tritonComputeClient, err := compute.NewClient(config)
