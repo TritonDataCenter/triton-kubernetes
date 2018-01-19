@@ -222,9 +222,12 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 		prompt := promptui.Prompt{
 			Label: "Number of nodes to create",
 			Validate: func(input string) error {
-				_, err := strconv.ParseInt(input, 10, 64)
+				num, err := strconv.ParseInt(input, 10, 64)
 				if err != nil {
 					return errors.New("Invalid number")
+				}
+				if num <= 0 {
+					return errors.New("Number must be greater than 0")
 				}
 				return nil
 			},
@@ -243,6 +246,10 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 	if err != nil {
 		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be a valid number. Found '%s'.", countInput)
 	}
+	if nodeCount <= 0 {
+		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be greater than 0. Found '%d'.", nodeCount)
+	}
+
 	cfg.NodeCount = nodeCount
 
 	// hostname
