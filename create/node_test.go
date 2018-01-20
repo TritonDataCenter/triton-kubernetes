@@ -15,7 +15,7 @@ var getNewHostnamesTestCases = []struct {
 	{[]string{"test-1", "test-2"}, "test", 0, []string{}},
 	{[]string{"test-1", "test-2"}, "test", -10, []string{}},
 	// node count == 1
-	{[]string{"test-1", "test-2"}, "bar", 1, []string{"bar"}},
+	{[]string{"test-1", "test-2"}, "bar", 1, []string{"bar-1"}},
 	{[]string{"test"}, "test", 1, []string{"test-1"}},
 	// node count > 1
 	{[]string{"foo", "bar"}, "test", 3, []string{"test-1", "test-2", "test-3"}},

@@ -280,21 +280,6 @@ func getNewHostnames(existingNames []string, nodeName string, nodesToAdd int) []
 		return []string{}
 	}
 
-	// If there's only one node to add, and the name doesn't exist
-	// just return the node name itself.
-	if nodesToAdd == 1 {
-		nodeNameUsed := false
-		for _, existingName := range existingNames {
-			if existingName == nodeName {
-				nodeNameUsed = true
-				break
-			}
-		}
-		if !nodeNameUsed {
-			return []string{nodeName}
-		}
-	}
-
 	// Find the number at which the series of hostnames should start.
 	startNum := 1
 	targetPrefix := nodeName + "-"
