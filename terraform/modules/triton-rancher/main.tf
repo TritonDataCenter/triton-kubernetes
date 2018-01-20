@@ -40,18 +40,7 @@ resource "triton_machine" "rancher_mysqldb" {
 
   networks = ["${data.triton_network.networks.*.id}"]
 
-  connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
-    host        = "${triton_machine.rancher_mysqldb.primaryip}"
-    private_key = "${file(var.triton_key_path)}"
-  }
-
-  provisioner "remote-exec" {
-    inline = <<-EOF
-      ${data.template_file.install_rancher_mysqldb.rendered}
-      EOF
-  }
+  user_script = "${data.template_file.install_rancher_mysqldb.rendered}"
 }
 
 data "template_file" "install_docker" {
@@ -69,6 +58,9 @@ data "template_file" "install_docker" {
 
 resource "triton_machine" "rancher_master" {
   count = "${var.gcm_node_count}"
+
+  # Set to properly destroy masters before mysql.
+  depends_on = ["triton_machine.rancher_mysqldb"]
 
   package = "${var.master_triton_machine_package}"
   image   = "${data.triton_image.image.id}"
