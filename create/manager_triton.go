@@ -339,7 +339,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 
 		continuePrompt := promptui.Select{
-			Label: "Attach another?",
+			Label: "Attach another",
 			Items: continueOptions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",

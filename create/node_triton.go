@@ -124,7 +124,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		}
 
 		continuePrompt := promptui.Select{
-			Label: "Attach another?",
+			Label: "Attach another",
 			Items: continueOptions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
