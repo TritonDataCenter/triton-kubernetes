@@ -362,14 +362,18 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 			// Remove the chosen network from the list of choices
 			networkChoices := networkPrompt.Items.([]*network.Network)
 			remainingChoices := append(networkChoices[:i], networkChoices[i+1:]...)
-			networkPrompt.Items = remainingChoices
 
-			// Continue Prompt
-			i, _, err = continuePrompt.Run()
-			if err != nil {
-				return err
+			if len(remainingChoices) == 0 {
+				shouldPrompt = false
+			} else {
+				networkPrompt.Items = remainingChoices
+				// Continue Prompt
+				i, _, err = continuePrompt.Run()
+				if err != nil {
+					return err
+				}
+				shouldPrompt = continueOptions[i].Value
 			}
-			shouldPrompt = continueOptions[i].Value
 		}
 
 		cfg.TritonNetworkNames = networksChosen
