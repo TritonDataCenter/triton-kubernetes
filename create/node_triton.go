@@ -177,7 +177,9 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 		// TODO: Verify Triton Image Name/Version
 	} else {
-		listImageInput := compute.ListImagesInput{}
+		listImageInput := compute.ListImagesInput{
+			Name: "ubuntu-certified-16.04",
+		}
 		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
 		if err != nil {
 			return err

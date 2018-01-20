@@ -383,7 +383,9 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.TritonImageName = viper.GetString("triton_image_name")
 		cfg.TritonImageVersion = viper.GetString("triton_image_version")
 	} else {
-		listImageInput := compute.ListImagesInput{}
+		listImageInput := compute.ListImagesInput{
+			Name: "ubuntu-certified-16.04",
+		}
 		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
 		if err != nil {
 			return err
