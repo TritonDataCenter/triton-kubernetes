@@ -40,17 +40,44 @@ resource "triton_machine" "rancher_mysqldb" {
 
   networks = ["${data.triton_network.networks.*.id}"]
 
-  connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
-    host        = "${triton_machine.rancher_mysqldb.primaryip}"
-    private_key = "${file(var.triton_key_path)}"
+  user_script = "${data.template_file.install_rancher_mysqldb.rendered}"
+}
+
+data "template_file" "install_docker" {
+  template = "${file("${path.module}/files/install_docker_rancher.sh.tpl")}"
+
+  vars {
+    docker_engine_install_url = "${var.docker_engine_install_url}"
+
+    rancher_server_image      = "${var.rancher_server_image}"
+    rancher_registry          = "${var.rancher_registry}"
+    rancher_registry_username = "${var.rancher_registry_username}"
+    rancher_registry_password = "${var.rancher_registry_password}"
+  }
+}
+
+resource "triton_machine" "rancher_master" {
+  count = "${var.gcm_node_count}"
+
+  # Set to properly destroy masters before mysql.
+  depends_on = ["triton_machine.rancher_mysqldb"]
+
+  package = "${var.master_triton_machine_package}"
+  image   = "${data.triton_image.image.id}"
+  name    = "${var.name}-master-${count.index + 1}"
+
+  user_script = "${data.template_file.install_docker.rendered}"
+
+  networks = ["${data.triton_network.networks.*.id}"]
+
+  cns = {
+    services = ["${var.name}"]
   }
 
-  provisioner "remote-exec" {
-    inline = <<-EOF
-      ${data.template_file.install_rancher_mysqldb.rendered}
-      EOF
+  affinity = ["role!=~gcm"]
+
+  tags = {
+    role = "gcm"
   }
 }
 
@@ -65,7 +92,6 @@ data "template_file" "install_rancher_master" {
     mysqldb_user              = "${var.mysqldb_username}"
     mysqldb_password          = "${var.mysqldb_password}"
     mysqldb_database_name     = "${var.mysqldb_database_name}"
-    docker_engine_install_url = "${var.docker_engine_install_url}"
     rancher_server_image      = "${var.rancher_server_image}"
     rancher_agent_image       = "${var.rancher_agent_image}"
     rancher_registry          = "${var.rancher_registry}"
@@ -74,25 +100,25 @@ data "template_file" "install_rancher_master" {
   }
 }
 
-resource "triton_machine" "rancher_master" {
+resource "null_resource" "install_rancher_master" {
   count = "${var.gcm_node_count}"
 
-  package = "${var.master_triton_machine_package}"
-  image   = "${data.triton_image.image.id}"
-  name    = "${var.name}-master-${count.index + 1}"
-
-  user_script = "${data.template_file.install_rancher_master.rendered}"
-
-  networks = ["${data.triton_network.networks.*.id}"]
-
-  cns = {
-    services = ["${var.name}"]
+  # Changes to any instance of the cluster requires re-provisioning
+  triggers {
+    rancher_master_ids = "${join(",", triton_machine.rancher_master.*.id)}"
   }
 
-  affinity = ["role!=~gcm"]
+  connection {
+    type        = "ssh"
+    user        = "${var.triton_ssh_user}"
+    host        = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
+    private_key = "${file(var.triton_key_path)}"
+  }
 
-  tags = {
-    role = "gcm"
+  provisioner "remote-exec" {
+    inline = <<EOF
+      ${data.template_file.install_rancher_master.rendered}
+      EOF
   }
 }
 
@@ -113,6 +139,8 @@ data "template_file" "setup_rancher_k8s" {
 }
 
 resource "null_resource" "setup_rancher_k8s" {
+  depends_on = ["null_resource.install_rancher_master"]
+
   # Changes to any instance of the cluster requires re-provisioning
   triggers {
     rancher_master_ids = "${join(",", triton_machine.rancher_master.*.id)}"

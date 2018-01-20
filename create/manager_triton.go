@@ -60,8 +60,13 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		baseSource = viper.GetString("source_url")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, tritonRancherTerraformModulePath)
+	baseSourceRef := defaultSourceRef
+	if viper.IsSet("source_ref") {
+		baseSourceRef = viper.GetString("source_ref")
+	}
+
+	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
+	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, tritonRancherTerraformModulePath, baseSourceRef)
 
 	// Name
 	if viper.IsSet("name") {

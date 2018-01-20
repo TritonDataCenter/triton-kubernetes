@@ -165,7 +165,12 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 		baseSource = viper.GetString("source_url")
 	}
 
-	cfg.Source = fmt.Sprintf("%s//%s", baseSource, terraformModulePath)
+	baseSourceRef := defaultSourceRef
+	if viper.IsSet("source_ref") {
+		baseSourceRef = viper.GetString("source_ref")
+	}
+
+	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	// Rancher Host Label
 	selectedHostLabel := ""

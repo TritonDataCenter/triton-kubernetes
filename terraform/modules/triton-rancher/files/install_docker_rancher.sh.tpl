@@ -1,13 +1,10 @@
-#!/bin/sh
-# Disable firewalld on CentOS.
-# TODO: Replace firewalld with iptables.
+#!/bin/bash
 
-if [ -n "$(command -v firewalld)" ]; then
-	sudo systemctl stop firewalld.service
-	sudo systemctl disable firewalld.service
-fi
+# Install Docker
+sudo curl "${docker_engine_install_url}" | sh
 
-sudo curl ${docker_engine_install_url} | sh
+# Needed on CentOS, TODO: Replace firewalld with iptables.
+sudo service firewalld stop
 
 sudo service docker stop
 DOCKER_SERVICE=$(systemctl status docker.service --no-pager | grep Loaded | sed 's~\(.*\)loaded (\(.*\)docker.service\(.*\)$~\2docker.service~g')
@@ -21,12 +18,10 @@ sudo bash -c 'echo "{
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 
-sudo hostnamectl set-hostname ${hostname}
-
 # Run docker login if requested
 if [ "${rancher_registry_username}" != "" ]; then
 	sudo docker login -u ${rancher_registry_username} -p ${rancher_registry_password} ${rancher_registry}
 fi
 
-# Run Rancher agent container
-${rancher_agent_command}
+# Pull the rancher_server_image in preparation of running it
+sudo docker pull ${rancher_server_image}
