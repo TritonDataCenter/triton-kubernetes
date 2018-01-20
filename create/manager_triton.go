@@ -296,16 +296,30 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	networks, err := tritonNetworkClient.List(context.Background(), nil)
+	if err != nil {
+		return err
+	}
+
 	// Triton Network Names
 	if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
-	} else {
-		networks, err := tritonNetworkClient.List(context.Background(), nil)
-		if err != nil {
-			return err
+
+		// Verify triton network names
+		validNetworksMap := map[string]struct{}{}
+		validNetworksSlice := []string{}
+		for _, validNetwork := range networks {
+			validNetworksMap[validNetwork.Name] = struct{}{}
+			validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
 		}
 
-		prompt := promptui.Select{
+		for _, network := range cfg.TritonNetworkNames {
+			if _, ok := validNetworksMap[network]; !ok {
+				return fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
+			}
+		}
+	} else {
+		networkPrompt := promptui.Select{
 			Label: "Triton Networks to attach",
 			Items: networks,
 			Templates: &promptui.SelectTemplates{
@@ -316,19 +330,62 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 			},
 		}
 
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
+		continueOptions := []struct {
+			Name  string
+			Value bool
+		}{
+			{"Yes", true},
+			{"No", false},
 		}
 
-		cfg.TritonNetworkNames = []string{networks[i].Name}
+		continuePrompt := promptui.Select{
+			Label: "Attach another",
+			Items: continueOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: "  {{.Name}}",
+				Selected: "  Attach another? {{.Name}}",
+			},
+		}
+
+		networksChosen := []string{}
+		shouldPrompt := true
+		for shouldPrompt {
+			// Network Prompt
+			i, _, err := networkPrompt.Run()
+			if err != nil {
+				return err
+			}
+			networksChosen = append(networksChosen, networks[i].Name)
+
+			// Remove the chosen network from the list of choices
+			networkChoices := networkPrompt.Items.([]*network.Network)
+			remainingChoices := append(networkChoices[:i], networkChoices[i+1:]...)
+
+			if len(remainingChoices) == 0 {
+				shouldPrompt = false
+			} else {
+				networkPrompt.Items = remainingChoices
+				// Continue Prompt
+				i, _, err = continuePrompt.Run()
+				if err != nil {
+					return err
+				}
+				shouldPrompt = continueOptions[i].Value
+			}
+		}
+
+		cfg.TritonNetworkNames = networksChosen
 	}
 
 	if viper.IsSet("triton_image_name") && viper.IsSet("triton_image_version") {
 		cfg.TritonImageName = viper.GetString("triton_image_name")
 		cfg.TritonImageVersion = viper.GetString("triton_image_version")
 	} else {
-		listImageInput := compute.ListImagesInput{}
+		listImageInput := compute.ListImagesInput{
+			Name: "ubuntu-certified-16.04",
+		}
 		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
 		if err != nil {
 			return err

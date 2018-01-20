@@ -218,10 +218,27 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		cfg.AzurePublicKeyPath = expandedPublicKeyPath
 	}
 
-	// Add new node to terraform config
-	err = state.Add(fmt.Sprintf(azureNodeKeyFormat, cfg.Hostname), &cfg)
+	// Get existing node names
+	nodes, err := state.Nodes(selectedCluster)
 	if err != nil {
 		return err
+	}
+	existingNames := []string{}
+	for nodeName := range nodes {
+		existingNames = append(existingNames, nodeName)
+	}
+
+	// Determine what the hostnames should be for the new node(s)
+	newHostnames := getNewHostnames(existingNames, cfg.Hostname, cfg.NodeCount)
+
+	// Add new node to terraform config with the new hostnames
+	for _, newHostname := range newHostnames {
+		cfgCopy := cfg
+		cfgCopy.Hostname = newHostname
+		err = state.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
+		if err != nil {
+			return err
+		}
 	}
 
 	// Create a temporary directory

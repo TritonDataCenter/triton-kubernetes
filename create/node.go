@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -15,7 +16,8 @@ import (
 type baseNodeTerraformConfig struct {
 	Source string `json:"source"`
 
-	Hostname string `json:"hostname"`
+	Hostname  string `json:"hostname"`
+	NodeCount int    `json:"-"`
 
 	RancherAPIURL        string                  `json:"rancher_api_url"`
 	RancherAccessKey     string                  `json:"rancher_access_key"`
@@ -212,7 +214,43 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 		return baseNodeTerraformConfig{}, fmt.Errorf("Invalid rancher_host_label '%s', must be 'compute', 'etcd' or 'orchestration'", selectedHostLabel)
 	}
 
-	// TODO: Allow user to specify number of nodes to be created.
+	// Allow user to specify number of nodes to be created.
+	var countInput string
+	if viper.IsSet("node_count") {
+		countInput = viper.GetString("node_count")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Number of nodes to create",
+			Validate: func(input string) error {
+				num, err := strconv.ParseInt(input, 10, 64)
+				if err != nil {
+					return errors.New("Invalid number")
+				}
+				if num <= 0 {
+					return errors.New("Number must be greater than 0")
+				}
+				return nil
+			},
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return baseNodeTerraformConfig{}, err
+		}
+
+		countInput = result
+	}
+
+	// Verifying node count
+	nodeCount, err := strconv.Atoi(countInput)
+	if err != nil {
+		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be a valid number. Found '%s'.", countInput)
+	}
+	if nodeCount <= 0 {
+		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be greater than 0. Found '%d'.", nodeCount)
+	}
+
+	cfg.NodeCount = nodeCount
 
 	// hostname
 	if viper.IsSet("hostname") {
@@ -234,4 +272,37 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 	}
 
 	return cfg, nil
+}
+
+// Returns the hostnames that should be used when adding new nodes. Prevents naming collisions.
+func getNewHostnames(existingNames []string, nodeName string, nodesToAdd int) []string {
+	if nodesToAdd < 1 {
+		return []string{}
+	}
+
+	// Find the number at which the series of hostnames should start.
+	startNum := 1
+	targetPrefix := nodeName + "-"
+	for _, existingName := range existingNames {
+		if !strings.HasPrefix(existingName, targetPrefix) {
+			continue
+		}
+
+		suffix := existingName[len(targetPrefix):]
+		numSuffix, err := strconv.Atoi(suffix)
+		if err != nil {
+			continue
+		}
+		if numSuffix >= startNum {
+			startNum = numSuffix + 1
+		}
+	}
+
+	// Build the list of hostnames
+	result := []string{}
+	for i := 0; i < nodesToAdd; i++ {
+		result = append(result, fmt.Sprintf("%s-%d", nodeName, startNum+i))
+	}
+
+	return result
 }
