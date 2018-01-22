@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
@@ -26,6 +27,7 @@ func DeleteManager(remoteBackend backend.Backend) error {
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
 	} else {
+		sort.Strings(clusterManagers)
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
 			Items: clusterManagers,
