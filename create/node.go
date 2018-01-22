@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -106,6 +107,7 @@ func NewNode(remoteBackend backend.Backend) error {
 		for name := range clusters {
 			clusterNames = append(clusterNames, name)
 		}
+		sort.Strings(clusterNames)
 		prompt := promptui.Select{
 			Label: "Cluster to deploy node to",
 			Items: clusterNames,
