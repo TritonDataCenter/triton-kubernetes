@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
@@ -121,6 +122,7 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		for name := range nodes {
 			nodeNames = append(nodeNames, name)
 		}
+		sort.Strings(nodeNames)
 		prompt := promptui.Select{
 			Label: "Node to delete",
 			Items: nodeNames,
