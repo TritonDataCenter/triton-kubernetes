@@ -126,6 +126,16 @@ func NewNode(remoteBackend backend.Backend) error {
 		selectedClusterKey = clusters[value]
 	}
 
+	err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Actually creates the new node
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, state state.State) error {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
@@ -133,6 +143,7 @@ func NewNode(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
 	}
 
+	var err error
 	switch parts[1] {
 	case "triton":
 		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
@@ -145,11 +156,9 @@ func NewNode(remoteBackend backend.Backend) error {
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
-
 	if err != nil {
 		return err
 	}
-
 	return nil
 }
 
