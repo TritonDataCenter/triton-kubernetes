@@ -13,10 +13,10 @@ import (
 
 // getCmd represents the get command
 var getCmd = &cobra.Command{
-	Use:       "get [manager]",
+	Use:       "get [manager or cluster]",
 	Short:     "Display resource information",
 	Long:      `Get allows you to get cluster manager details.`,
-	ValidArgs: []string{"manager"},
+	ValidArgs: []string{"manager", "cluster"},
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
 			return errors.New(`"triton-kubernetes get" requires one argument`)
@@ -45,6 +45,13 @@ func getCmdFunc(cmd *cobra.Command, args []string) {
 	case "manager":
 		fmt.Println("get manager called")
 		err := get.GetManager(remoteBackend)
+		if err != nil {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	case "cluster":
+		fmt.Println("get cluster called")
+		err := get.GetCluster(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

@@ -114,16 +114,17 @@ func NewCluster(remoteBackend backend.Backend) error {
 		selectedCloudProvider = strings.ToLower(value)
 	}
 
+	var clusterName string
 	switch selectedCloudProvider {
 	case "triton":
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
-		err = newTritonCluster(remoteBackend, state)
+		clusterName, err = newTritonCluster(remoteBackend, state)
 	case "aws":
-		err = newAWSCluster(remoteBackend, state)
+		clusterName, err = newAWSCluster(remoteBackend, state)
 	case "gcp":
-		err = newGCPCluster(remoteBackend, state)
+		clusterName, err = newGCPCluster(remoteBackend, state)
 	case "azure":
-		err = newAzureCluster(remoteBackend, state)
+		clusterName, err = newAzureCluster(remoteBackend, state)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
@@ -132,7 +133,54 @@ func NewCluster(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	// TODO: Ask user if they'd like to create nodes in their new cluster
+	fmt.Printf("Cluster '%s' has been successfully created.\n", clusterName)
+
+	// Ask user if they'd like to create a node for this cluster
+	// TODO: What is this going to look like in the configuration?
+	createNodeOptions := []struct {
+		Name  string
+		Value bool
+	}{
+		{"Yes", true},
+		{"No", false},
+	}
+
+	createNodePrompt := promptui.Select{
+		Label: "Would you like to create nodes for this cluster",
+		Items: createNodeOptions,
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}?",
+			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+			Inactive: "  {{.Name}}",
+			Selected: "  Create new node? {{.Name}}",
+		},
+	}
+
+	i, _, err := createNodePrompt.Run()
+	if err != nil {
+		return err
+	}
+
+	shouldCreateNode := createNodeOptions[i].Value
+	createNodePrompt.Label = "Would you like to create more nodes for this cluster"
+
+	viper.Set("cluster_manager", selectedClusterManager)
+	viper.Set("cluster_name", clusterName)
+
+	for shouldCreateNode {
+		// Create new node
+		err = NewNode(remoteBackend)
+		if err != nil {
+			return err
+		}
+
+		// Ask if user would like to create more nodes
+		i, _, err := createNodePrompt.Run()
+		if err != nil {
+			return err
+		}
+		shouldCreateNode = createNodeOptions[i].Value
+	}
 
 	return nil
 }

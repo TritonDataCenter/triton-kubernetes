@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
@@ -82,6 +83,7 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 		for name := range clusters {
 			clusterNames = append(clusterNames, name)
 		}
+		sort.Strings(clusterNames)
 		prompt := promptui.Select{
 			Label: "Cluster to delete",
 			Items: clusterNames,
