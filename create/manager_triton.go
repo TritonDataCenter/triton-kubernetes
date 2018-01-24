@@ -45,6 +45,10 @@ type tritonManagerTerraformConfig struct {
 	TritonSSHUser              string   `json:"triton_ssh_user,omitempty"`
 	MasterTritonMachinePackage string   `json:"master_triton_machine_package,omitempty"`
 
+	TritonMySQLImageName        string `json:"triton_mysql_image_name,omitempty"`
+	TritonMySQLImageVersion     string `json:"triton_mysql_image_version,omitempty"`
+	MySQLDBTritonMachinePackage string `json:"mysqldb_triton_machine_package,omitempty"`
+
 	RancherServerImage      string `json:"rancher_server_image,omitempty"`
 	RancherAgentImage       string `json:"rancher_agent_image,omitempty"`
 	RancherRegistry         string `json:"rancher_registry,omitempty"`
@@ -379,18 +383,31 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.TritonNetworkNames = networksChosen
 	}
 
+	// Get existing images
+	listImageInput := compute.ListImagesInput{
+		Name: "ubuntu-certified-16.04",
+	}
+	images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
+	if err != nil {
+		return err
+	}
+
+	// Triton Image
 	if viper.IsSet("triton_image_name") && viper.IsSet("triton_image_version") {
 		cfg.TritonImageName = viper.GetString("triton_image_name")
 		cfg.TritonImageVersion = viper.GetString("triton_image_version")
+		// Verify triton image name and version
+		found := false
+		for _, image := range images {
+			if image.Name == cfg.TritonImageName && image.Version == cfg.TritonImageVersion {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("Invalid Triton Image Name and Version '%s@%s'", cfg.TritonImageName, cfg.TritonImageVersion)
+		}
 	} else {
-		listImageInput := compute.ListImagesInput{
-			Name: "ubuntu-certified-16.04",
-		}
-		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
-		if err != nil {
-			return err
-		}
-
 		searcher := func(input string, index int) bool {
 			image := images[index]
 			name := strings.Replace(strings.ToLower(image.Name), " ", "", -1)
@@ -435,23 +452,35 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.TritonSSHUser = result
 	}
 
+	// Get list of packages
+	listPackageInput := compute.ListPackagesInput{}
+	packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)
+	if err != nil {
+		return err
+	}
+
+	// Filter to only kvm packages
+	kvmPackages := []*compute.Package{}
+	for _, pkg := range packages {
+		if strings.Contains(pkg.Name, "kvm") {
+			kvmPackages = append(kvmPackages, pkg)
+		}
+	}
+
 	if viper.IsSet("master_triton_machine_package") {
 		cfg.MasterTritonMachinePackage = viper.GetString("master_triton_machine_package")
-	} else {
-		listPackageInput := compute.ListPackagesInput{}
-		packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)
-		if err != nil {
-			return err
-		}
-
-		// Filter to only kvm packages
-		kvmPackages := []*compute.Package{}
-		for _, pkg := range packages {
-			if strings.Contains(pkg.Name, "kvm") {
-				kvmPackages = append(kvmPackages, pkg)
+		// Verify master triton machine package
+		found := false
+		for _, pkg := range kvmPackages {
+			if cfg.MasterTritonMachinePackage == pkg.Name {
+				found = true
+				break
 			}
 		}
-
+		if !found {
+			return fmt.Errorf("Invalid Master Triton Machine Package '%s'", cfg.MasterTritonMachinePackage)
+		}
+	} else {
 		searcher := func(input string, index int) bool {
 			pkg := kvmPackages[index]
 			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
@@ -478,6 +507,94 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 
 		cfg.MasterTritonMachinePackage = kvmPackages[i].Name
+	}
+
+	// Triton MySQL Image
+	if cfg.HA && viper.IsSet("triton_mysql_image_name") && viper.IsSet("triton_mysql_image_version") {
+		cfg.TritonMySQLImageName = viper.GetString("triton_mysql_image_name")
+		cfg.TritonMySQLImageVersion = viper.GetString("triton_mysql_image_version")
+		// Verify Triton MySQL image name and version
+		found := false
+		for _, image := range images {
+			if image.Name == cfg.TritonMySQLImageName && image.Version == cfg.TritonMySQLImageVersion {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("Invalid Triton MySQL Image Name and Version '%s@%s'", cfg.TritonMySQLImageName, cfg.TritonMySQLImageVersion)
+		}
+	} else if cfg.HA {
+		searcher := func(input string, index int) bool {
+			image := images[index]
+			name := strings.Replace(strings.ToLower(image.Name), " ", "", -1)
+			input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+			return strings.Contains(name, input)
+		}
+
+		prompt := promptui.Select{
+			Label: "Triton MySQL Image to use",
+			Items: images,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ .Name | underline }}{{ "@" | underline }}{{ .Version | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .Name }}@{{ .Version }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton MySQL Image:" | bold}} {{ .Name }}{{ "@" }}{{ .Version }}`, promptui.IconGood),
+			},
+			Searcher: searcher,
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.TritonMySQLImageName = images[i].Name
+		cfg.TritonMySQLImageVersion = images[i].Version
+	}
+
+	// MySQL DB Triton Machine Package
+	if cfg.HA && viper.IsSet("mysqldb_triton_machine_package") {
+		cfg.MySQLDBTritonMachinePackage = viper.GetString("mysqldb_triton_machine_package")
+		// Verify MySQL DB triton machine package
+		found := false
+		for _, pkg := range kvmPackages {
+			if cfg.MySQLDBTritonMachinePackage == pkg.Name {
+				found = true
+				break
+			}
+		}
+		if !found {
+			return fmt.Errorf("Invalid MySQL DB Triton Machine Package '%s'", cfg.MySQLDBTritonMachinePackage)
+		}
+	} else if cfg.HA {
+		searcher := func(input string, index int) bool {
+			pkg := kvmPackages[index]
+			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
+			input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+			return strings.Contains(name, input)
+		}
+
+		prompt := promptui.Select{
+			Label: "MySQL DB Triton Machine Package to use for Rancher Master",
+			Items: kvmPackages,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .Name }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "MySQL DB Triton Machine Package:" | bold}} {{ .Name }}`, promptui.IconGood),
+			},
+			Searcher: searcher,
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.MySQLDBTritonMachinePackage = kvmPackages[i].Name
 	}
 
 	state, err := remoteBackend.State(cfg.Name)
