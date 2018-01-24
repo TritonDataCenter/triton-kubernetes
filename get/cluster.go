@@ -1,4 +1,4 @@
-package destroy
+package get
 
 import (
 	"fmt"
@@ -13,30 +13,23 @@ import (
 	"github.com/spf13/viper"
 )
 
-func DeleteManager(remoteBackend backend.Backend) error {
+func GetCluster(remoteBackend backend.Backend) error {
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
 	}
 
 	if len(clusterManagers) == 0 {
-		return fmt.Errorf("No cluster managers, please create a cluster manager before creating a kubernetes cluster.")
+		return fmt.Errorf("No cluster managers.")
 	}
 
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
 	} else {
-		sort.Strings(clusterManagers)
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
 			Items: clusterManagers,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
-				Inactive: `  {{ . }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster Manager:" | bold}} {{ . }}`, promptui.IconGood),
-			},
 		}
 
 		_, value, err := prompt.Run()
@@ -64,6 +57,49 @@ func DeleteManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	// Get existing clusters
+	clusters, err := state.Clusters()
+	if err != nil {
+		return err
+	}
+
+	if len(clusters) == 0 {
+		return fmt.Errorf("No clusters.")
+	}
+
+	selectedClusterKey := ""
+	if viper.IsSet("cluster_name") {
+		clusterName := viper.GetString("cluster_name")
+		clusterKey, ok := clusters[clusterName]
+		if !ok {
+			return fmt.Errorf("A cluster named '%s', does not exist.", clusterName)
+		}
+
+		selectedClusterKey = clusterKey
+	} else {
+		clusterNames := make([]string, 0, len(clusters))
+		for name := range clusters {
+			clusterNames = append(clusterNames, name)
+		}
+		sort.Strings(clusterNames)
+		prompt := promptui.Select{
+			Label: "Cluster to view",
+			Items: clusterNames,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: " {{ . }}",
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Cluster:" | bold}} {{ . }}`, promptui.IconGood),
+			},
+		}
+
+		_, value, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		selectedClusterKey = clusters[value]
+	}
+
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
 	if err != nil {
@@ -89,14 +125,8 @@ func DeleteManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	// Run terraform destroy
-	err = shell.RunShellCommand(&shellOptions, "terraform", "destroy", "-force")
-	if err != nil {
-		return err
-	}
-
-	// After terraform succeeds, delete remote state
-	err = remoteBackend.DeleteState(selectedClusterManager)
+	// Run terraform output
+	err = shell.RunShellCommand(&shellOptions, "terraform", "output", "-module", selectedClusterKey)
 	if err != nil {
 		return err
 	}
