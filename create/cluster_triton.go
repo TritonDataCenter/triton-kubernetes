@@ -3,7 +3,6 @@ package create
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -31,10 +30,10 @@ type tritonClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newTritonCluster(remoteBackend backend.Backend, state state.State) (string, state.State, error) {
+func newTritonCluster(remoteBackend backend.Backend, currState state.State) (string, state.State, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	cfg := tritonClusterTerraformConfig{
@@ -57,7 +56,7 @@ func newTritonCluster(remoteBackend backend.Backend, state state.State) (string,
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.TritonAccount = result
 	}
@@ -88,14 +87,14 @@ func newTritonCluster(remoteBackend backend.Backend, state state.State) (string,
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		rawTritonKeyPath = result
 	}
 
 	expandedTritonKeyPath, err := homedir.Expand(rawTritonKeyPath)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 	cfg.TritonKeyPath = expandedTritonKeyPath
 
@@ -105,7 +104,7 @@ func newTritonCluster(remoteBackend backend.Backend, state state.State) (string,
 	} else {
 		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.TritonKeyID = keyID
 	}
@@ -121,53 +120,16 @@ func newTritonCluster(remoteBackend backend.Backend, state state.State) (string,
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.TritonURL = result
 	}
 
 	// Add new cluster to terraform config
-	err = state.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
+	err = currState.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return "", state, err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return "", state, err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return "", state, err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return "", state, err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return "", state, err
-	}
-
-	return cfg.Name, state, nil
+	return cfg.Name, currState, nil
 }

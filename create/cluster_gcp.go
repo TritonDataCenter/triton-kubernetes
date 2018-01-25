@@ -10,7 +10,6 @@ import (
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
@@ -36,10 +35,10 @@ type gcpClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, state.State, error) {
+func newGCPCluster(remoteBackend backend.Backend, currState state.State) (string, state.State, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(gcpRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	cfg := gcpClusterTerraformConfig{
@@ -71,25 +70,25 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		rawGCPPathToCredentials = result
 	}
 
 	expandedGCPPathToCredentials, err := homedir.Expand(rawGCPPathToCredentials)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 	cfg.GCPPathToCredentials = expandedGCPPathToCredentials
 
 	gcpCredentials, err := ioutil.ReadFile(cfg.GCPPathToCredentials)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly")
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	// jwt.Config does not expose the project ID, so re-unmarshal to get it.
@@ -97,18 +96,18 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, st
 		ProjectID string `json:"project_id"`
 	}
 	if err := json.Unmarshal(gcpCredentials, &pid); err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 	cfg.GCPProjectID = pid.ProjectID
 
 	service, err := compute.New(jwtCfg.Client(context.Background()))
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	regions, err := service.Regions.List(cfg.GCPProjectID).Do()
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	// GCP Compute Region
@@ -123,7 +122,7 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, st
 			}
 		}
 		if !found {
-			return "", state, fmt.Errorf("Selected GCP Compute Region '%s' does not exist.", cfg.GCPComputeRegion)
+			return "", state.State{}, fmt.Errorf("Selected GCP Compute Region '%s' does not exist.", cfg.GCPComputeRegion)
 		}
 
 	} else {
@@ -149,54 +148,17 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 
 		cfg.GCPComputeRegion = regions.Items[i].Name
 	}
 
 	// Add new cluster to terraform config
-	err = state.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
+	err = currState.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return "", state, err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return "", state, err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return "", state, err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return "", state, err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return "", state, err
-	}
-
-	return cfg.Name, state, nil
+	return cfg.Name, currState, nil
 }

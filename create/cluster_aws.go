@@ -3,13 +3,11 @@ package create
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net"
 	"os"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -43,10 +41,10 @@ type awsClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, state.State, error) {
+func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string, state.State, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
 	cfg := awsClusterTerraformConfig{
@@ -69,7 +67,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.AWSAccessKey = result
 	}
@@ -90,7 +88,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.AWSSecretKey = result
 	}
@@ -103,14 +101,14 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(endpoints.UsWest1RegionID)
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 	ec2Client := ec2.New(sess)
 
 	// Get the regions
 	regionsResult, err := ec2Client.DescribeRegions(&ec2.DescribeRegionsInput{})
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 	regions := regionsResult.Regions
 
@@ -127,7 +125,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 			}
 		}
 		if !found {
-			return "", state, fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
+			return "", state.State{}, fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
 		}
 	} else {
 		// Building an array of strings that will be given to the SelectPrompt.
@@ -163,7 +161,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 
 		cfg.AWSRegion = *regions[i].RegionName
@@ -173,7 +171,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 	awsConfig = aws.NewConfig().WithCredentials(creds).WithRegion(cfg.AWSRegion)
 	sess, err = session.NewSession(awsConfig)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 	ec2Client = ec2.New(sess)
 
@@ -185,7 +183,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 		if viper.IsSet("aws_public_key_path") {
 			expandedAWSPublicKeyPath, err := homedir.Expand(viper.GetString("aws_public_key_path"))
 			if err != nil {
-				return "", state, err
+				return "", state.State{}, err
 			}
 			cfg.AWSPublicKeyPath = expandedAWSPublicKeyPath
 		}
@@ -194,7 +192,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 		input := ec2.DescribeKeyPairsInput{}
 		rawKeyPairs, err := ec2Client.DescribeKeyPairs(&input)
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 
 		keyPairs := []string{}
@@ -214,7 +212,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 			value, err := prompt.Run()
 			if err != nil {
-				return "", state, err
+				return "", state.State{}, err
 			}
 
 			cfg.AWSKeyName = value
@@ -228,7 +226,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 			i, value, err := prompt.Run()
 			if err != nil {
-				return "", state, err
+				return "", state.State{}, err
 			}
 
 			// i == -1 when user selects "Upload new key"
@@ -262,12 +260,12 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 			result, err := prompt.Run()
 			if err != nil {
-				return "", state, err
+				return "", state.State{}, err
 			}
 
 			expandedKeyPath, err := homedir.Expand(result)
 			if err != nil {
-				return "", state, err
+				return "", state.State{}, err
 			}
 
 			cfg.AWSPublicKeyPath = expandedKeyPath
@@ -299,7 +297,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.AWSVPCCIDR = result
 	}
@@ -311,7 +309,7 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 		// Parsing VPC CIDR to prepare for subnet validation
 		_, vpcIPNet, err := net.ParseCIDR(cfg.AWSVPCCIDR)
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		vpcPrefix, _ := vpcIPNet.Mask.Size()
 
@@ -339,53 +337,16 @@ func newAWSCluster(remoteBackend backend.Backend, state state.State) (string, st
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state, err
+			return "", state.State{}, err
 		}
 		cfg.AWSSubnetCIDR = result
 	}
 
 	// Add new cluster to terraform config
-	err = state.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
+	err = currState.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", state, err
+		return "", state.State{}, err
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return "", state, err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return "", state, err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return "", state, err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return "", state, err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return "", state, err
-	}
-
-	return cfg.Name, state, nil
+	return cfg.Name, currState, nil
 }

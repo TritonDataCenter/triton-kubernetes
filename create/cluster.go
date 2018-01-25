@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/joyent/triton-kubernetes/shell"
+
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
 
@@ -131,10 +133,14 @@ func NewCluster(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
 
-	fmt.Println(newState)
-
+	// Get the new cluster key given the cluster name
+	clusterMap, err := newState.Clusters()
 	if err != nil {
 		return err
+	}
+	clusterKey, ok := clusterMap[clusterName]
+	if !ok {
+		return fmt.Errorf("Couldn't find cluster key for cluster '%s'.\n", clusterName)
 	}
 
 	// Ask user if they'd like to create a node for this cluster
@@ -165,12 +171,9 @@ func NewCluster(remoteBackend backend.Backend) error {
 	shouldCreateNode := createNodeOptions[i].Value
 	createNodePrompt.Label = "Would you like to create more nodes for this cluster"
 
-	viper.Set("cluster_manager", selectedClusterManager)
-	viper.Set("cluster_name", clusterName)
-
 	for shouldCreateNode {
-		// Create new node
-		err = NewNode(remoteBackend)
+		// Add new nodes to the state
+		_, newState, err = newNode(selectedClusterManager, clusterKey, remoteBackend, newState)
 		if err != nil {
 			return err
 		}
@@ -181,6 +184,15 @@ func NewCluster(remoteBackend backend.Backend) error {
 			return err
 		}
 		shouldCreateNode = createNodeOptions[i].Value
+	}
+
+	// Run terraform apply with state
+	err = shell.RunTerraformApplyWithState(newState)
+
+	// After terraform succeeds, commit state
+	err = remoteBackend.PersistState(newState)
+	if err != nil {
+		return err
 	}
 
 	return nil
