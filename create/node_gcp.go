@@ -4,11 +4,9 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
@@ -36,10 +34,15 @@ type gcpNodeTerraformConfig struct {
 	GCPImage        string `json:"gcp_image"`
 }
 
-func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
+// Adds new GCP nodes to the given cluster and manager.
+// Returns:
+// - a slice of the hostnames added
+// - the new state
+// - error or nil
+func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, state.State, error) {
 	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	cfg := gcpNodeTerraformConfig{
@@ -56,22 +59,22 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	gcpCredentials, err := ioutil.ReadFile(cfg.GCPPathToCredentials)
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly")
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	service, err := compute.New(jwtCfg.Client(context.Background()))
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	zones, err := service.Zones.List(cfg.GCPProjectID).Filter(fmt.Sprintf("region eq https://www.googleapis.com/compute/v1/projects/%s/regions/%s", cfg.GCPProjectID, cfg.GCPComputeRegion)).Do()
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	// GCP Instance Zone
@@ -86,7 +89,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			}
 		}
 		if !found {
-			return fmt.Errorf("Selected GCP Instance Zone '%s' does not exist.", cfg.GCPInstanceZone)
+			return []string{}, state, fmt.Errorf("Selected GCP Instance Zone '%s' does not exist.", cfg.GCPInstanceZone)
 		}
 
 	} else {
@@ -112,7 +115,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, state, err
 		}
 
 		cfg.GCPInstanceZone = zones.Items[i].Name
@@ -120,7 +123,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	machineTypes, err := service.MachineTypes.List(cfg.GCPProjectID, cfg.GCPInstanceZone).Do()
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	// GCP Machine Type
@@ -135,7 +138,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			}
 		}
 		if !found {
-			return fmt.Errorf("Selected GCP Machine Type '%s' does not exist.", cfg.GCPMachineType)
+			return []string{}, state, fmt.Errorf("Selected GCP Machine Type '%s' does not exist.", cfg.GCPMachineType)
 		}
 
 	} else {
@@ -161,7 +164,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, state, err
 		}
 
 		cfg.GCPMachineType = machineTypes.Items[i].Name
@@ -169,7 +172,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	images, err := service.Images.List("ubuntu-os-cloud").Do()
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 
 	// GCP Image
@@ -184,7 +187,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			}
 		}
 		if !found {
-			return fmt.Errorf("Selected GCP Image '%s' does not exist.", cfg.GCPImage)
+			return []string{}, state, fmt.Errorf("Selected GCP Image '%s' does not exist.", cfg.GCPImage)
 		}
 
 	} else {
@@ -210,7 +213,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, state, err
 		}
 
 		cfg.GCPImage = images.Items[i].Name
@@ -219,7 +222,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	// Get existing node names
 	nodes, err := state.Nodes(selectedCluster)
 	if err != nil {
-		return err
+		return []string{}, state, err
 	}
 	existingNames := []string{}
 	for nodeName := range nodes {
@@ -235,46 +238,9 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		cfgCopy.Hostname = newHostname
 		err = state.Add(fmt.Sprintf(gcpNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
-			return err
+			return []string{}, state, err
 		}
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return newHostnames, state, nil
 }

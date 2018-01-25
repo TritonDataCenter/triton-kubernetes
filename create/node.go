@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
+	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
@@ -135,7 +136,7 @@ func NewNode(remoteBackend backend.Backend) error {
 }
 
 // Actually creates the new node
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, state state.State) error {
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currState state.State) error {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
@@ -144,21 +145,35 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 	}
 
 	var err error
+	var newState state.State
 	switch parts[1] {
 	case "triton":
-		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		_, newState, err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	case "aws":
-		err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		_, newState, err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	case "gcp":
-		err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		_, newState, err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	case "azure":
-		err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		_, newState, err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
 	if err != nil {
 		return err
 	}
+
+	// Get the new state and run terraform apply
+	err = shell.RunTerraformApplyWithState(newState)
+	if err != nil {
+		return err
+	}
+
+	// After terraform succeeds, commit state
+	err = remoteBackend.PersistState(newState)
+	if err != nil {
+		return err
+	}
+
 	return nil
 }
 
