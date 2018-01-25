@@ -268,6 +268,23 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.TritonURL = result
 	}
 
+	// Manta URL
+	var mantaURL string
+	if viper.IsSet("manta_url") {
+		mantaURL = viper.GetString("manta_url")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Manta URL",
+			Default: "https://us-east.manta.joyent.com",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		mantaURL = result
+	}
+
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
 	if err != nil {
 		return err
@@ -285,7 +302,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 	config := &triton.ClientConfig{
 		TritonURL:   cfg.TritonURL,
-		MantaURL:    "https://us-east.manta.joyent.com",
+		MantaURL:    mantaURL,
 		AccountName: cfg.TritonAccount,
 		Signers:     []authentication.Signer{sshKeySigner},
 	}
