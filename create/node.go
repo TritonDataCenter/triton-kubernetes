@@ -83,13 +83,13 @@ func NewNode(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
-	state, err := remoteBackend.State(selectedClusterManager)
+	currState, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
 	}
 
 	// Get existing clusters
-	clusters, err := state.Clusters()
+	clusters, err := currState.Clusters()
 	if err != nil {
 		return err
 	}
@@ -127,37 +127,7 @@ func NewNode(remoteBackend backend.Backend) error {
 		selectedClusterKey = clusters[value]
 	}
 
-	err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
-	if err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// Actually creates the new node
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currState state.State) error {
-	// Determine which cloud the selected cluster is in and call the appropriate newNode func
-	parts := strings.Split(selectedClusterKey, "_")
-	if len(parts) < 3 {
-		// clusterKey is `cluster_{provider}_{hostname}`
-		return fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
-	}
-
-	var err error
-	var newState state.State
-	switch parts[1] {
-	case "triton":
-		_, newState, err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
-	case "aws":
-		_, newState, err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
-	case "gcp":
-		_, newState, err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
-	case "azure":
-		_, newState, err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
-	default:
-		return fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
-	}
+	_, newState, err := newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	if err != nil {
 		return err
 	}
@@ -175,6 +145,28 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 	}
 
 	return nil
+}
+
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currState state.State) ([]string, state.State, error) {
+	// Determine which cloud the selected cluster is in and call the appropriate newNode func
+	parts := strings.Split(selectedClusterKey, "_")
+	if len(parts) < 3 {
+		// clusterKey is `cluster_{provider}_{hostname}`
+		return []string{}, state.State{}, fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
+	}
+
+	switch parts[1] {
+	case "triton":
+		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+	case "aws":
+		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+	case "gcp":
+		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+	case "azure":
+		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+	default:
+		return []string{}, state.State{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
+	}
 }
 
 func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, state state.State) (baseNodeTerraformConfig, error) {
