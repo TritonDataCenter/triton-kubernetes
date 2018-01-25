@@ -220,7 +220,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton SSH User",
-			Default: "root",
+			Default: "ubuntu",
 		}
 
 		result, err := prompt.Run()
