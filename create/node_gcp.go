@@ -39,8 +39,8 @@ type gcpNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, error) {
-	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
 	}
@@ -49,9 +49,9 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		GCPPathToCredentials: state.Get(fmt.Sprintf("module.%s.gcp_path_to_credentials", selectedCluster)),
-		GCPProjectID:         state.Get(fmt.Sprintf("module.%s.gcp_project_id", selectedCluster)),
-		GCPComputeRegion:     state.Get(fmt.Sprintf("module.%s.gcp_compute_region", selectedCluster)),
+		GCPPathToCredentials: currentState.Get(fmt.Sprintf("module.%s.gcp_path_to_credentials", selectedCluster)),
+		GCPProjectID:         currentState.Get(fmt.Sprintf("module.%s.gcp_project_id", selectedCluster)),
+		GCPComputeRegion:     currentState.Get(fmt.Sprintf("module.%s.gcp_compute_region", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		GCPComputeNetworkName: fmt.Sprintf("${module.%s.gcp_compute_network_name}", selectedCluster),
@@ -220,7 +220,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
 		return []string{}, err
 	}
@@ -236,7 +236,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(gcpNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(gcpNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

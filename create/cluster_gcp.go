@@ -35,7 +35,7 @@ type gcpClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newGCPCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
+func newGCPCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(gcpRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -155,7 +155,7 @@ func newGCPCluster(remoteBackend backend.Backend, currState state.State) (string
 	}
 
 	// Add new cluster to terraform config
-	err = currState.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
 		return "", err
 	}

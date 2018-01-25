@@ -51,8 +51,8 @@ type azureNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, error) {
-	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
 	}
@@ -61,12 +61,12 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		AzureSubscriptionID: state.Get(fmt.Sprintf("module.%s.azure_subscription_id", selectedCluster)),
-		AzureClientID:       state.Get(fmt.Sprintf("module.%s.azure_client_id", selectedCluster)),
-		AzureClientSecret:   state.Get(fmt.Sprintf("module.%s.azure_client_secret", selectedCluster)),
-		AzureTenantID:       state.Get(fmt.Sprintf("module.%s.azure_tenant_id", selectedCluster)),
-		AzureEnvironment:    state.Get(fmt.Sprintf("module.%s.azure_environment", selectedCluster)),
-		AzureLocation:       state.Get(fmt.Sprintf("module.%s.azure_location", selectedCluster)),
+		AzureSubscriptionID: currentState.Get(fmt.Sprintf("module.%s.azure_subscription_id", selectedCluster)),
+		AzureClientID:       currentState.Get(fmt.Sprintf("module.%s.azure_client_id", selectedCluster)),
+		AzureClientSecret:   currentState.Get(fmt.Sprintf("module.%s.azure_client_secret", selectedCluster)),
+		AzureTenantID:       currentState.Get(fmt.Sprintf("module.%s.azure_tenant_id", selectedCluster)),
+		AzureEnvironment:    currentState.Get(fmt.Sprintf("module.%s.azure_environment", selectedCluster)),
+		AzureLocation:       currentState.Get(fmt.Sprintf("module.%s.azure_location", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		AzureResourceGroupName:      fmt.Sprintf("${module.%s.azure_resource_group_name}", selectedCluster),
@@ -222,7 +222,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
 		return []string{}, err
 	}
@@ -238,7 +238,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

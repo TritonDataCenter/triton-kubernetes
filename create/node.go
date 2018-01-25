@@ -83,13 +83,13 @@ func NewNode(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
-	currState, err := remoteBackend.State(selectedClusterManager)
+	currentState, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
 	}
 
 	// Get existing clusters
-	clusters, err := currState.Clusters()
+	clusters, err := currentState.Clusters()
 	if err != nil {
 		return err
 	}
@@ -127,19 +127,19 @@ func NewNode(remoteBackend backend.Backend) error {
 		selectedClusterKey = clusters[value]
 	}
 
-	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	if err != nil {
 		return err
 	}
 
 	// Get the new state and run terraform apply
-	err = shell.RunTerraformApplyWithState(currState)
+	err = shell.RunTerraformApplyWithState(currentState)
 	if err != nil {
 		return err
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(currState)
+	err = remoteBackend.PersistState(currentState)
 	if err != nil {
 		return err
 	}
@@ -147,7 +147,7 @@ func NewNode(remoteBackend backend.Backend) error {
 	return nil
 }
 
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currState state.State) ([]string, error) {
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
@@ -157,27 +157,27 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 
 	switch parts[1] {
 	case "triton":
-		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "aws":
-		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "gcp":
-		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "azure":
-		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	default:
 		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
 }
 
-func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, state state.State) (baseNodeTerraformConfig, error) {
+func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, currentState state.State) (baseNodeTerraformConfig, error) {
 	cfg := baseNodeTerraformConfig{
 		RancherAPIURL:        "http://${element(module.cluster-manager.masters, 0)}:8080",
 		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
 
 		// Grab registry variables from cluster config
-		RancherRegistry:         state.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
-		RancherRegistryUsername: state.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
-		RancherRegistryPassword: state.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
+		RancherRegistry:         currentState.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
+		RancherRegistryUsername: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
+		RancherRegistryPassword: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
 	}
 
 	baseSource := defaultSourceURL

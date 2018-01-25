@@ -41,7 +41,7 @@ type awsClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
+func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -343,7 +343,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 	}
 
 	// Add new cluster to terraform config
-	err = currState.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
 		return "", err
 	}

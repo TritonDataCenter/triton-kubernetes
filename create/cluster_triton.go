@@ -30,7 +30,7 @@ type tritonClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newTritonCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
+func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -126,7 +126,7 @@ func newTritonCluster(remoteBackend backend.Backend, currState state.State) (str
 	}
 
 	// Add new cluster to terraform config
-	err = currState.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
 		return "", err
 	}

@@ -35,7 +35,7 @@ type azureClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAzureCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
+func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(azureRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -229,7 +229,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 	}
 
 	// Add new cluster to terraform config
-	err = currState.Add(fmt.Sprintf(azureClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.Add(fmt.Sprintf(azureClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
 		return "", err
 	}

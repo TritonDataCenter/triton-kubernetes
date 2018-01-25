@@ -41,8 +41,8 @@ type awsNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, error) {
-	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
 	}
@@ -51,9 +51,9 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		AWSAccessKey: state.Get(fmt.Sprintf("module.%s.aws_access_key", selectedCluster)),
-		AWSSecretKey: state.Get(fmt.Sprintf("module.%s.aws_secret_key", selectedCluster)),
-		AWSRegion:    state.Get(fmt.Sprintf("module.%s.aws_region", selectedCluster)),
+		AWSAccessKey: currentState.Get(fmt.Sprintf("module.%s.aws_access_key", selectedCluster)),
+		AWSSecretKey: currentState.Get(fmt.Sprintf("module.%s.aws_secret_key", selectedCluster)),
+		AWSRegion:    currentState.Get(fmt.Sprintf("module.%s.aws_region", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		AWSSubnetID:        fmt.Sprintf("${module.%s.aws_subnet_id}", selectedCluster),
@@ -155,7 +155,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
 		return []string{}, err
 	}
@@ -171,7 +171,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

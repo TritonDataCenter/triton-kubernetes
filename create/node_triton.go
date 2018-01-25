@@ -42,8 +42,8 @@ type tritonNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, error) {
-	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
 	}
@@ -52,10 +52,10 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		TritonAccount: state.Get(fmt.Sprintf("module.%s.triton_account", selectedCluster)),
-		TritonKeyPath: state.Get(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)),
-		TritonKeyID:   state.Get(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)),
-		TritonURL:     state.Get(fmt.Sprintf("module.%s.triton_url", selectedCluster)),
+		TritonAccount: currentState.Get(fmt.Sprintf("module.%s.triton_account", selectedCluster)),
+		TritonKeyPath: currentState.Get(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)),
+		TritonKeyID:   currentState.Get(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)),
+		TritonURL:     currentState.Get(fmt.Sprintf("module.%s.triton_url", selectedCluster)),
 	}
 
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
@@ -282,7 +282,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
 		return []string{}, err
 	}
@@ -298,7 +298,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}
