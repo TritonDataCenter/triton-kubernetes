@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -249,6 +250,11 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 				kvmPackages = append(kvmPackages, pkg)
 			}
 		}
+
+		// Sort packages by memory size in increasing order
+		sort.SliceStable(kvmPackages, func(i, j int) bool {
+			return kvmPackages[i].Memory < kvmPackages[j].Memory
+		})
 
 		searcher := func(input string, index int) bool {
 			pkg := kvmPackages[index]

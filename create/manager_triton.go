@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -466,6 +467,11 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 			kvmPackages = append(kvmPackages, pkg)
 		}
 	}
+
+	// Sort packages by amount of memory in increasing order
+	sort.SliceStable(kvmPackages, func(i, j int) bool {
+		return kvmPackages[i].Memory < kvmPackages[j].Memory
+	})
 
 	if viper.IsSet("master_triton_machine_package") {
 		cfg.MasterTritonMachinePackage = viper.GetString("master_triton_machine_package")
