@@ -41,10 +41,10 @@ type awsClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string, state.State, error) {
+func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	cfg := awsClusterTerraformConfig{
@@ -67,7 +67,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AWSAccessKey = result
 	}
@@ -88,7 +88,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AWSSecretKey = result
 	}
@@ -101,14 +101,14 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(endpoints.UsWest1RegionID)
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 	ec2Client := ec2.New(sess)
 
 	// Get the regions
 	regionsResult, err := ec2Client.DescribeRegions(&ec2.DescribeRegionsInput{})
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 	regions := regionsResult.Regions
 
@@ -125,7 +125,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 			}
 		}
 		if !found {
-			return "", state.State{}, fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
+			return "", fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
 		}
 	} else {
 		// Building an array of strings that will be given to the SelectPrompt.
@@ -161,7 +161,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 
 		cfg.AWSRegion = *regions[i].RegionName
@@ -171,7 +171,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 	awsConfig = aws.NewConfig().WithCredentials(creds).WithRegion(cfg.AWSRegion)
 	sess, err = session.NewSession(awsConfig)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 	ec2Client = ec2.New(sess)
 
@@ -183,7 +183,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 		if viper.IsSet("aws_public_key_path") {
 			expandedAWSPublicKeyPath, err := homedir.Expand(viper.GetString("aws_public_key_path"))
 			if err != nil {
-				return "", state.State{}, err
+				return "", err
 			}
 			cfg.AWSPublicKeyPath = expandedAWSPublicKeyPath
 		}
@@ -192,7 +192,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 		input := ec2.DescribeKeyPairsInput{}
 		rawKeyPairs, err := ec2Client.DescribeKeyPairs(&input)
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 
 		keyPairs := []string{}
@@ -212,7 +212,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 			value, err := prompt.Run()
 			if err != nil {
-				return "", state.State{}, err
+				return "", err
 			}
 
 			cfg.AWSKeyName = value
@@ -226,7 +226,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 			i, value, err := prompt.Run()
 			if err != nil {
-				return "", state.State{}, err
+				return "", err
 			}
 
 			// i == -1 when user selects "Upload new key"
@@ -260,12 +260,12 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 			result, err := prompt.Run()
 			if err != nil {
-				return "", state.State{}, err
+				return "", err
 			}
 
 			expandedKeyPath, err := homedir.Expand(result)
 			if err != nil {
-				return "", state.State{}, err
+				return "", err
 			}
 
 			cfg.AWSPublicKeyPath = expandedKeyPath
@@ -297,7 +297,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AWSVPCCIDR = result
 	}
@@ -309,7 +309,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 		// Parsing VPC CIDR to prepare for subnet validation
 		_, vpcIPNet, err := net.ParseCIDR(cfg.AWSVPCCIDR)
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		vpcPrefix, _ := vpcIPNet.Mask.Size()
 
@@ -337,7 +337,7 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AWSSubnetCIDR = result
 	}
@@ -345,14 +345,8 @@ func newAWSCluster(remoteBackend backend.Backend, currState state.State) (string
 	// Add new cluster to terraform config
 	err = currState.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
-	// Make new state
-	newState, err := state.New(currState.Name, currState.Bytes())
-	if err != nil {
-		return "", state.State{}, err
-	}
-
-	return cfg.Name, newState, nil
+	return cfg.Name, nil
 }

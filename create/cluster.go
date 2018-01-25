@@ -6,9 +6,9 @@ import (
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -118,23 +118,30 @@ func NewCluster(remoteBackend backend.Backend) error {
 	}
 
 	var clusterName string
-	var newState state.State
 	switch selectedCloudProvider {
 	case "triton":
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
-		clusterName, newState, err = newTritonCluster(remoteBackend, currState)
+		clusterName, err = newTritonCluster(remoteBackend, currState)
 	case "aws":
-		clusterName, newState, err = newAWSCluster(remoteBackend, currState)
+		clusterName, err = newAWSCluster(remoteBackend, currState)
 	case "gcp":
-		clusterName, newState, err = newGCPCluster(remoteBackend, currState)
+		clusterName, err = newGCPCluster(remoteBackend, currState)
 	case "azure":
-		clusterName, newState, err = newAzureCluster(remoteBackend, currState)
+		clusterName, err = newAzureCluster(remoteBackend, currState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
 
+	// TODO: Find a fix - state.Clusters() doesn't return any clusters added via state.Add().
+	// However, the new clusters appear in the result of state.Bytes(). The current workaround
+	// is to create a new state object that has the same bytes as the previous state object.
+	currState, err = state.New(currState.Name, currState.Bytes())
+	if err != nil {
+		return err
+	}
+
 	// Get the new cluster key given the cluster name
-	clusterMap, err := newState.Clusters()
+	clusterMap, err := currState.Clusters()
 	if err != nil {
 		return err
 	}
@@ -173,7 +180,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 
 	for shouldCreateNode {
 		// Add new nodes to the state
-		_, newState, err = newNode(selectedClusterManager, clusterKey, remoteBackend, newState)
+		_, currState, err = newNode(selectedClusterManager, clusterKey, remoteBackend, currState)
 		if err != nil {
 			return err
 		}
@@ -187,10 +194,10 @@ func NewCluster(remoteBackend backend.Backend) error {
 	}
 
 	// Run terraform apply with state
-	err = shell.RunTerraformApplyWithState(newState)
+	err = shell.RunTerraformApplyWithState(currState)
 
 	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(newState)
+	err = remoteBackend.PersistState(currState)
 	if err != nil {
 		return err
 	}

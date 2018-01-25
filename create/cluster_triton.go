@@ -30,10 +30,10 @@ type tritonClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newTritonCluster(remoteBackend backend.Backend, currState state.State) (string, state.State, error) {
+func newTritonCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	cfg := tritonClusterTerraformConfig{
@@ -56,7 +56,7 @@ func newTritonCluster(remoteBackend backend.Backend, currState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.TritonAccount = result
 	}
@@ -87,14 +87,14 @@ func newTritonCluster(remoteBackend backend.Backend, currState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		rawTritonKeyPath = result
 	}
 
 	expandedTritonKeyPath, err := homedir.Expand(rawTritonKeyPath)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 	cfg.TritonKeyPath = expandedTritonKeyPath
 
@@ -104,7 +104,7 @@ func newTritonCluster(remoteBackend backend.Backend, currState state.State) (str
 	} else {
 		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.TritonKeyID = keyID
 	}
@@ -120,7 +120,7 @@ func newTritonCluster(remoteBackend backend.Backend, currState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.TritonURL = result
 	}
@@ -128,14 +128,8 @@ func newTritonCluster(remoteBackend backend.Backend, currState state.State) (str
 	// Add new cluster to terraform config
 	err = currState.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
-	// Make new state
-	newState, err := state.New(currState.Name, currState.Bytes())
-	if err != nil {
-		return "", state.State{}, err
-	}
-
-	return cfg.Name, newState, nil
+	return cfg.Name, nil
 }

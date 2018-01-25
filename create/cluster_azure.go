@@ -35,10 +35,10 @@ type azureClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAzureCluster(remoteBackend backend.Backend, currState state.State) (string, state.State, error) {
+func newAzureCluster(remoteBackend backend.Backend, currState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(azureRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	cfg := azureClusterTerraformConfig{
@@ -61,7 +61,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AzureSubscriptionID = result
 	}
@@ -82,7 +82,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AzureClientID = result
 	}
@@ -103,7 +103,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AzureClientSecret = result
 	}
@@ -124,7 +124,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 		cfg.AzureTenantID = result
 	}
@@ -146,7 +146,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 		_, value, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 
 		cfg.AzureEnvironment = value
@@ -154,25 +154,25 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 	// Verify selected azure environment is valid
 	if cfg.AzureEnvironment != "public" && cfg.AzureEnvironment != "government" && cfg.AzureEnvironment != "german" && cfg.AzureEnvironment != "china" {
-		return "", state.State{}, fmt.Errorf("Invalid azure_environment '%s', must be one of the following: 'public', 'government', 'german', or 'china'", cfg.AzureEnvironment)
+		return "", fmt.Errorf("Invalid azure_environment '%s', must be one of the following: 'public', 'government', 'german', or 'china'", cfg.AzureEnvironment)
 	}
 
 	// Terraform expects public/government/german/china for azure environment
 	// Azure SDK expects `Azure{Environment}Cloud`
 	azureEnv, err := azure.EnvironmentFromName(fmt.Sprintf("Azure%sCloud", cfg.AzureEnvironment))
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	// We now have enough information to init an azure client
 	oauthConfig, err := adal.NewOAuthConfig(azureEnv.ActiveDirectoryEndpoint, cfg.AzureTenantID)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	azureSPT, err := adal.NewServicePrincipalToken(*oauthConfig, cfg.AzureClientID, cfg.AzureClientSecret, azureEnv.ResourceManagerEndpoint)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	azureGroupClient := subscriptions.NewGroupClientWithBaseURI(azureEnv.ResourceManagerEndpoint)
@@ -180,7 +180,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 	azureRawLocations, err := azureGroupClient.ListLocations(cfg.AzureSubscriptionID)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
 	azureLocations := []string{}
@@ -201,7 +201,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 			}
 		}
 		if !found {
-			return "", state.State{}, fmt.Errorf("Invalid azure_location '%s', must be one of the following: %s", cfg.AzureLocation, strings.Join(azureLocations, ", "))
+			return "", fmt.Errorf("Invalid azure_location '%s', must be one of the following: %s", cfg.AzureLocation, strings.Join(azureLocations, ", "))
 		}
 	} else {
 		prompt := promptui.Select{
@@ -222,7 +222,7 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 
 		_, value, err := prompt.Run()
 		if err != nil {
-			return "", state.State{}, err
+			return "", err
 		}
 
 		cfg.AzureLocation = value
@@ -231,14 +231,8 @@ func newAzureCluster(remoteBackend backend.Backend, currState state.State) (stri
 	// Add new cluster to terraform config
 	err = currState.Add(fmt.Sprintf(azureClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", state.State{}, err
+		return "", err
 	}
 
-	// Make new state
-	newState, err := state.New(currState.Name, currState.Bytes())
-	if err != nil {
-		return "", state.State{}, err
-	}
-
-	return cfg.Name, newState, nil
+	return cfg.Name, nil
 }
