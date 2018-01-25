@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
+	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -85,7 +86,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
-	state, err := remoteBackend.State(selectedClusterManager)
+	currState, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
 	}
@@ -115,28 +116,28 @@ func NewCluster(remoteBackend backend.Backend) error {
 	}
 
 	var clusterName string
+	var newState state.State
 	switch selectedCloudProvider {
 	case "triton":
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
-		clusterName, err = newTritonCluster(remoteBackend, state)
+		clusterName, newState, err = newTritonCluster(remoteBackend, currState)
 	case "aws":
-		clusterName, err = newAWSCluster(remoteBackend, state)
+		clusterName, newState, err = newAWSCluster(remoteBackend, currState)
 	case "gcp":
-		clusterName, err = newGCPCluster(remoteBackend, state)
+		clusterName, newState, err = newGCPCluster(remoteBackend, currState)
 	case "azure":
-		clusterName, err = newAzureCluster(remoteBackend, state)
+		clusterName, newState, err = newAzureCluster(remoteBackend, currState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
+
+	fmt.Println(newState)
 
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Cluster '%s' has been successfully created.\n", clusterName)
-
 	// Ask user if they'd like to create a node for this cluster
-	// TODO: What is this going to look like in the configuration?
 	createNodeOptions := []struct {
 		Name  string
 		Value bool

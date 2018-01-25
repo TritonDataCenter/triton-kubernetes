@@ -35,10 +35,11 @@ type gcpClusterTerraformConfig struct {
 	GCPComputeRegion     string `json:"gcp_compute_region"`
 }
 
-func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, error) {
+// Returns the name of the cluster that was created and the new state.
+func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, state.State, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(gcpRancherKubernetesTerraformModulePath)
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	cfg := gcpClusterTerraformConfig{
@@ -70,25 +71,25 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return "", state, err
 		}
 		rawGCPPathToCredentials = result
 	}
 
 	expandedGCPPathToCredentials, err := homedir.Expand(rawGCPPathToCredentials)
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 	cfg.GCPPathToCredentials = expandedGCPPathToCredentials
 
 	gcpCredentials, err := ioutil.ReadFile(cfg.GCPPathToCredentials)
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly")
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	// jwt.Config does not expose the project ID, so re-unmarshal to get it.
@@ -96,18 +97,18 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 		ProjectID string `json:"project_id"`
 	}
 	if err := json.Unmarshal(gcpCredentials, &pid); err != nil {
-		return "", err
+		return "", state, err
 	}
 	cfg.GCPProjectID = pid.ProjectID
 
 	service, err := compute.New(jwtCfg.Client(context.Background()))
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	regions, err := service.Regions.List(cfg.GCPProjectID).Do()
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	// GCP Compute Region
@@ -122,7 +123,7 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 			}
 		}
 		if !found {
-			return "", fmt.Errorf("Selected GCP Compute Region '%s' does not exist.", cfg.GCPComputeRegion)
+			return "", state, fmt.Errorf("Selected GCP Compute Region '%s' does not exist.", cfg.GCPComputeRegion)
 		}
 
 	} else {
@@ -148,7 +149,7 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return "", state, err
 		}
 
 		cfg.GCPComputeRegion = regions.Items[i].Name
@@ -157,13 +158,13 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 	// Add new cluster to terraform config
 	err = state.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 	defer os.RemoveAll(tempDir)
 
@@ -171,7 +172,7 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
 	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	// Use temporary directory as working directory
@@ -182,20 +183,20 @@ func newGCPCluster(remoteBackend backend.Backend, state state.State) (string, er
 	// Run terraform init
 	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	// Run terraform apply
 	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
 	// After terraform succeeds, commit state
 	err = remoteBackend.PersistState(state)
 	if err != nil {
-		return "", err
+		return "", state, err
 	}
 
-	return cfg.Name, nil
+	return cfg.Name, state, nil
 }
