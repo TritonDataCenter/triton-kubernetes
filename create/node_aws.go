@@ -41,10 +41,10 @@ type awsNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, state.State, error) {
+func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, error) {
 	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	cfg := awsNodeTerraformConfig{
@@ -66,7 +66,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(cfg.AWSRegion)
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 	ec2Client := ec2.New(sess)
 
@@ -87,7 +87,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		}
 		describeImagesResponse, err := ec2Client.DescribeImages(&describeImagesInput)
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 
 		type ami struct {
@@ -124,7 +124,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 
 		cfg.AWSAMIID = amis[i].ID
@@ -149,7 +149,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		result, err := prompt.Run()
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 		cfg.AWSInstanceType = result
 	}
@@ -157,7 +157,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	// Get existing node names
 	nodes, err := state.Nodes(selectedCluster)
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 	existingNames := []string{}
 	for nodeName := range nodes {
@@ -173,9 +173,9 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		cfgCopy.Hostname = newHostname
 		err = state.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 	}
 
-	return newHostnames, state, nil
+	return newHostnames, nil
 }

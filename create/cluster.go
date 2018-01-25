@@ -180,7 +180,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 
 	for shouldCreateNode {
 		// Add new nodes to the state
-		_, currState, err = newNode(selectedClusterManager, clusterKey, remoteBackend, currState)
+		_, err = newNode(selectedClusterManager, clusterKey, remoteBackend, currState)
 		if err != nil {
 			return err
 		}

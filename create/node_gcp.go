@@ -39,10 +39,10 @@ type gcpNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, state.State, error) {
+func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) ([]string, error) {
 	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, state)
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	cfg := gcpNodeTerraformConfig{
@@ -59,22 +59,22 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	gcpCredentials, err := ioutil.ReadFile(cfg.GCPPathToCredentials)
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly")
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	service, err := compute.New(jwtCfg.Client(context.Background()))
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	zones, err := service.Zones.List(cfg.GCPProjectID).Filter(fmt.Sprintf("region eq https://www.googleapis.com/compute/v1/projects/%s/regions/%s", cfg.GCPProjectID, cfg.GCPComputeRegion)).Do()
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	// GCP Instance Zone
@@ -89,7 +89,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			}
 		}
 		if !found {
-			return []string{}, state, fmt.Errorf("Selected GCP Instance Zone '%s' does not exist.", cfg.GCPInstanceZone)
+			return []string{}, fmt.Errorf("Selected GCP Instance Zone '%s' does not exist.", cfg.GCPInstanceZone)
 		}
 
 	} else {
@@ -115,7 +115,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 
 		cfg.GCPInstanceZone = zones.Items[i].Name
@@ -123,7 +123,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	machineTypes, err := service.MachineTypes.List(cfg.GCPProjectID, cfg.GCPInstanceZone).Do()
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	// GCP Machine Type
@@ -138,7 +138,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			}
 		}
 		if !found {
-			return []string{}, state, fmt.Errorf("Selected GCP Machine Type '%s' does not exist.", cfg.GCPMachineType)
+			return []string{}, fmt.Errorf("Selected GCP Machine Type '%s' does not exist.", cfg.GCPMachineType)
 		}
 
 	} else {
@@ -164,7 +164,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 
 		cfg.GCPMachineType = machineTypes.Items[i].Name
@@ -172,7 +172,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 	images, err := service.Images.List("ubuntu-os-cloud").Do()
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 
 	// GCP Image
@@ -187,7 +187,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			}
 		}
 		if !found {
-			return []string{}, state, fmt.Errorf("Selected GCP Image '%s' does not exist.", cfg.GCPImage)
+			return []string{}, fmt.Errorf("Selected GCP Image '%s' does not exist.", cfg.GCPImage)
 		}
 
 	} else {
@@ -213,7 +213,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 
 		cfg.GCPImage = images.Items[i].Name
@@ -222,7 +222,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	// Get existing node names
 	nodes, err := state.Nodes(selectedCluster)
 	if err != nil {
-		return []string{}, state, err
+		return []string{}, err
 	}
 	existingNames := []string{}
 	for nodeName := range nodes {
@@ -238,9 +238,9 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		cfgCopy.Hostname = newHostname
 		err = state.Add(fmt.Sprintf(gcpNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
-			return []string{}, state, err
+			return []string{}, err
 		}
 	}
 
-	return newHostnames, state, nil
+	return newHostnames, nil
 }

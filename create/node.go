@@ -127,19 +127,19 @@ func NewNode(remoteBackend backend.Backend) error {
 		selectedClusterKey = clusters[value]
 	}
 
-	_, newState, err := newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
+	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	if err != nil {
 		return err
 	}
 
 	// Get the new state and run terraform apply
-	err = shell.RunTerraformApplyWithState(newState)
+	err = shell.RunTerraformApplyWithState(currState)
 	if err != nil {
 		return err
 	}
 
 	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(newState)
+	err = remoteBackend.PersistState(currState)
 	if err != nil {
 		return err
 	}
@@ -147,12 +147,12 @@ func NewNode(remoteBackend backend.Backend) error {
 	return nil
 }
 
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currState state.State) ([]string, state.State, error) {
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currState state.State) ([]string, error) {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
 		// clusterKey is `cluster_{provider}_{hostname}`
-		return []string{}, state.State{}, fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
+		return []string{}, fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
 	}
 
 	switch parts[1] {
@@ -165,7 +165,7 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 	case "azure":
 		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currState)
 	default:
-		return []string{}, state.State{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
+		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
 }
 
