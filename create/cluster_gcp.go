@@ -160,5 +160,11 @@ func newGCPCluster(remoteBackend backend.Backend, currState state.State) (string
 		return "", state.State{}, err
 	}
 
-	return cfg.Name, currState, nil
+	// Make new state
+	newState, err := state.New(currState.Name, currState.Bytes())
+	if err != nil {
+		return "", state.State{}, err
+	}
+
+	return cfg.Name, newState, nil
 }
