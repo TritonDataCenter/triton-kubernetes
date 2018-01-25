@@ -268,7 +268,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 		cfg.Hostname = viper.GetString("hostname")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Hostname",
+			Label: "Hostname prefix",
 		}
 
 		result, err := prompt.Run()
