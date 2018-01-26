@@ -283,7 +283,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		cfg.RancherRegistry = viper.GetString("rancher_registry")
 	} else {
 		prompt := promptui.Prompt{
-			Label:   "Rancher Registry",
+			Label:   "Private Registry",
 			Default: "None",
 		}
 
@@ -304,7 +304,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
 		} else {
 			prompt := promptui.Prompt{
-				Label: "Rancher Registry Username",
+				Label: "Private Registry Username",
 			}
 
 			result, err := prompt.Run()
@@ -319,7 +319,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
 		} else {
 			prompt := promptui.Prompt{
-				Label: "Rancher Registry Password",
+				Label: "Private Registry Password",
 				Mask:  '*',
 			}
 

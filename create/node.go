@@ -237,26 +237,25 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 	if viper.IsSet("node_count") {
 		countInput = viper.GetString("node_count")
 	} else {
-		prompt := promptui.Prompt{
+		nodeCountOptions := []string{"1", "3", "5", "7"}
+
+		prompt := promptui.Select{
 			Label: "Number of nodes to create",
-			Validate: func(input string) error {
-				num, err := strconv.ParseInt(input, 10, 64)
-				if err != nil {
-					return errors.New("Invalid number")
-				}
-				if num <= 0 {
-					return errors.New("Number must be greater than 0")
-				}
-				return nil
+			Items: nodeCountOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: "  {{.}}",
+				Selected: "  Number of nodes to create? {{.}}",
 			},
 		}
 
-		result, err := prompt.Run()
+		i, _, err := prompt.Run()
 		if err != nil {
 			return baseNodeTerraformConfig{}, err
 		}
 
-		countInput = result
+		countInput = nodeCountOptions[i]
 	}
 
 	// Verifying node count
@@ -275,7 +274,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 		cfg.Hostname = viper.GetString("hostname")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Hostname",
+			Label: "Hostname prefix",
 		}
 
 		result, err := prompt.Run()

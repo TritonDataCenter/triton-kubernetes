@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -268,6 +269,23 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.TritonURL = result
 	}
 
+	// Manta URL
+	var mantaURL string
+	if viper.IsSet("manta_url") {
+		mantaURL = viper.GetString("manta_url")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Manta URL",
+			Default: "https://us-east.manta.joyent.com",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		mantaURL = result
+	}
+
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
 	if err != nil {
 		return err
@@ -285,7 +303,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 	config := &triton.ClientConfig{
 		TritonURL:   cfg.TritonURL,
-		MantaURL:    "https://us-east.manta.joyent.com",
+		MantaURL:    mantaURL,
 		AccountName: cfg.TritonAccount,
 		Signers:     []authentication.Signer{sshKeySigner},
 	}
@@ -392,6 +410,11 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	// Sort images by publish date in reverse chronological order
+	sort.SliceStable(images, func(i, j int) bool {
+		return images[i].PublishedAt.After(images[j].PublishedAt)
+	})
+
 	// Triton Image
 	if viper.IsSet("triton_image_name") && viper.IsSet("triton_image_version") {
 		cfg.TritonImageName = viper.GetString("triton_image_name")
@@ -442,7 +465,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton SSH User",
-			Default: "root",
+			Default: "ubuntu",
 		}
 
 		result, err := prompt.Run()
@@ -466,6 +489,11 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 			kvmPackages = append(kvmPackages, pkg)
 		}
 	}
+
+	// Sort packages by amount of memory in increasing order
+	sort.SliceStable(kvmPackages, func(i, j int) bool {
+		return kvmPackages[i].Memory < kvmPackages[j].Memory
+	})
 
 	if viper.IsSet("master_triton_machine_package") {
 		cfg.MasterTritonMachinePackage = viper.GetString("master_triton_machine_package")
