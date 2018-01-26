@@ -2,12 +2,11 @@ package destroy
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sort"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -109,8 +108,9 @@ func DeleteNode(remoteBackend backend.Backend) error {
 	}
 
 	selectedNodeKey := ""
+	nodeHostname := ""
 	if viper.IsSet("hostname") {
-		nodeHostname := viper.GetString("hostname")
+		nodeHostname = viper.GetString("hostname")
 		nodeKey, ok := nodes[nodeHostname]
 		if !ok {
 			return fmt.Errorf("A node named '%s', does not exist.", nodeHostname)
@@ -138,39 +138,25 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		if err != nil {
 			return err
 		}
+		nodeHostname = value
 		selectedNodeKey = nodes[value]
 	}
 
-	// TODO: Prompt confirmation to delete node?
-
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	// Confirmation
+	label := fmt.Sprintf("Are you sure you want to destroy %q", nodeHostname)
+	selected := fmt.Sprintf("Destroy %q", nodeHostname)
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
+	if !confirmed {
+		fmt.Println("Destroy node canceled.")
+		return nil
 	}
 
 	// Run terraform destroy
 	targetArg := fmt.Sprintf("-target=module.%s", selectedNodeKey)
-	err = shell.RunShellCommand(&shellOptions, "terraform", "destroy", "-force", targetArg)
+	err = shell.RunTerraformDestroyWithState(state, []string{targetArg})
 	if err != nil {
 		return err
 	}

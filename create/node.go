@@ -8,7 +8,9 @@ import (
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
+	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -82,13 +84,13 @@ func NewNode(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
-	state, err := remoteBackend.State(selectedClusterManager)
+	currentState, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
 	}
 
 	// Get existing clusters
-	clusters, err := state.Clusters()
+	clusters, err := currentState.Clusters()
 	if err != nil {
 		return err
 	}
@@ -126,7 +128,31 @@ func NewNode(remoteBackend backend.Backend) error {
 		selectedClusterKey = clusters[value]
 	}
 
-	err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+	if err != nil {
+		return err
+	}
+
+	// Confirmation Prompt
+	label := "Proceed with the node creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		fmt.Println("Node creation canceled")
+		return nil
+	}
+
+	// Get the new state and run terraform apply
+	err = shell.RunTerraformApplyWithState(currentState)
+	if err != nil {
+		return err
+	}
+
+	// After terraform succeeds, commit state
+	err = remoteBackend.PersistState(currentState)
 	if err != nil {
 		return err
 	}
@@ -134,43 +160,37 @@ func NewNode(remoteBackend backend.Backend) error {
 	return nil
 }
 
-// Actually creates the new node
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, state state.State) error {
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
 		// clusterKey is `cluster_{provider}_{hostname}`
-		return fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
+		return []string{}, fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
 	}
 
-	var err error
 	switch parts[1] {
 	case "triton":
-		err = newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "aws":
-		err = newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "gcp":
-		err = newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "azure":
-		err = newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, state)
+		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	default:
-		return fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
+		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}
-	if err != nil {
-		return err
-	}
-	return nil
 }
 
-func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, state state.State) (baseNodeTerraformConfig, error) {
+func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, currentState state.State) (baseNodeTerraformConfig, error) {
 	cfg := baseNodeTerraformConfig{
 		RancherAPIURL:        "http://${element(module.cluster-manager.masters, 0)}:8080",
 		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
 
 		// Grab registry variables from cluster config
-		RancherRegistry:         state.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
-		RancherRegistryUsername: state.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
-		RancherRegistryPassword: state.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
+		RancherRegistry:         currentState.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
+		RancherRegistryUsername: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
+		RancherRegistryPassword: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
 	}
 
 	baseSource := defaultSourceURL
@@ -230,26 +250,25 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 	if viper.IsSet("node_count") {
 		countInput = viper.GetString("node_count")
 	} else {
-		prompt := promptui.Prompt{
+		nodeCountOptions := []string{"1", "3", "5", "7"}
+
+		prompt := promptui.Select{
 			Label: "Number of nodes to create",
-			Validate: func(input string) error {
-				num, err := strconv.ParseInt(input, 10, 64)
-				if err != nil {
-					return errors.New("Invalid number")
-				}
-				if num <= 0 {
-					return errors.New("Number must be greater than 0")
-				}
-				return nil
+			Items: nodeCountOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ . | underline }}", promptui.IconSelect),
+				Inactive: "  {{.}}",
+				Selected: "  Number of nodes to create? {{.}}",
 			},
 		}
 
-		result, err := prompt.Run()
+		i, _, err := prompt.Run()
 		if err != nil {
 			return baseNodeTerraformConfig{}, err
 		}
 
-		countInput = result
+		countInput = nodeCountOptions[i]
 	}
 
 	// Verifying node count
@@ -268,7 +287,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, sta
 		cfg.Hostname = viper.GetString("hostname")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Hostname",
+			Label: "Hostname prefix",
 		}
 
 		result, err := prompt.Run()

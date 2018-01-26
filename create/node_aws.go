@@ -3,12 +3,9 @@ package create
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
-	"os"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -39,19 +36,24 @@ type awsNodeTerraformConfig struct {
 	AWSInstanceType string `json:"aws_instance_type"`
 }
 
-func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
-	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+// Adds new AWS nodes to the given cluster and manager.
+// Returns:
+// - a slice of the hostnames added
+// - the new state
+// - error or nil
+func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	cfg := awsNodeTerraformConfig{
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		AWSAccessKey: state.Get(fmt.Sprintf("module.%s.aws_access_key", selectedCluster)),
-		AWSSecretKey: state.Get(fmt.Sprintf("module.%s.aws_secret_key", selectedCluster)),
-		AWSRegion:    state.Get(fmt.Sprintf("module.%s.aws_region", selectedCluster)),
+		AWSAccessKey: currentState.Get(fmt.Sprintf("module.%s.aws_access_key", selectedCluster)),
+		AWSSecretKey: currentState.Get(fmt.Sprintf("module.%s.aws_secret_key", selectedCluster)),
+		AWSRegion:    currentState.Get(fmt.Sprintf("module.%s.aws_region", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		AWSSubnetID:        fmt.Sprintf("${module.%s.aws_subnet_id}", selectedCluster),
@@ -64,7 +66,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(cfg.AWSRegion)
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 	ec2Client := ec2.New(sess)
 
@@ -85,7 +87,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		}
 		describeImagesResponse, err := ec2Client.DescribeImages(&describeImagesInput)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		type ami struct {
@@ -122,7 +124,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		cfg.AWSAMIID = amis[i].ID
@@ -147,15 +149,15 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 
 		result, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 		cfg.AWSInstanceType = result
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 	existingNames := []string{}
 	for nodeName := range nodes {
@@ -169,48 +171,11 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return newHostnames, nil
 }

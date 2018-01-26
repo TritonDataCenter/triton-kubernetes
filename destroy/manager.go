@@ -2,12 +2,11 @@ package destroy
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sort"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -64,33 +63,20 @@ func DeleteManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	// Confirmation
+	label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
+	selected := fmt.Sprintf("Destroy %q", selectedClusterManager)
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
+	if !confirmed {
+		fmt.Println("Destroy manager canceled.")
+		return nil
 	}
 
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform destroy
-	err = shell.RunShellCommand(&shellOptions, "terraform", "destroy", "-force")
+	// Run Terraform destroy
+	err = shell.RunTerraformDestroyWithState(state, []string{})
 	if err != nil {
 		return err
 	}

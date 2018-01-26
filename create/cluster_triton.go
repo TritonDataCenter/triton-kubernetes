@@ -3,7 +3,6 @@ package create
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -30,7 +29,8 @@ type tritonClusterTerraformConfig struct {
 	TritonURL     string `json:"triton_url,omitempty"`
 }
 
-func newTritonCluster(remoteBackend backend.Backend, state state.State) (string, error) {
+// Returns the name of the cluster that was created and the new state.
+func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
 	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -126,44 +126,7 @@ func newTritonCluster(remoteBackend backend.Backend, state state.State) (string,
 	}
 
 	// Add new cluster to terraform config
-	err = state.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
-	if err != nil {
-		return "", err
-	}
-
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return "", err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return "", err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return "", err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return "", err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
+	err = currentState.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
 	if err != nil {
 		return "", err
 	}

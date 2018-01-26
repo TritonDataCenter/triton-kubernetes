@@ -4,11 +4,10 @@ import (
 	"context"
 	"fmt"
 	"io/ioutil"
-	"os"
+	"sort"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	triton "github.com/joyent/triton-go"
@@ -39,25 +38,30 @@ type tritonNodeTerraformConfig struct {
 	TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
 }
 
-func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
-	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+// Adds new Triton nodes to the given cluster and manager.
+// Returns:
+// - a slice of the hostnames added
+// - the new state
+// - error or nil
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	cfg := tritonNodeTerraformConfig{
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		TritonAccount: state.Get(fmt.Sprintf("module.%s.triton_account", selectedCluster)),
-		TritonKeyPath: state.Get(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)),
-		TritonKeyID:   state.Get(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)),
-		TritonURL:     state.Get(fmt.Sprintf("module.%s.triton_url", selectedCluster)),
+		TritonAccount: currentState.Get(fmt.Sprintf("module.%s.triton_account", selectedCluster)),
+		TritonKeyPath: currentState.Get(fmt.Sprintf("module.%s.triton_key_path", selectedCluster)),
+		TritonKeyID:   currentState.Get(fmt.Sprintf("module.%s.triton_key_id", selectedCluster)),
+		TritonURL:     currentState.Get(fmt.Sprintf("module.%s.triton_url", selectedCluster)),
 	}
 
 	keyMaterial, err := ioutil.ReadFile(cfg.TritonKeyPath)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	privateKeySignerInput := authentication.PrivateKeySignerInput{
@@ -67,7 +71,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	}
 	sshKeySigner, err := authentication.NewPrivateKeySigner(privateKeySignerInput)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	config := &triton.ClientConfig{
@@ -78,12 +82,12 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 	tritonNetworkClient, err := network.NewClient(config)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	networks, err := tritonNetworkClient.List(context.Background(), nil)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	// Triton Network Names
@@ -100,7 +104,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 		for _, network := range cfg.TritonNetworkNames {
 			if _, ok := validNetworksMap[network]; !ok {
-				return fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
+				return []string{}, fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
 			}
 		}
 	} else {
@@ -140,7 +144,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 			// Network Prompt
 			i, _, err := networkPrompt.Run()
 			if err != nil {
-				return err
+				return []string{}, err
 			}
 			networksChosen = append(networksChosen, networks[i].Name)
 
@@ -156,7 +160,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 				// Continue Prompt
 				i, _, err = continuePrompt.Run()
 				if err != nil {
-					return err
+					return []string{}, err
 				}
 				shouldPrompt = continueOptions[i].Value
 			}
@@ -167,7 +171,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 	tritonComputeClient, err := compute.NewClient(config)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	// Triton Image Name and Triton Image Version
@@ -182,8 +186,13 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		}
 		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
+
+		// Sort images by publish date in reverse chronological order
+		sort.SliceStable(images, func(i, j int) bool {
+			return images[i].PublishedAt.After(images[j].PublishedAt)
+		})
 
 		searcher := func(input string, index int) bool {
 			image := images[index]
@@ -207,7 +216,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		cfg.TritonImageName = images[i].Name
@@ -220,12 +229,12 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton SSH User",
-			Default: "root",
+			Default: "ubuntu",
 		}
 
 		result, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 		cfg.TritonSSHUser = result
 	}
@@ -239,7 +248,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		listPackageInput := compute.ListPackagesInput{}
 		packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		// Filter to only kvm packages
@@ -249,6 +258,11 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 				kvmPackages = append(kvmPackages, pkg)
 			}
 		}
+
+		// Sort packages by memory size in increasing order
+		sort.SliceStable(kvmPackages, func(i, j int) bool {
+			return kvmPackages[i].Memory < kvmPackages[j].Memory
+		})
 
 		searcher := func(input string, index int) bool {
 			pkg := kvmPackages[index]
@@ -272,16 +286,16 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		cfg.TritonMachinePackage = kvmPackages[i].Name
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 	existingNames := []string{}
 	for nodeName := range nodes {
@@ -295,48 +309,11 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return newHostnames, nil
 }

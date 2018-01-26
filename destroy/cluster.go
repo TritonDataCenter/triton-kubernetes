@@ -2,12 +2,11 @@ package destroy
 
 import (
 	"fmt"
-	"io/ioutil"
-	"os"
 	"sort"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -70,8 +69,9 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 	}
 
 	selectedClusterKey := ""
+	clusterName := ""
 	if viper.IsSet("cluster_name") {
-		clusterName := viper.GetString("cluster_name")
+		clusterName = viper.GetString("cluster_name")
 		clusterKey, ok := clusters[clusterName]
 		if !ok {
 			return fmt.Errorf("A cluster named '%s', does not exist.", clusterName)
@@ -99,34 +99,20 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 		if err != nil {
 			return err
 		}
+		clusterName = value
 		selectedClusterKey = clusters[value]
 	}
 
-	// TODO: Prompt confirmation to delete cluster?
-
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	// Confirmation
+	label := fmt.Sprintf("Are you sure you want to destroy %q", clusterName)
+	selected := fmt.Sprintf("Destroy %q", clusterName)
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
+	if !confirmed {
+		fmt.Println("Destroy cluster canceled.")
+		return nil
 	}
 
 	nodes, err := state.Nodes(selectedClusterKey)
@@ -135,8 +121,6 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 	}
 
 	args := []string{
-		"destroy",
-		"-force",
 		fmt.Sprintf("-target=module.%s", selectedClusterKey),
 	}
 
@@ -146,7 +130,7 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 	}
 
 	// Run terraform destroy
-	err = shell.RunShellCommand(&shellOptions, "terraform", args...)
+	err = shell.RunTerraformDestroyWithState(state, args)
 	if err != nil {
 		return err
 	}
