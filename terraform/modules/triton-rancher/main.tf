@@ -130,10 +130,6 @@ data "template_file" "setup_rancher_k8s" {
     rancher_host = "http://127.0.0.1:8080"
     primary_ip   = "${element(triton_machine.rancher_master.*.primaryip, 0)}"
 
-    docker_machine_driver_triton_url      = "${var.docker_machine_driver_triton_url}"
-    docker_machine_driver_triton_checksum = "${var.docker_machine_driver_triton_checksum}"
-    rancher_ui_driver_triton              = "${var.rancher_ui_driver_triton}"
-
     rancher_registry = "${var.rancher_registry}"
   }
 }
