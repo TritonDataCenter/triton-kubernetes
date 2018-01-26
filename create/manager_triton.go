@@ -238,6 +238,44 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 	}
 
+	// Rancher Server Image
+	if viper.IsSet("rancher_server_image") {
+		cfg.RancherServerImage = viper.GetString("rancher_server_image")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Rancher Server Image",
+			Default: "Default",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		if result != "Default" {
+			cfg.RancherServerImage = result
+		}
+	}
+
+	// Rancher Agent Image
+	if viper.IsSet("rancher_agent_image") {
+		cfg.RancherAgentImage = viper.GetString("rancher_agent_image")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Rancher Agent Image",
+			Default: "Default",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		if result != "Default" {
+			cfg.RancherAgentImage = result
+		}
+	}
+
 	// Triton Account
 	if viper.IsSet("triton_account") {
 		cfg.TritonAccount = viper.GetString("triton_account")
