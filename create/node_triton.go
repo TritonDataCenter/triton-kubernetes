@@ -249,21 +249,13 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 			return []string{}, err
 		}
 
-		// Filter to only kvm packages
-		kvmPackages := []*compute.Package{}
-		for _, pkg := range packages {
-			if strings.Contains(pkg.Name, "kvm") {
-				kvmPackages = append(kvmPackages, pkg)
-			}
-		}
-
 		// Sort packages by memory size in increasing order
-		sort.SliceStable(kvmPackages, func(i, j int) bool {
-			return kvmPackages[i].Memory < kvmPackages[j].Memory
+		sort.SliceStable(packages, func(i, j int) bool {
+			return packages[i].Memory < packages[j].Memory
 		})
 
 		searcher := func(input string, index int) bool {
-			pkg := kvmPackages[index]
+			pkg := packages[index]
 			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
 			input = strings.Replace(strings.ToLower(input), " ", "", -1)
 
@@ -272,7 +264,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 
 		prompt := promptui.Select{
 			Label: "Triton Machine Package to use for node",
-			Items: kvmPackages,
+			Items: packages,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
@@ -287,7 +279,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 			return []string{}, err
 		}
 
-		cfg.TritonMachinePackage = kvmPackages[i].Name
+		cfg.TritonMachinePackage = packages[i].Name
 	}
 
 	// Get existing node names
