@@ -494,9 +494,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	}
 
 	// Get existing images
-	listImageInput := compute.ListImagesInput{
-		Name: "ubuntu-certified-16.04",
-	}
+	listImageInput := compute.ListImagesInput{}
 	images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
 	if err != nil {
 		return err
@@ -574,24 +572,16 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	// Filter to only kvm packages
-	kvmPackages := []*compute.Package{}
-	for _, pkg := range packages {
-		if strings.Contains(pkg.Name, "kvm") {
-			kvmPackages = append(kvmPackages, pkg)
-		}
-	}
-
 	// Sort packages by amount of memory in increasing order
-	sort.SliceStable(kvmPackages, func(i, j int) bool {
-		return kvmPackages[i].Memory < kvmPackages[j].Memory
+	sort.SliceStable(packages, func(i, j int) bool {
+		return packages[i].Memory < packages[j].Memory
 	})
 
 	if viper.IsSet("master_triton_machine_package") {
 		cfg.MasterTritonMachinePackage = viper.GetString("master_triton_machine_package")
 		// Verify master triton machine package
 		found := false
-		for _, pkg := range kvmPackages {
+		for _, pkg := range packages {
 			if cfg.MasterTritonMachinePackage == pkg.Name {
 				found = true
 				break
@@ -602,7 +592,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 	} else {
 		searcher := func(input string, index int) bool {
-			pkg := kvmPackages[index]
+			pkg := packages[index]
 			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
 			input = strings.Replace(strings.ToLower(input), " ", "", -1)
 
@@ -611,7 +601,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 		prompt := promptui.Select{
 			Label: "Triton Machine Package to use for Rancher Master",
-			Items: kvmPackages,
+			Items: packages,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
@@ -626,7 +616,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 			return err
 		}
 
-		cfg.MasterTritonMachinePackage = kvmPackages[i].Name
+		cfg.MasterTritonMachinePackage = packages[i].Name
 	}
 
 	// Triton MySQL Image
@@ -679,7 +669,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.MySQLDBTritonMachinePackage = viper.GetString("mysqldb_triton_machine_package")
 		// Verify MySQL DB triton machine package
 		found := false
-		for _, pkg := range kvmPackages {
+		for _, pkg := range packages {
 			if cfg.MySQLDBTritonMachinePackage == pkg.Name {
 				found = true
 				break
@@ -690,7 +680,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 	} else if cfg.HA {
 		searcher := func(input string, index int) bool {
-			pkg := kvmPackages[index]
+			pkg := packages[index]
 			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
 			input = strings.Replace(strings.ToLower(input), " ", "", -1)
 
@@ -699,7 +689,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 		prompt := promptui.Select{
 			Label: "MySQL DB Triton Machine Package to use for Rancher Master",
-			Items: kvmPackages,
+			Items: packages,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
@@ -714,7 +704,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 			return err
 		}
 
-		cfg.MySQLDBTritonMachinePackage = kvmPackages[i].Name
+		cfg.MySQLDBTritonMachinePackage = packages[i].Name
 	}
 
 	state, err := remoteBackend.State(cfg.Name)
