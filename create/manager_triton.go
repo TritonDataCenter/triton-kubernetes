@@ -494,9 +494,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	}
 
 	// Get existing images
-	listImageInput := compute.ListImagesInput{
-		Name: "ubuntu-certified-16.04",
-	}
+	listImageInput := compute.ListImagesInput{}
 	images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
 	if err != nil {
 		return err
