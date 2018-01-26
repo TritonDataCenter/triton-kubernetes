@@ -6,6 +6,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -68,8 +69,9 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 	}
 
 	selectedClusterKey := ""
+	clusterName := ""
 	if viper.IsSet("cluster_name") {
-		clusterName := viper.GetString("cluster_name")
+		clusterName = viper.GetString("cluster_name")
 		clusterKey, ok := clusters[clusterName]
 		if !ok {
 			return fmt.Errorf("A cluster named '%s', does not exist.", clusterName)
@@ -97,10 +99,21 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 		if err != nil {
 			return err
 		}
+		clusterName = value
 		selectedClusterKey = clusters[value]
 	}
 
-	// TODO: Prompt confirmation to delete cluster?
+	// Confirmation
+	label := fmt.Sprintf("Are you sure you want to destroy %q", clusterName)
+	selected := fmt.Sprintf("Destroy %q", clusterName)
+	confirmed, err := util.PromptForConfirmation(label, selected)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		fmt.Println("Destroy cluster canceled.")
+		return nil
+	}
 
 	nodes, err := state.Nodes(selectedClusterKey)
 	if err != nil {

@@ -6,6 +6,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -107,8 +108,9 @@ func DeleteNode(remoteBackend backend.Backend) error {
 	}
 
 	selectedNodeKey := ""
+	nodeHostname := ""
 	if viper.IsSet("hostname") {
-		nodeHostname := viper.GetString("hostname")
+		nodeHostname = viper.GetString("hostname")
 		nodeKey, ok := nodes[nodeHostname]
 		if !ok {
 			return fmt.Errorf("A node named '%s', does not exist.", nodeHostname)
@@ -136,10 +138,21 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		if err != nil {
 			return err
 		}
+		nodeHostname = value
 		selectedNodeKey = nodes[value]
 	}
 
-	// TODO: Prompt confirmation to delete node?
+	// Confirmation
+	label := fmt.Sprintf("Are you sure you want to destroy %q", nodeHostname)
+	selected := fmt.Sprintf("Destroy %q", nodeHostname)
+	confirmed, err := util.PromptForConfirmation(label, selected)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		fmt.Println("Destroy node canceled.")
+		return nil
+	}
 
 	// Run terraform destroy
 	targetArg := fmt.Sprintf("-target=module.%s", selectedNodeKey)

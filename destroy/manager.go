@@ -6,6 +6,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -60,6 +61,18 @@ func DeleteManager(remoteBackend backend.Backend) error {
 	state, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
+	}
+
+	// Confirmation
+	label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
+	selected := fmt.Sprintf("Destroy %q", selectedClusterManager)
+	confirmed, err := util.PromptForConfirmation(label, selected)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		fmt.Println("Destroy manager canceled.")
+		return nil
 	}
 
 	// Run Terraform destroy
