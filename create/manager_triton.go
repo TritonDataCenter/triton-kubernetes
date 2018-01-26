@@ -12,6 +12,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 	homedir "github.com/mitchellh/go-homedir"
 
 	triton "github.com/joyent/triton-go"
@@ -633,33 +634,18 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	state.Add("module.cluster-manager", &cfg)
 	state.Add(remoteBackend.StateTerraformConfig(cfg.Name))
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	label := "Proceed with the manager creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
+	if !confirmed {
+		fmt.Println("Manager creation canceled.")
+		return nil
 	}
 
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
+	err = shell.RunTerraformApplyWithState(state)
 	if err != nil {
 		return err
 	}

@@ -10,6 +10,7 @@ import (
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -130,6 +131,18 @@ func NewNode(remoteBackend backend.Backend) error {
 	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	if err != nil {
 		return err
+	}
+
+	// Confirmation Prompt
+	label := "Proceed with the node creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		fmt.Println("Node creation canceled")
+		return nil
 	}
 
 	// Get the new state and run terraform apply

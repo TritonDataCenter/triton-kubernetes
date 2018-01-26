@@ -7,6 +7,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/joyent/triton-kubernetes/backend"
 
@@ -191,6 +192,17 @@ func NewCluster(remoteBackend backend.Backend) error {
 			return err
 		}
 		shouldCreateNode = createNodeOptions[i].Value
+	}
+
+	label := "Proceed with cluster creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
+	if err != nil {
+		return err
+	}
+	if !confirmed {
+		fmt.Println("Cluster creation canceled.")
+		return nil
 	}
 
 	// Run terraform apply with state
