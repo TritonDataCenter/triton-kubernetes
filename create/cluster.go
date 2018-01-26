@@ -5,6 +5,9 @@ import (
 	"fmt"
 	"strings"
 
+	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/state"
+
 	"github.com/joyent/triton-kubernetes/backend"
 
 	"github.com/manifoldco/promptui"
@@ -85,7 +88,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Selected cluster manager '%s' does not exist.", selectedClusterManager)
 	}
 
-	state, err := remoteBackend.State(selectedClusterManager)
+	currentState, err := remoteBackend.State(selectedClusterManager)
 	if err != nil {
 		return err
 	}
@@ -118,25 +121,36 @@ func NewCluster(remoteBackend backend.Backend) error {
 	switch selectedCloudProvider {
 	case "triton":
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
-		clusterName, err = newTritonCluster(remoteBackend, state)
+		clusterName, err = newTritonCluster(remoteBackend, currentState)
 	case "aws":
-		clusterName, err = newAWSCluster(remoteBackend, state)
+		clusterName, err = newAWSCluster(remoteBackend, currentState)
 	case "gcp":
-		clusterName, err = newGCPCluster(remoteBackend, state)
+		clusterName, err = newGCPCluster(remoteBackend, currentState)
 	case "azure":
-		clusterName, err = newAzureCluster(remoteBackend, state)
+		clusterName, err = newAzureCluster(remoteBackend, currentState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
 
+	// TODO: Find a fix - state.Clusters() doesn't return any clusters added via state.Add().
+	// However, the new clusters appear in the result of state.Bytes(). The current workaround
+	// is to create a new state object that has the same bytes as the previous state object.
+	currentState, err = state.New(currentState.Name, currentState.Bytes())
 	if err != nil {
 		return err
 	}
 
-	fmt.Printf("Cluster '%s' has been successfully created.\n", clusterName)
+	// Get the new cluster key given the cluster name
+	clusterMap, err := currentState.Clusters()
+	if err != nil {
+		return err
+	}
+	clusterKey, ok := clusterMap[clusterName]
+	if !ok {
+		return fmt.Errorf("Couldn't find cluster key for cluster '%s'.\n", clusterName)
+	}
 
 	// Ask user if they'd like to create a node for this cluster
-	// TODO: What is this going to look like in the configuration?
 	createNodeOptions := []struct {
 		Name  string
 		Value bool
@@ -164,12 +178,9 @@ func NewCluster(remoteBackend backend.Backend) error {
 	shouldCreateNode := createNodeOptions[i].Value
 	createNodePrompt.Label = "Would you like to create more nodes for this cluster"
 
-	viper.Set("cluster_manager", selectedClusterManager)
-	viper.Set("cluster_name", clusterName)
-
 	for shouldCreateNode {
-		// Create new node
-		err = NewNode(remoteBackend)
+		// Add new nodes to the state
+		_, err = newNode(selectedClusterManager, clusterKey, remoteBackend, currentState)
 		if err != nil {
 			return err
 		}
@@ -180,6 +191,18 @@ func NewCluster(remoteBackend backend.Backend) error {
 			return err
 		}
 		shouldCreateNode = createNodeOptions[i].Value
+	}
+
+	// Run terraform apply with state
+	err = shell.RunTerraformApplyWithState(currentState)
+	if err != nil {
+		return err
+	}
+
+	// After terraform succeeds, commit state
+	err = remoteBackend.PersistState(currentState)
+	if err != nil {
+		return err
 	}
 
 	return nil

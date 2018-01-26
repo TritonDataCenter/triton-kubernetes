@@ -3,12 +3,10 @@ package create
 import (
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/Azure/azure-sdk-for-go/arm/compute"
@@ -48,22 +46,27 @@ type azureNodeTerraformConfig struct {
 	AzurePublicKeyPath  string `json:"azure_public_key_path"`
 }
 
-func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, state state.State) error {
-	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, state)
+// Adds new Azure nodes to the given cluster and manager.
+// Returns:
+// - a slice of the hostnames added
+// - the new state
+// - error or nil
+func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	cfg := azureNodeTerraformConfig{
 		baseNodeTerraformConfig: baseConfig,
 
 		// Grab variables from cluster config
-		AzureSubscriptionID: state.Get(fmt.Sprintf("module.%s.azure_subscription_id", selectedCluster)),
-		AzureClientID:       state.Get(fmt.Sprintf("module.%s.azure_client_id", selectedCluster)),
-		AzureClientSecret:   state.Get(fmt.Sprintf("module.%s.azure_client_secret", selectedCluster)),
-		AzureTenantID:       state.Get(fmt.Sprintf("module.%s.azure_tenant_id", selectedCluster)),
-		AzureEnvironment:    state.Get(fmt.Sprintf("module.%s.azure_environment", selectedCluster)),
-		AzureLocation:       state.Get(fmt.Sprintf("module.%s.azure_location", selectedCluster)),
+		AzureSubscriptionID: currentState.Get(fmt.Sprintf("module.%s.azure_subscription_id", selectedCluster)),
+		AzureClientID:       currentState.Get(fmt.Sprintf("module.%s.azure_client_id", selectedCluster)),
+		AzureClientSecret:   currentState.Get(fmt.Sprintf("module.%s.azure_client_secret", selectedCluster)),
+		AzureTenantID:       currentState.Get(fmt.Sprintf("module.%s.azure_tenant_id", selectedCluster)),
+		AzureEnvironment:    currentState.Get(fmt.Sprintf("module.%s.azure_environment", selectedCluster)),
+		AzureLocation:       currentState.Get(fmt.Sprintf("module.%s.azure_location", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
 		AzureResourceGroupName:      fmt.Sprintf("${module.%s.azure_resource_group_name}", selectedCluster),
@@ -75,17 +78,17 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	// Azure SDK expects `Azure{Environment}Cloud`
 	azureEnv, err := azure.EnvironmentFromName(fmt.Sprintf("Azure%sCloud", cfg.AzureEnvironment))
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	oauthConfig, err := adal.NewOAuthConfig(azureEnv.ActiveDirectoryEndpoint, cfg.AzureTenantID)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	azureSPT, err := adal.NewServicePrincipalToken(*oauthConfig, cfg.AzureClientID, cfg.AzureClientSecret, azureEnv.ResourceManagerEndpoint)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	azureVMSizesClient := compute.NewVirtualMachineSizesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
@@ -93,7 +96,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 
 	azureRawVMSizes, err := azureVMSizesClient.List(strings.Replace(strings.ToLower(cfg.AzureLocation), " ", "", -1))
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	azureVMSizes := []string{}
@@ -114,7 +117,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 			}
 		}
 		if !found {
-			return fmt.Errorf("Invalid azure_size '%s', must be one of the following: %s", cfg.AzureSize, strings.Join(azureVMSizes, ", "))
+			return []string{}, fmt.Errorf("Invalid azure_size '%s', must be one of the following: %s", cfg.AzureSize, strings.Join(azureVMSizes, ", "))
 		}
 	} else {
 		prompt := promptui.Select{
@@ -135,7 +138,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 
 		_, value, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		cfg.AzureSize = value
@@ -146,7 +149,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 
 	imageResults, err := azureImagesClient.List()
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 
 	for _, x := range *imageResults.Value {
@@ -171,7 +174,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 
 		result, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 		cfg.AzureSSHUser = result
 	}
@@ -180,7 +183,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	if viper.IsSet("azure_public_key_path") {
 		expandedPublicKeyPath, err := homedir.Expand(viper.GetString("azure_public_key_path"))
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		cfg.AzurePublicKeyPath = expandedPublicKeyPath
@@ -207,21 +210,21 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 
 		result, err := prompt.Run()
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		expandedPublicKeyPath, err := homedir.Expand(result)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 
 		cfg.AzurePublicKeyPath = expandedPublicKeyPath
 	}
 
 	// Get existing node names
-	nodes, err := state.Nodes(selectedCluster)
+	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
-		return err
+		return []string{}, err
 	}
 	existingNames := []string{}
 	for nodeName := range nodes {
@@ -235,48 +238,11 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = state.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
 		if err != nil {
-			return err
+			return []string{}, err
 		}
 	}
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
-	if err != nil {
-		return err
-	}
-	defer os.RemoveAll(tempDir)
-
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
-	}
-
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
-	if err != nil {
-		return err
-	}
-
-	// After terraform succeeds, commit state
-	err = remoteBackend.PersistState(state)
-	if err != nil {
-		return err
-	}
-
-	return nil
+	return newHostnames, nil
 }
