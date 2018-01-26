@@ -195,6 +195,9 @@ func NewCluster(remoteBackend backend.Backend) error {
 
 	// Run terraform apply with state
 	err = shell.RunTerraformApplyWithState(currentState)
+	if err != nil {
+		return err
+	}
 
 	// After terraform succeeds, commit state
 	err = remoteBackend.PersistState(currentState)
