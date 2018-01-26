@@ -185,6 +185,59 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 	}
 
+	// Rancher Docker Registry
+	if viper.IsSet("rancher_registry") {
+		cfg.RancherRegistry = viper.GetString("rancher_registry")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Private Registry",
+			Default: "None",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		if result != "None" {
+			cfg.RancherRegistry = result
+		}
+	}
+
+	// Ask for rancher registry username/password only if rancher registry is given
+	if cfg.RancherRegistry != "" {
+		// Rancher Registry Username
+		if viper.IsSet("rancher_registry_username") {
+			cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "Private Registry Username",
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+			cfg.RancherRegistryUsername = result
+		}
+
+		// Rancher Registry Password
+		if viper.IsSet("rancher_registry_password") {
+			cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "Private Registry Password",
+				Mask:  '*',
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+			cfg.RancherRegistryPassword = result
+		}
+	}
+
 	// Triton Account
 	if viper.IsSet("triton_account") {
 		cfg.TritonAccount = viper.GetString("triton_account")
