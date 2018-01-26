@@ -605,33 +605,36 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	state.Add("module.cluster-manager", &cfg)
 	state.Add(remoteBackend.StateTerraformConfig(cfg.Name))
 
-	// Create a temporary directory
-	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	// Confirmation Prompt
+	confirmOptions := []struct {
+		Name  string
+		Value bool
+	}{
+		{"Yes", true},
+		{"No", false},
+	}
+	confirmPrompt := promptui.Select{
+		Label: "Would you like to proceed with the manager creation",
+		Items: confirmOptions,
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}?",
+			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+			Inactive: "  {{.Name}}",
+			Selected: "  Proceed with manager creation? {{.Name}}",
+		},
+	}
+
+	i, _, err := confirmPrompt.Run()
 	if err != nil {
 		return err
 	}
-	defer os.RemoveAll(tempDir)
 
-	// Save the terraform config to the temporary directory
-	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
-	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
-	if err != nil {
-		return err
+	if !confirmOptions[i].Value {
+		fmt.Println("Manager creation canceled")
+		return nil
 	}
 
-	// Use temporary directory as working directory
-	shellOptions := shell.ShellOptions{
-		WorkingDir: tempDir,
-	}
-
-	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
-	if err != nil {
-		return err
-	}
-
-	// Run terraform apply
-	err = shell.RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
+	err = shell.RunTerraformApplyWithState(state)
 	if err != nil {
 		return err
 	}
