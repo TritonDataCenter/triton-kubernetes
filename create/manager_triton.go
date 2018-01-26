@@ -465,7 +465,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton SSH User",
-			Default: "root",
+			Default: "ubuntu",
 		}
 
 		result, err := prompt.Run()
