@@ -11,6 +11,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/joyent/triton-kubernetes/util"
 	homedir "github.com/mitchellh/go-homedir"
 
 	triton "github.com/joyent/triton-go"
@@ -605,32 +606,14 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	state.Add("module.cluster-manager", &cfg)
 	state.Add(remoteBackend.StateTerraformConfig(cfg.Name))
 
-	// Confirmation Prompt
-	confirmOptions := []struct {
-		Name  string
-		Value bool
-	}{
-		{"Yes", true},
-		{"No", false},
-	}
-	confirmPrompt := promptui.Select{
-		Label: "Would you like to proceed with the manager creation",
-		Items: confirmOptions,
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}?",
-			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-			Inactive: "  {{.Name}}",
-			Selected: "  Proceed with manager creation? {{.Name}}",
-		},
-	}
-
-	i, _, err := confirmPrompt.Run()
+	label := "Proceed with the manager creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-
-	if !confirmOptions[i].Value {
-		fmt.Println("Manager creation canceled")
+	if !confirmed {
+		fmt.Println("Manager creation canceled.")
 		return nil
 	}
 

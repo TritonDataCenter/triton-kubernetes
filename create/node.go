@@ -10,6 +10,7 @@ import (
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -133,30 +134,13 @@ func NewNode(remoteBackend backend.Backend) error {
 	}
 
 	// Confirmation Prompt
-	confirmOptions := []struct {
-		Name  string
-		Value bool
-	}{
-		{"Yes", true},
-		{"No", false},
-	}
-	confirmPrompt := promptui.Select{
-		Label: "Would you like to proceed with the node creation",
-		Items: confirmOptions,
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}?",
-			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-			Inactive: "  {{.Name}}",
-			Selected: "  Proceed with node creation? {{.Name}}",
-		},
-	}
-
-	i, _, err := confirmPrompt.Run()
+	label := "Proceed with the node creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-
-	if !confirmOptions[i].Value {
+	if !confirmed {
 		fmt.Println("Node creation canceled")
 		return nil
 	}

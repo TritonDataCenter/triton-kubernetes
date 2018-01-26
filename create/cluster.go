@@ -7,6 +7,7 @@ import (
 
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/joyent/triton-kubernetes/backend"
 
@@ -193,32 +194,14 @@ func NewCluster(remoteBackend backend.Backend) error {
 		shouldCreateNode = createNodeOptions[i].Value
 	}
 
-	// Confirmation Prompt
-	confirmOptions := []struct {
-		Name  string
-		Value bool
-	}{
-		{"Yes", true},
-		{"No", false},
-	}
-	confirmPrompt := promptui.Select{
-		Label: "Proceed",
-		Items: confirmOptions,
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}?",
-			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-			Inactive: "  {{.Name}}",
-			Selected: "  Proceed? {{.Name}}",
-		},
-	}
-
-	i, _, err = confirmPrompt.Run()
+	label := "Proceed with cluster creation"
+	selected := "Proceed"
+	confirmed, err := util.PromptForConfirmation(label, selected)
 	if err != nil {
 		return err
 	}
-
-	if !confirmOptions[i].Value {
-		fmt.Println("Cluster creation canceled")
+	if !confirmed {
+		fmt.Println("Cluster creation canceled.")
 		return nil
 	}
 
