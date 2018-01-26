@@ -393,6 +393,11 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	// Sort images by publish date in reverse chronological order
+	sort.SliceStable(images, func(i, j int) bool {
+		return images[i].PublishedAt.After(images[j].PublishedAt)
+	})
+
 	// Triton Image
 	if viper.IsSet("triton_image_name") && viper.IsSet("triton_image_version") {
 		cfg.TritonImageName = viper.GetString("triton_image_name")

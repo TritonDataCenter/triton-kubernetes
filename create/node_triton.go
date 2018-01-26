@@ -186,6 +186,11 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 			return err
 		}
 
+		// Sort images by publish date in reverse chronological order
+		sort.SliceStable(images, func(i, j int) bool {
+			return images[i].PublishedAt.After(images[j].PublishedAt)
+		})
+
 		searcher := func(input string, index int) bool {
 			image := images[index]
 			name := strings.Replace(strings.ToLower(image.Name), " ", "", -1)
