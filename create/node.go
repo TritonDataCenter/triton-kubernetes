@@ -132,6 +132,35 @@ func NewNode(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	// Confirmation Prompt
+	confirmOptions := []struct {
+		Name  string
+		Value bool
+	}{
+		{"Yes", true},
+		{"No", false},
+	}
+	confirmPrompt := promptui.Select{
+		Label: "Would you like to proceed with the node creation",
+		Items: confirmOptions,
+		Templates: &promptui.SelectTemplates{
+			Label:    "{{ . }}?",
+			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+			Inactive: "  {{.Name}}",
+			Selected: "  Proceed with node creation? {{.Name}}",
+		},
+	}
+
+	i, _, err := confirmPrompt.Run()
+	if err != nil {
+		return err
+	}
+
+	if !confirmOptions[i].Value {
+		fmt.Println("Node creation canceled")
+		return nil
+	}
+
 	// Get the new state and run terraform apply
 	err = shell.RunTerraformApplyWithState(currentState)
 	if err != nil {
