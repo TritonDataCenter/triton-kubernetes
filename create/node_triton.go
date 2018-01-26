@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io/ioutil"
 	"os"
+	"sort"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -185,6 +186,11 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 			return err
 		}
 
+		// Sort images by publish date in reverse chronological order
+		sort.SliceStable(images, func(i, j int) bool {
+			return images[i].PublishedAt.After(images[j].PublishedAt)
+		})
+
 		searcher := func(input string, index int) bool {
 			image := images[index]
 			name := strings.Replace(strings.ToLower(image.Name), " ", "", -1)
@@ -249,6 +255,11 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 				kvmPackages = append(kvmPackages, pkg)
 			}
 		}
+
+		// Sort packages by memory size in increasing order
+		sort.SliceStable(kvmPackages, func(i, j int) bool {
+			return kvmPackages[i].Memory < kvmPackages[j].Memory
+		})
 
 		searcher := func(input string, index int) bool {
 			pkg := kvmPackages[index]
