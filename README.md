@@ -60,112 +60,33 @@ triton-kubernetes --help
 
 ## How-To
 
-To see the multi-cloud capabilities of Triton Kubernetes, we are going to create a global cluster manager with four identical Kubernetes environments. These environments are going to be all configured in HA mode and on different cloud providers ([Triton](#setup-questions-kubernetes-cluster-on-triton), [AWS](#setup-questions-kubernetes-cluster-on-aws), [Azure](#setup-questions-kubernetes-cluster-on-azure), [GCP](#setup-questions-kubernetes-cluster-on-gcp)).
+Triton Kubernetes allows you to create/destroy global cluster managers, Kubernetes environments and individual cluster nodes. You can also get information on a cluster manager or Kubernetes environment. Triton Kubernetes provides these features through the `create`, `destroy` and `get` commands.
 
-### Starting a Global Cluster Manager
-Install [**Triton Kubernetes**](#install-triton-kubernetes) and run it:
-
-```bash
-triton-kubernetes create manager
-```
-
-Follow the on screen instructions answering questions about the cluster. You can use the default by pressing “Enter”/”Return” key.
-
-#### Setup Questions
-
-| Question                                                                       | Default                                               | Input                |
-|--------------------------------------------------------------------------------|-------------------------------------------------------|----------------------|
-| Name your Global Cluster Manager                                               | global-cluster                                        | <kbd>enter</kbd>     |
-| Do you want to set up the Global Cluster Manager in HA mode                    |                                                       | yes                  |
-| Which Triton networks should be used for this environment                      | Joyent-SDC-Public                                     | <kbd>enter</kbd>     |
-| Which Triton package should be used for Global Cluster Manager server(s)       | k4-highcpu-kvm-1.75G                                  | k4-highcpu-kvm-3.75G |
-| Which Triton package should be used for Global Cluster Manager database server | k4-highcpu-kvm-1.75G                                  | k4-highcpu-kvm-3.75G |
-| docker-engine install script                                                   | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd>     |
-
-After verification of the entries, setup will start Cluster Manager in HA mode on Joyent Cloud. This will be a two node HA configuration with a shared database node.
-
-### Adding Kubernetes Environments to Global Cluster Manager
-Invoke the following command and follow the on screen instructions answering questions about the Kubernetes environment.
+### Create
 
 ```bash
-triton-kubernetes create cluster
+triton-kubernetes create [manager or cluster or node]
 ```
 
-#### Setup Questions: Kubernetes cluster on Triton
+Creates a new cluster manager, kubernetes cluster or individual kubernetes cluster node.
 
-| Question | Default | Input |
-|---------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|----------------------|
-| Which cloud do you want to run your environment on | 1 | <kbd>enter</kbd> |
-| Name your environment | triton-test | <kbd>enter</kbd> |
-| Do you want this environment to run in HA mode |  | yes |
-| Number of compute nodes for triton-test environment | 3 | <kbd>enter</kbd> |
-| Which Triton networks should be used for this environment | Joyent-SDC-Public | <kbd>enter</kbd> |
-| Which Triton package should be used for triton-test environment etcd nodes | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
-| Which Triton package should be used for triton-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
-| Which Triton package should be used for triton-test environment compute nodes | k4-highcpu-kvm-1.75G | k4-highcpu-kvm-3.75G |
-| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
+When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, Azure GCP).
 
-After verification of the entries, setup will create a Kubernetes environment in HA mode on Joyent Cloud. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+### Destroy
 
-#### Setup Questions: Kubernetes cluster on AWS
+```bash
+triton-kubernetes destroy [manager or cluster or node]
+```
 
-| Question | Default | Input |
-|-------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|------------------|
-| Which cloud do you want to run your environment on | 1 | 2 |
-| AWS Access Key |  | \[AWS access key id] |
-| AWS Secret Key |  | \[AWS secret key] |
-| Name your environment | aws-test | <kbd>enter</kbd> |
-| Do you want this environment to run in HA mode |  | yes |
-| Number of compute nodes for aws-test environment | 3 | <kbd>enter</kbd> |
-| Where should the aws-test environment be located | us-west-2 | <kbd>enter</kbd> |
-| Which image should be used for the nodes | ami-0def3275 | <kbd>enter</kbd> |
-| What size hosts should be used for aws-test environment etcd nodes | t2.micro | t2.small |
-| What size hosts should be used for aws-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | t2.micro | t2.small |
-| What size hosts should be used for aws-test environment compute nodes | t2.micro | t2.small |
-| Which ssh public key should these hosts be set up with |  | \[your public ssh key] |
-| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
+Destroys an existing cluster manager, kubernetes cluster or individual kubernetes cluster node.
 
-After verification of the entries, setup will create a Kubernetes environment in HA mode running on AWS. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+### Get
 
-#### Setup Questions: Kubernetes cluster on Azure
+```bash
+triton-kubernetes get [manager or cluster]
+```
 
-| Question | Default | Input |
-|---------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|--------------------------|
-| Which cloud do you want to run your environment on | 1 | 3 |
-| Azure subscription id |  | \[Azure subscription id] |
-| Azure client id |  | \[Azure client id] |
-| Azure client secret |  | \[Azure client secret] |
-| Azure tenant id |  | \[Azure tenant id] |
-| Name your environment | azure-test | <kbd>enter</kbd> |
-| Do you want this environment to run in HA mode |  | yes |
-| Number of compute nodes for azure-test environment | 3 | <kbd>enter</kbd> |
-| Where should the azure-test environment be located | westus2 | <kbd>enter</kbd> |
-| What size hosts should be used for azure-test environment etcd nodes | Standard_A1 | Standard_A2 |
-| What size hosts should be used for azure-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | Standard_A1 | Standard_A2 |
-| What size hosts should be used for azure-test environment compute nodes | Standard_A1 | Standard_A2 |
-| Which ssh public key should these hosts be set up with |  | \[public ssh key] |
-| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
-
-After verification of the entries, setup will create a Kubernetes environment in HA mode running on Azure. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
-
-#### Setup Questions: Kubernetes cluster on GCP
-
-| Question | Default | Input |
-|-------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|------------------------------|
-| Which cloud do you want to run your environment on | 1 | 4 |
-| Path to GCP credentials file |  | \[GCP json credentials file] |
-| GCP Project ID |  | \[GCP project id] |
-| Name your environment | gcp-test | <kbd>enter</kbd> |
-| Do you want this environment to run in HA mode |  | yes |
-| Number of compute nodes for gcp-test environment | 3 | <kbd>enter</kbd> |
-| Compute Region | us-west1 | <kbd>enter</kbd> |
-| Instance Zone | us-west1-a | <kbd>enter</kbd> |
-| What size hosts should be used for gcp-test environment etcd nodes | n1-standard-1 | n1-standard-2 |
-| What size hosts should be used for gcp-test environment orchestration nodes running apiserver/scheduler/controllermanager/... | n1-standard-1 | n1-standard-2 |
-| What size hosts should be used for gcp-test environment compute nodes | n1-standard-1 | n1-standard-2 |
-| docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
-
-After verification of the entries, setup will create a Kubernetes environment in HA mode running on GCP. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+Displays cluster manager or kubernetes cluster details.
 
 ## Backend State
 
