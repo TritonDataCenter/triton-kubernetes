@@ -46,11 +46,12 @@ func init() {
 func initConfig() {
 	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
+	} else {
+		viper.SetConfigName(".triton-kubernetes") // name of config file (without extension)
+		viper.AddConfigPath("$HOME")              // adding home directory as first search path
 	}
 
-	viper.SetConfigName(".triton-kubernetes") // name of config file (without extension)
-	viper.AddConfigPath("$HOME")              // adding home directory as first search path
-	viper.AutomaticEnv()                      // read in environment variables that match
+	viper.AutomaticEnv() // read in environment variables that match
 
 	// If a config file is found, read it in.
 	if err := viper.ReadInConfig(); err == nil {
