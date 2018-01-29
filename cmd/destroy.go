@@ -15,7 +15,7 @@ import (
 var destroyCmd = &cobra.Command{
 	Use:       "destroy [manager or cluster or node]",
 	Short:     "Destroy cluster managers, kubernetes clusters or individual kubernetes cluster nodes.",
-	Long:      `Create allows you to create a new cluster manager or a new kubernetes cluster or an individual kubernetes cluster node.`,
+	Long:      `Destroy allows you to destroy an existing cluster manager or a kubernetes cluster or an individual kubernetes cluster node.`,
 	ValidArgs: []string{"manager", "cluster", "node"},
 	Args: func(cmd *cobra.Command, args []string) error {
 		if len(args) != 1 {
