@@ -4,9 +4,14 @@ provider "google" {
   region      = "${var.gcp_compute_region}"
 }
 
+resource "google_compute_network" "default" {
+  name                    = "${var.name}"
+  auto_create_subnetworks = "true"
+}
+
 resource "google_compute_firewall" "default" {
-  name          = "${var.compute_firewall}"
-  network       = "default"
+  name          = "${var.name}"
+  network       = "${google_compute_network.default.name}"
   source_ranges = ["0.0.0.0/0"]
 
   allow {
@@ -16,14 +21,16 @@ resource "google_compute_firewall" "default" {
 }
 
 provider "rancher" {
-  api_url = "${var.api_url}"
+  api_url    = "${var.rancher_api_url}"
+  access_key = "${var.rancher_access_key}"
+  secret_key = "${var.rancher_secret_key}"
 }
 
 data "external" "rancher_environment_template" {
   program = ["bash", "${path.module}/files/rancher_environment_template.sh"]
 
   query = {
-    rancher_api_url     = "${var.api_url}"
+    rancher_api_url     = "${var.rancher_api_url}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"
@@ -72,8 +79,10 @@ resource "rancher_registry_credential" "k8s_registry" {
 }
 
 resource "rancher_registration_token" "etcd" {
-  name           = "etcd_host_tokens"
-  description    = "Registration token for ${var.name} etcd hosts"
+  count = "${var.etcd_node_count}"
+
+  name           = "${var.name}-etcd-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-etcd-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -88,7 +97,7 @@ data "template_file" "install_rancher_agent_etcd" {
 
   vars {
     hostname                  = "${var.name}-etcd-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.etcd.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.etcd.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -101,7 +110,7 @@ resource "google_compute_instance" "etcd" {
   count = "${var.etcd_node_count}"
 
   name         = "${var.name}-etcd-${count.index + 1}"
-  machine_type = "${var.etcd_gcp_instance_type}"
+  machine_type = "${var.etcd_gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -111,7 +120,7 @@ resource "google_compute_instance" "etcd" {
   }
 
   network_interface {
-    network = "default"
+    network = "${google_compute_network.default.name}"
 
     access_config {
       // Ephemeral IP
@@ -126,8 +135,10 @@ resource "google_compute_instance" "etcd" {
 }
 
 resource "rancher_registration_token" "orchestration" {
-  name           = "orchestration_host_tokens"
-  description    = "Registration token for ${var.name} orchestration hosts"
+  count = "${var.orchestration_node_count}"
+
+  name           = "${var.name}-orchestration-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-orchestration-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -142,7 +153,7 @@ data "template_file" "install_rancher_agent_orchestration" {
 
   vars {
     hostname                  = "${var.name}-orchestration-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.orchestration.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.orchestration.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -155,7 +166,7 @@ resource "google_compute_instance" "orchestration" {
   count = "${var.orchestration_node_count}"
 
   name         = "${var.name}-orchestration-${count.index + 1}"
-  machine_type = "${var.orchestration_gcp_instance_type}"
+  machine_type = "${var.orchestration_gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -165,7 +176,7 @@ resource "google_compute_instance" "orchestration" {
   }
 
   network_interface {
-    network = "default"
+    network = "${google_compute_network.default.name}"
 
     access_config {
       // Ephemeral IP
@@ -180,8 +191,10 @@ resource "google_compute_instance" "orchestration" {
 }
 
 resource "rancher_registration_token" "compute" {
-  name           = "compute_host_tokens"
-  description    = "Registration token for ${var.name} compute hosts"
+  count = "${var.compute_node_count}"
+
+  name           = "${var.name}-compute-${count.index + 1}_token"
+  description    = "Registration token for ${var.name}-compute-${count.index + 1} host"
   environment_id = "${rancher_environment.k8s.id}"
 
   host_labels {
@@ -196,7 +209,7 @@ data "template_file" "install_rancher_agent_compute" {
 
   vars {
     hostname                  = "${var.name}-compute-${count.index + 1}"
-    rancher_agent_command     = "${rancher_registration_token.compute.command}"
+    rancher_agent_command     = "${element(rancher_registration_token.compute.*.command, count.index)}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_registry          = "${var.rancher_registry}"
@@ -209,7 +222,7 @@ resource "google_compute_instance" "compute" {
   count = "${var.compute_node_count}"
 
   name         = "${var.name}-compute-${count.index + 1}"
-  machine_type = "${var.compute_gcp_instance_type}"
+  machine_type = "${var.compute_gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
 
   boot_disk {
@@ -219,7 +232,7 @@ resource "google_compute_instance" "compute" {
   }
 
   network_interface {
-    network = "default"
+    network = "${google_compute_network.default.name}"
 
     access_config {
       // Ephemeral IP

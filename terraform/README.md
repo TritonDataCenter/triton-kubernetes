@@ -1,8 +1,8 @@
-triton-rancher-k8s terraform
+triton-kubernetes terraform
 ============================
 
 Overview
--   A terraform module that provisions a Rancher master on Triton that is capable of provisioning hosts on Triton.
+-   A set of terraform modules that provisions Rancher Masters and Hosts.
 
 Getting Started
 -   Checkout this project

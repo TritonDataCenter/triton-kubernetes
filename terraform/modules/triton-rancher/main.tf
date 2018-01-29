@@ -40,38 +40,16 @@ resource "triton_machine" "rancher_mysqldb" {
 
   networks = ["${data.triton_network.networks.*.id}"]
 
-  connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
-    host        = "${triton_machine.rancher_mysqldb.primaryip}"
-    private_key = "${file(var.triton_key_path)}"
-  }
-
-  provisioner "remote-exec" {
-    inline = <<-EOF
-      ${data.template_file.install_rancher_mysqldb.rendered}
-      EOF
-  }
+  user_script = "${data.template_file.install_rancher_mysqldb.rendered}"
 }
 
-data "template_file" "install_rancher_master" {
-  template = "${file("${path.module}/files/install_rancher_master.sh.tpl")}"
+data "template_file" "install_docker" {
+  template = "${file("${path.module}/files/install_docker_rancher.sh.tpl")}"
 
   vars {
-    ha                  = "${var.ha}"
-    triton_key_material = "${file(var.triton_key_path)}"
-
-    mysqldb_host          = "${coalesce(join("", triton_machine.rancher_mysqldb.*.primaryip), "")}"
-    mysqldb_port          = "${var.mysqldb_port}"
-    mysqldb_user          = "${var.mysqldb_username}"
-    mysqldb_password      = "${var.mysqldb_password}"
-    mysqldb_database_name = "${var.mysqldb_database_name}"
-
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
-    rancher_server_image = "${var.rancher_server_image}"
-    rancher_agent_image  = "${var.rancher_agent_image}"
-
+    rancher_server_image      = "${var.rancher_server_image}"
     rancher_registry          = "${var.rancher_registry}"
     rancher_registry_username = "${var.rancher_registry_username}"
     rancher_registry_password = "${var.rancher_registry_password}"
@@ -81,11 +59,14 @@ data "template_file" "install_rancher_master" {
 resource "triton_machine" "rancher_master" {
   count = "${var.gcm_node_count}"
 
+  # Set to properly destroy masters before mysql.
+  depends_on = ["triton_machine.rancher_mysqldb"]
+
   package = "${var.master_triton_machine_package}"
   image   = "${data.triton_image.image.id}"
   name    = "${var.name}-master-${count.index + 1}"
 
-  user_script = "${data.template_file.install_rancher_master.rendered}"
+  user_script = "${data.template_file.install_docker.rendered}"
 
   networks = ["${data.triton_network.networks.*.id}"]
 
@@ -100,6 +81,47 @@ resource "triton_machine" "rancher_master" {
   }
 }
 
+data "template_file" "install_rancher_master" {
+  template = "${file("${path.module}/files/install_rancher_master.sh.tpl")}"
+
+  vars {
+    ha = "${var.ha}"
+
+    mysqldb_host              = "${coalesce(join("", triton_machine.rancher_mysqldb.*.primaryip), "")}"
+    mysqldb_port              = "${var.mysqldb_port}"
+    mysqldb_user              = "${var.mysqldb_username}"
+    mysqldb_password          = "${var.mysqldb_password}"
+    mysqldb_database_name     = "${var.mysqldb_database_name}"
+    rancher_server_image      = "${var.rancher_server_image}"
+    rancher_agent_image       = "${var.rancher_agent_image}"
+    rancher_registry          = "${var.rancher_registry}"
+    rancher_registry_username = "${var.rancher_registry_username}"
+    rancher_registry_password = "${var.rancher_registry_password}"
+  }
+}
+
+resource "null_resource" "install_rancher_master" {
+  count = "${var.gcm_node_count}"
+
+  # Changes to any instance of the cluster requires re-provisioning
+  triggers {
+    rancher_master_ids = "${join(",", triton_machine.rancher_master.*.id)}"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "${var.triton_ssh_user}"
+    host        = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
+    private_key = "${file(var.triton_key_path)}"
+  }
+
+  provisioner "remote-exec" {
+    inline = <<EOF
+      ${data.template_file.install_rancher_master.rendered}
+      EOF
+  }
+}
+
 data "template_file" "setup_rancher_k8s" {
   template = "${file("${path.module}/files/setup_rancher.sh.tpl")}"
 
@@ -108,15 +130,13 @@ data "template_file" "setup_rancher_k8s" {
     rancher_host = "http://127.0.0.1:8080"
     primary_ip   = "${element(triton_machine.rancher_master.*.primaryip, 0)}"
 
-    docker_machine_driver_triton_url      = "${var.docker_machine_driver_triton_url}"
-    docker_machine_driver_triton_checksum = "${var.docker_machine_driver_triton_checksum}"
-    rancher_ui_driver_triton              = "${var.rancher_ui_driver_triton}"
-
     rancher_registry = "${var.rancher_registry}"
   }
 }
 
 resource "null_resource" "setup_rancher_k8s" {
+  depends_on = ["null_resource.install_rancher_master"]
+
   # Changes to any instance of the cluster requires re-provisioning
   triggers {
     rancher_master_ids = "${join(",", triton_machine.rancher_master.*.id)}"

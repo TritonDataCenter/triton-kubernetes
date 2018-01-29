@@ -2,64 +2,60 @@
   <img src="https://www.joyent.com/assets/img/external/triton-kubernetes.svg" width="100%" height="144">
 </a>
 
-## Quick Start Guide
-
-This is a multi-cloud Kubernetes solution. **Triton Kubernetes** has a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud. For an example set up, look at the [How-To](#how-to) section.
+Triton Kubernetes is a multi-cloud Kubernetes solution. It has a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud. For an example set up, look at the [How-To](#how-to) section.
 
 ![Triton-Kubernetes](docs/imgs/Triton-Kubernetes.png)
 
 > NOTE: This package has been tested on Linux/OSX.
 
-### Pre-Reqs
-In order to start running **Triton Kubernetes**, you must create a [Triton](https://my.joyent.com/) account and install [`triton` CLI](#install-triton), [`wget`](#install-wget-), and [`kubectl`](#install-the-kubernetes-cli). `terraform` is also a requirement, but if it isn't found, it will be downloaded automatically.
+## Quick Start Guide
 
-[Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster. 
+### Pre-Reqs
+In order to run **Triton Kubernetes**, you must create a [Triton](https://my.joyent.com/) account and install [`jq`](#install-jq) and [`terraform`](#install-terraform).
+
+[Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster.
+
+[jq](https://stedolan.github.io/jq/) is a lightweight and flexible command-line JSON processor. It's leveraged by `triton-kubernetes`.
 
 [Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.
 
-#### Install Triton CLI
+#### Install `jq`
 
-In order to install `triton`, first you must have a [Triton account](https://sso.joyent.com/signup). As a new user you will receive a $250 credit to enable you to give Triton and Kubernetes a test run, but it's important to [add your billing information](https://my.joyent.com/main/#!/account/payment) and [add an ssh key](https://my.joyent.com/main/#!/account) to your account. If you need instructions for how to generate and SSH key, [read our documentation](https://docs.joyent.com/public-cloud/getting-started).
+Install `jq` for the system you are on:
 
-1.  Install [Node.js](https://nodejs.org/en/download/) and run `npm install -g triton` to install Triton CLI.
-1.  `triton` uses profiles to store access information. You'll need to set up profiles for relevant data centers.
-    +   `triton profile create` will give a [step-by-step walkthrough](https://docs.joyent.com/public-cloud/api-access/cloudapi) of how to create a profile.
-	+   Choose a profile to use for your Kubernetes Cluster.
-1.  Get into the Triton environment with `eval $(triton env <profile name>)`.
-1.  Run `triton info` to test your configuration.
-
-#### Terraform
-
-Terraform will be downloaded automatically under the `<triton-kubernetes>/bin/` directory.
-
-#### Install `wget`
-
-Install `wget` for the system you are on:
-
-```sh
+```bash
 # OS X using brew
-brew install wget
+brew install jq
 
 # Debian/Ubuntu
-apt-get install wget
+apt-get install jq
 
 # CentOS/RHEL
-yum install wget
+yum install jq
 ```
 
-#### Install the Kubernetes CLI
+#### Install Terraform
 
-There are different ways to [install `kubectl`](https://kubernetes.io/docs/tasks/kubectl/install/), but the simplest way is via `curl`:
+Install `terraform` for the system you are on:
+```bash
+# OS X using brew
+brew install terraform
 
-```sh
-# OS X
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/darwin/amd64/kubectl
+# Debian/Ubuntu/CentOS/RHEL
+wget https://releases.hashicorp.com/terraform/0.11.2/terraform_0.11.2_linux_amd64.zip
+unzip terraform_0.11.2_linux_amd64.zip
+mv terraform /usr/local/bin/
+```
 
-# Linux
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/linux/amd64/kubectl
+#### Install `triton-kubernetes`
+Download Binary:
+TODO
 
-# Windows
-curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s https://storage.googleapis.com/kubernetes-release/release/stable.txt)/bin/windows/amd64/kubectl.exe
+From Source:
+```bash
+go get -u github.com/joyent/triton-kubernetes
+go install github.com/joyent/triton-kubernetes
+triton-kubernetes --help
 ```
 
 ## How-To
@@ -67,15 +63,10 @@ curl -LO https://storage.googleapis.com/kubernetes-release/release/$(curl -s htt
 To see the multi-cloud capabilities of Triton Kubernetes, we are going to create a global cluster manager with four identical Kubernetes environments. These environments are going to be all configured in HA mode and on different cloud providers ([Triton](#setup-questions-kubernetes-cluster-on-triton), [AWS](#setup-questions-kubernetes-cluster-on-aws), [Azure](#setup-questions-kubernetes-cluster-on-azure), [GCP](#setup-questions-kubernetes-cluster-on-gcp)).
 
 ### Starting a Global Cluster Manager
-Make sure you have a Triton profile created and active.
-Download the **Triton Kubernetes** package and run `triton-kubernetes.sh`:
+Install [**Triton Kubernetes**](#install-triton-kubernetes) and run it:
 
 ```bash
-$ eval "$(triton env)"
-$ git clone https://github.com/joyent/triton-kubernetes.git
-Cloning into 'triton-kubernetes'...
-$ cd triton-kubernetes 
-$ ./triton-kubernetes.sh -c
+triton-kubernetes create manager
 ```
 
 Follow the on screen instructions answering questions about the cluster. You can use the default by pressing “Enter”/”Return” key.
@@ -93,16 +84,14 @@ Follow the on screen instructions answering questions about the cluster. You can
 
 After verification of the entries, setup will start Cluster Manager in HA mode on Joyent Cloud. This will be a two node HA configuration with a shared database node.
 
-### Adding a Kubernetes Environments to Global Cluster Manager
-From the same repository directory that [global-cluster](#starting-a-global-cluster-manager) Cluster Manager was created, invoke the following command and follow the on screen instructions answering questions about the Kubernetes environment. We are adding four environments one on each cloud and their inputs are below. You can use the defaults by pressing “Enter”/”Return” key:
+### Adding Kubernetes Environments to Global Cluster Manager
+Invoke the following command and follow the on screen instructions answering questions about the Kubernetes environment.
 
 ```bash
-$ ./triton-kubernetes.sh -e
+triton-kubernetes create cluster
 ```
 
 #### Setup Questions: Kubernetes cluster on Triton
-
-The Triton credentials are pulled from environment variables. If `eval "$(triton env)"` was not ran, you will be prompted for Triton account, CloudAPI endpoint URL, ssh key ID and private key.
 
 | Question | Default | Input |
 |---------------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|----------------------|
@@ -119,27 +108,6 @@ The Triton credentials are pulled from environment variables. If `eval "$(triton
 After verification of the entries, setup will create a Kubernetes environment in HA mode on Joyent Cloud. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
 
 #### Setup Questions: Kubernetes cluster on AWS
-
-Before getting started, you will need to find the ImageId for an Ubuntu 16.04 instance in the region you are planning on deploying.
-
-Canonical keeps a list of AMI ids here: https://cloud-images.ubuntu.com/locator/ec2/ you are looking for Ubuntu Server 16.04 amd64 with instance type of _hvm:ebs-ssd_
-
-If you have the aws cli tools installed (and jq), then you can run the following command (don't forget to modify the region, otherwise you won't get the correct AMI image id.)
-
-```bash
-aws --region us-west-2 ec2 describe-images --owners 099720109477 --filters \
-  "Name=root-device-type,Values=ebs" "Name=virtualization-type,Values=hvm" \
-  "Name=architecture, Values=x86_64" "Name=is-public,Values=true" \
-  "Name=name,Values='*hvm-ssd/ubuntu-xenial-16.04-amd64-server*'" \
-  --query 'Images[*].{ImageId:ImageId,Name:Name,CreationDate:CreationDate}' | \
-  jq '.|sort_by(.CreationDate)|last'
-```
-
-If you need more information on the AMI, you can use the following command. (Unfortunately, it doesn't tell you which region the image lives in.)
-
-```bash
-aws ec2 describe-images --image-id ami-0def3275
-```
 
 | Question | Default | Input |
 |-------------------------------------------------------------------------------------------------------------------------------|-------------------------------------------------------|------------------|
@@ -198,3 +166,30 @@ After verification of the entries, setup will create a Kubernetes environment in
 | docker-engine install script | <https://releases.rancher.com/install-docker/17.03.sh> | <kbd>enter</kbd> |
 
 After verification of the entries, setup will create a Kubernetes environment in HA mode running on GCP. This will be a three worker/three ETCD/three Kubernetes Services node configuration managed by the previously started cluster manager ([global-cluster](#starting-a-global-cluster-manager)).
+
+## Backend State
+
+Triton Kubernetes persists state by leveraging one of the supported backends. This state is required to add/remove/modify infrastructure managed by Triton Kubernetes.
+
+### Manta
+Will persist state in the `/triton-kubernetes/` folder for the provided user in Manta Cloud Storage.
+
+### Local
+Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernets was run on.
+
+## Developing Locally
+
+### Testing terraform module changes
+The `SOURCE_URL` flag will override the default terraform module source. Default is `github.com/joyent/triton-kubernetes`.
+
+The `SOURCE_REF` flag will override the default branch/tag/commit reference for the terraform module source. Default is `master`
+
+Testing local changes
+```bash
+SOURCE_URL=/full/path/to/working/dir/triton-kubernetes ./triton-kubernetes
+```
+
+Testing remote changes
+```bash
+SOURCE_URL=github.com/fayazg/triton-kubernets SOURCE_REF=new-branch ./triton-kubernetes
+```

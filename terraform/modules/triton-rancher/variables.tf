@@ -55,21 +55,6 @@ variable "docker_engine_install_url" {
   description = "The URL to the shell script to install the docker engine."
 }
 
-variable "docker_machine_driver_triton_url" {
-  default     = "https://github.com/nimajalali/docker-machine-driver-triton/releases/download/v0.0.5/docker-machine-driver-triton"
-  description = "A URL to a binary that implements the docker-machine-driver interface for Triton."
-}
-
-variable "docker_machine_driver_triton_checksum" {
-  default     = "b0ed3600c2d136c788eeac47d595ef9c"
-  description = "The md5 checksum for the docker-machine-driver-triton binary."
-}
-
-variable "rancher_ui_driver_triton" {
-  default     = "https://s3-us-west-1.amazonaws.com/static.nimajalali.com/ui-driver-triton/component.js"
-  description = "A URL to the Rancher UI driver for Triton."
-}
-
 variable "ha" {
   default     = false
   description = "Should Rancher be deployed in HA, if true a mysqldb node and 2 Rancher master nodes will be created."
