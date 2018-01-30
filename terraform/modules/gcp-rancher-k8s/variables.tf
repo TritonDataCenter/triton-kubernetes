@@ -35,7 +35,7 @@ variable "compute_node_count" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://releases.rancher.com/install-docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 

@@ -64,7 +64,7 @@ resource "triton_machine" "rancher_master" {
 
   package = "${var.master_triton_machine_package}"
   image   = "${data.triton_image.image.id}"
-  name    = "${var.name}-master-${count.index + 1}"
+  name    = "${var.name}-${count.index + 1}"
 
   user_script = "${data.template_file.install_docker.rendered}"
 

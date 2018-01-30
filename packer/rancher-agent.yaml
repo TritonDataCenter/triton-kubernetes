@@ -8,7 +8,7 @@ builders:
 provisioners:
 - type: shell
   inline:
-    - sudo curl "https://releases.rancher.com/install-docker/17.03.sh" | sh
+    - sudo curl "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh" | sh
     - sudo apt-get install jq -y
     - sudo docker pull rancher/healthcheck:v0.3.3
     - sudo docker pull rancher/net:v0.13.7

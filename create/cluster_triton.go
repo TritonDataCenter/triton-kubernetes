@@ -45,7 +45,7 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 		cfg.TritonAccount = viper.GetString("triton_account")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Triton Account Name (usually your email)",
+			Label: "Triton Account Name",
 			Validate: func(input string) error {
 				if len(input) == 0 {
 					return errors.New("Invalid Triton Account")

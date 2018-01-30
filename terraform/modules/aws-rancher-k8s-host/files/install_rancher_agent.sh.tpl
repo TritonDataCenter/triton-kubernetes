@@ -1,5 +1,5 @@
 #!/bin/sh
-# This script just wraps https://releases.rancher.com/install-docker/1.12.sh
+# This script just wraps https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh
 # It disables firewalld on CentOS.
 # TODO: Replace firewalld with iptables.
 

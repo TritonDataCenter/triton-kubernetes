@@ -7,7 +7,7 @@ triton_account: '{{user `triton_account`}}'
 triton_key_material: '{{user `triton_key_material`}}'
 triton_key_id: '{{user `triton_key_id`}}'
 
-source_machine_name: packer-builder-ubuntu-16.04-docker1.12-{{timestamp}}
+source_machine_name: packer-builder-ubuntu-16.04-docker17.03-{{timestamp}}
 source_machine_image: 342045ce-6af1-4adf-9ef1-e5bfaf9de28c # ubuntu-certified-16.04/20170619.1
 source_machine_package: k4-highcpu-kvm-1.75G
 
@@ -15,5 +15,5 @@ communicator: ssh
 ssh_username: ubuntu
 ssh_private_key_file: '{{user `triton_key_material`}}'
 
-image_name: ubuntu-16.04-docker1.12
+image_name: ubuntu-16.04-docker17.03
 image_version: 1.0.0
