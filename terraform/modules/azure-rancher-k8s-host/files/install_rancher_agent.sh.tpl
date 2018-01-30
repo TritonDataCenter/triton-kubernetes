@@ -9,7 +9,10 @@ if [ -n "$(command -v firewalld)" ]; then
 fi
 
 sudo curl ${docker_engine_install_url} | sh
-
+sudo service docker stop
+sudo bash -c 'echo "{
+  \"storage-driver\": \"overlay2\"
+}" > /etc/docker/daemon.json'
 sudo service docker restart
 
 sudo hostnamectl set-hostname ${hostname}

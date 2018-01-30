@@ -39,7 +39,7 @@ variable "rancher_registry_password" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://releases.rancher.com/install-docker/1.12.sh"
+  default     = "https://releases.rancher.com/install-docker/17.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 

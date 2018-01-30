@@ -23,8 +23,8 @@ module "create_rancher-example" {
   ha                             = true
   gcm_node_count                 = "2"
 
-  # rancher_server_image      = "docker-registry.joyent.com:5000/rancher/server:v1.6.10"
-  # rancher_agent_image       = "docker-registry.joyent.com:5000/rancher/agent:v1.2.6"
+  # rancher_server_image      = "docker-registry.joyent.com:5000/rancher/server:v1.6.14"
+  # rancher_agent_image       = "docker-registry.joyent.com:5000/rancher/agent:v1.2.9"
 
   # rancher_registry          = "docker-registry.joyent.com:5000"
   # rancher_registry_username = "username"

@@ -10,4 +10,4 @@ provisioners:
   inline:
     - sudo curl "https://releases.rancher.com/install-docker/17.03.sh" | sh
     - sudo apt-get install jq -y
-    - sudo docker pull rancher/server:v1.6.10
+    - sudo docker pull rancher/server:v1.6.14
