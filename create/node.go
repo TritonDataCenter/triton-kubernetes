@@ -249,6 +249,26 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 	var countInput string
 	if viper.IsSet("node_count") {
 		countInput = viper.GetString("node_count")
+	} else if cfg.RancherHostLabels.Compute == "true" {
+		prompt := promptui.Prompt{
+			Label: "Number of nodes to create",
+			Validate: func(input string) error {
+				num, err := strconv.ParseInt(input, 10, 64)
+				if err != nil {
+					return errors.New("Invalid number")
+				}
+				if num <= 0 {
+					return errors.New("Number must be greater than 0")
+				}
+				return nil
+			},
+			Default: "3",
+		}
+		result, err := prompt.Run()
+		if err != nil {
+			return baseNodeTerraformConfig{}, err
+		}
+		countInput = result
 	} else {
 		nodeCountOptions := []string{"1", "3", "5", "7"}
 
