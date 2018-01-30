@@ -338,7 +338,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	if viper.IsSet("triton_key_id") {
 		cfg.TritonKeyID = viper.GetString("triton_key_id")
 	} else {
-		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
+		keyID, err := util.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
 		if err != nil {
 			return err
 		}
