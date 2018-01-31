@@ -34,7 +34,7 @@ var destroyCmd = &cobra.Command{
 }
 
 func destroyCmdFunc(cmd *cobra.Command, args []string) {
-	remoteBackend, err := util.PromptForBackend()
+	remoteBackend, err := util.PromptForBackend(false)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)

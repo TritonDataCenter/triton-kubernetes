@@ -10,6 +10,10 @@ import (
 
 var cfgFile string
 
+// SilentMode represents whether or not the program is running in silent mode.
+// Silent mode causes the program to throw an error when config values are missing.
+var SilentMode bool
+
 // This represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "triton-kubernetes",
@@ -37,6 +41,8 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.triton-kubernetes.yaml)")
+	rootCmd.PersistentFlags().Bool("silent", false, "Prevent interactive prompts")
+
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
 	rootCmd.Flags().BoolP("toggle", "t", false, "Help message for toggle")
