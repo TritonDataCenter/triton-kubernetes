@@ -2,6 +2,7 @@ package create
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"sort"
@@ -43,7 +44,7 @@ type tritonNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State, silentMode bool) ([]string, error) {
 	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
@@ -107,6 +108,8 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 				return []string{}, fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
 			}
 		}
+	} else if silentMode {
+		return []string{}, errors.New("triton_network_names must be specified")
 	} else {
 		networkPrompt := promptui.Select{
 			Label: "Triton Networks to attach",
@@ -180,6 +183,8 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		cfg.TritonImageVersion = viper.GetString("triton_image_version")
 
 		// TODO: Verify Triton Image Name/Version
+	} else if silentMode {
+		return []string{}, errors.New("Both triton_image_name and triton_image_version must be specified")
 	} else {
 		listImageInput := compute.ListImagesInput{}
 		images, err := tritonComputeClient.Images().List(context.Background(), &listImageInput)
@@ -224,6 +229,8 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	// Triton SSH User
 	if viper.IsSet("triton_ssh_user") {
 		cfg.TritonSSHUser = viper.GetString("triton_ssh_user")
+	} else if silentMode {
+		return []string{}, errors.New("triton_ssh_user must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton SSH User",
@@ -242,6 +249,8 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		cfg.TritonMachinePackage = viper.GetString("triton_machine_package")
 
 		// TODO: Verify triton_machine_package
+	} else if silentMode {
+		return []string{}, errors.New("triton_machine_package must be specified")
 	} else {
 		listPackageInput := compute.ListPackagesInput{}
 		packages, err := tritonComputeClient.Packages().List(context.Background(), &listPackageInput)

@@ -39,7 +39,7 @@ type rancherHostLabelsConfig struct {
 	Compute       string `json:"compute,omitempty"`
 }
 
-func NewNode(remoteBackend backend.Backend) error {
+func NewNode(remoteBackend backend.Backend, silentMode bool) error {
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -52,6 +52,8 @@ func NewNode(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if silentMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
@@ -104,6 +106,8 @@ func NewNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedClusterKey = clusterKey
+	} else if silentMode {
+		return errors.New("cluster_name must be specified")
 	} else {
 		clusterNames := make([]string, 0, len(clusters))
 		for name := range clusters {
@@ -128,21 +132,23 @@ func NewNode(remoteBackend backend.Backend) error {
 		selectedClusterKey = clusters[value]
 	}
 
-	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
 	if err != nil {
 		return err
 	}
 
 	// Confirmation Prompt
-	label := "Proceed with the node creation"
-	selected := "Proceed"
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Node creation canceled")
-		return nil
+	if !silentMode {
+		label := "Proceed with the node creation"
+		selected := "Proceed"
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Node creation canceled")
+			return nil
+		}
 	}
 
 	// Get the new state and run terraform apply
@@ -160,7 +166,7 @@ func NewNode(remoteBackend backend.Backend) error {
 	return nil
 }
 
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currentState state.State, silentMode bool) ([]string, error) {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
@@ -170,13 +176,13 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 
 	switch parts[1] {
 	case "triton":
-		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
 	case "aws":
-		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
 	case "gcp":
-		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
 	case "azure":
-		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
 	default:
 		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}

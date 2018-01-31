@@ -65,7 +65,7 @@ func createCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "node":
 		fmt.Println("create node called")
-		err := create.NewNode(remoteBackend)
+		err := create.NewNode(remoteBackend, silentMode)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
