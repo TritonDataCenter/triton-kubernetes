@@ -291,8 +291,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	}
 
 	// Rancher Docker Registry
-	if viper.IsSet("rancher_registry") {
-		cfg.RancherRegistry = viper.GetString("rancher_registry")
+	if viper.IsSet("private_registry") {
+		cfg.RancherRegistry = viper.GetString("private_registry")
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Private Registry",
@@ -312,8 +312,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Ask for rancher registry username/password only if rancher registry is given
 	if cfg.RancherRegistry != "" {
 		// Rancher Registry Username
-		if viper.IsSet("rancher_registry_username") {
-			cfg.RancherRegistryUsername = viper.GetString("rancher_registry_username")
+		if viper.IsSet("private_registry_username") {
+			cfg.RancherRegistryUsername = viper.GetString("private_registry_username")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Private Registry Username",
@@ -327,8 +327,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		}
 
 		// Rancher Registry Password
-		if viper.IsSet("rancher_registry_password") {
-			cfg.RancherRegistryPassword = viper.GetString("rancher_registry_password")
+		if viper.IsSet("private_registry_password") {
+			cfg.RancherRegistryPassword = viper.GetString("private_registry_password")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Private Registry Password",

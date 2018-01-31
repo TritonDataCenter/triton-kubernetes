@@ -6,8 +6,8 @@ import (
 	"os"
 
 	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
@@ -102,7 +102,7 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	if viper.IsSet("triton_key_id") {
 		cfg.TritonKeyID = viper.GetString("triton_key_id")
 	} else {
-		keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
+		keyID, err := util.GetPublicKeyFingerprintFromPrivateKey(cfg.TritonKeyPath)
 		if err != nil {
 			return "", err
 		}

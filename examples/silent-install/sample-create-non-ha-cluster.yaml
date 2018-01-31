@@ -1,0 +1,15 @@
+backend_provider: local
+cluster_manager: non-ha-manager
+name: non-ha-cluster
+cluster_cloud_provider: triton
+k8s_plane_isolation: none
+private_registry: "docker-registry.joyent.com:5000"
+private_registry_username: ""
+private_registry_password: ""
+k8s_registry: "docker-registry.joyent.com:5000"
+k8s_registry_username: ""
+k8s_registry_password: ""
+triton_account: fayazg
+triton_key_path: ~/.ssh/id_rsa
+triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
+triton_url: https://us-east-1.api.joyent.com
