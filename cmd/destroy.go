@@ -39,7 +39,9 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 	if err != nil {
 		silentMode = false
 	}
-	fmt.Printf("Silent Mode: %v\n", silentMode)
+	if silentMode {
+		fmt.Println("Running in silent mode")
+	}
 
 	remoteBackend, err := util.PromptForBackend(silentMode)
 	if err != nil {
