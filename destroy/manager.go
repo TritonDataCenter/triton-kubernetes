@@ -1,6 +1,7 @@
 package destroy
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func DeleteManager(remoteBackend backend.Backend) error {
+func DeleteManager(remoteBackend backend.Backend, silentMode bool) error {
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -25,6 +26,8 @@ func DeleteManager(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if silentMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		sort.Strings(clusterManagers)
 		prompt := promptui.Select{
