@@ -58,7 +58,7 @@ func getCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "cluster":
 		fmt.Println("get cluster called")
-		err := get.GetCluster(remoteBackend)
+		err := get.GetCluster(remoteBackend, silentMode)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

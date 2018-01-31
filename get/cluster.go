@@ -1,6 +1,7 @@
 package get
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,7 +14,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetCluster(remoteBackend backend.Backend) error {
+func GetCluster(remoteBackend backend.Backend, silentMode bool) error {
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -26,6 +27,8 @@ func GetCluster(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if silentMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
@@ -76,6 +79,8 @@ func GetCluster(remoteBackend backend.Backend) error {
 		}
 
 		selectedClusterKey = clusterKey
+	} else if silentMode {
+		return errors.New("cluster_name must be specified")
 	} else {
 		clusterNames := make([]string, 0, len(clusters))
 		for name := range clusters {
