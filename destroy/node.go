@@ -1,6 +1,7 @@
 package destroy
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -12,7 +13,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func DeleteNode(remoteBackend backend.Backend) error {
+func DeleteNode(remoteBackend backend.Backend, silentMode bool) error {
 
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
@@ -26,6 +27,8 @@ func DeleteNode(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if silentMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
@@ -78,6 +81,8 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedClusterKey = clusterKey
+	} else if silentMode {
+		return errors.New("cluster_name must be specified")
 	} else {
 		clusterNames := make([]string, 0, len(clusters))
 		for name := range clusters {
@@ -117,6 +122,8 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedNodeKey = nodeKey
+	} else if silentMode {
+		return errors.New("hostname must be specified")
 	} else {
 		nodeNames := make([]string, 0, len(nodes))
 		for name := range nodes {

@@ -65,7 +65,7 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "node":
 		fmt.Println("destroy node called")
-		err := destroy.DeleteNode(remoteBackend)
+		err := destroy.DeleteNode(remoteBackend, silentMode)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
