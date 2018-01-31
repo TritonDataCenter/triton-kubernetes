@@ -34,7 +34,14 @@ var getCmd = &cobra.Command{
 }
 
 func getCmdFunc(cmd *cobra.Command, args []string) {
-	remoteBackend, err := util.PromptForBackend(false)
+	// Get silent mode value
+	silentMode, err := cmd.Flags().GetBool("silent")
+	if err != nil {
+		silentMode = false
+	}
+	fmt.Printf("Silent Mode: %v\n", silentMode)
+
+	remoteBackend, err := util.PromptForBackend(silentMode)
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -44,7 +51,7 @@ func getCmdFunc(cmd *cobra.Command, args []string) {
 	switch getType {
 	case "manager":
 		fmt.Println("get manager called")
-		err := get.GetManager(remoteBackend)
+		err := get.GetManager(remoteBackend, silentMode)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
