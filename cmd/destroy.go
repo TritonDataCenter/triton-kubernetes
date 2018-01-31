@@ -58,7 +58,7 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 		}
 	case "cluster":
 		fmt.Println("destroy cluster called")
-		err := destroy.DeleteCluster(remoteBackend)
+		err := destroy.DeleteCluster(remoteBackend, silentMode)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
