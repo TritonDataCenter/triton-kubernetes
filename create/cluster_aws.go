@@ -41,8 +41,8 @@ type awsClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
-	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
+func newAWSCluster(remoteBackend backend.Backend, currentState state.State, silentMode bool) (string, error) {
+	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath, silentMode)
 	if err != nil {
 		return "", err
 	}
@@ -54,6 +54,8 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	// AWS Access Key
 	if viper.IsSet("aws_access_key") {
 		cfg.AWSAccessKey = viper.GetString("aws_access_key")
+	} else if silentMode {
+		return "", errors.New("aws_access_key must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "AWS Access Key",
@@ -75,6 +77,8 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	// AWS Secret Key
 	if viper.IsSet("aws_secret_key") {
 		cfg.AWSSecretKey = viper.GetString("aws_secret_key")
+	} else if silentMode {
+		return "", errors.New("aws_secret_key must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "AWS Secret Key",
@@ -127,6 +131,8 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 		if !found {
 			return "", fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
 		}
+	} else if silentMode {
+		return "", errors.New("aws_region must be specified")
 	} else {
 		// Building an array of strings that will be given to the SelectPrompt.
 		// The SelectTemplate has problems displaying struct fields that are string pointers.
@@ -187,6 +193,8 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 			}
 			cfg.AWSPublicKeyPath = expandedAWSPublicKeyPath
 		}
+	} else if silentMode {
+		return "", errors.New("aws_key_name must be specified")
 	} else {
 		// List all available aws keys
 		input := ec2.DescribeKeyPairsInput{}
@@ -275,6 +283,8 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	// AWS VPC CIDR
 	if viper.IsSet("aws_vpc_cidr") {
 		cfg.AWSVPCCIDR = viper.GetString("aws_vpc_cidr")
+	} else if silentMode {
+		return "", errors.New("aws_vpc_cidr must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "AWS VPC CIDR",
@@ -305,6 +315,8 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	// AWS Subnet CIDR
 	if viper.IsSet("aws_subnet_cidr") {
 		cfg.AWSSubnetCIDR = viper.GetString("aws_subnet_cidr")
+	} else if silentMode {
+		return "", errors.New("aws_subnet_cidr must be specified")
 	} else {
 		// Parsing VPC CIDR to prepare for subnet validation
 		_, vpcIPNet, err := net.ParseCIDR(cfg.AWSVPCCIDR)

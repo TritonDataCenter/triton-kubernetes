@@ -30,8 +30,8 @@ type tritonClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
-	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
+func newTritonCluster(remoteBackend backend.Backend, currentState state.State, silentMode bool) (string, error) {
+	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath, silentMode)
 	if err != nil {
 		return "", err
 	}
@@ -43,6 +43,8 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	// Triton Account
 	if viper.IsSet("triton_account") {
 		cfg.TritonAccount = viper.GetString("triton_account")
+	} else if silentMode {
+		return "", errors.New("triton_account must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Triton Account Name",
@@ -65,6 +67,8 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	rawTritonKeyPath := ""
 	if viper.IsSet("triton_key_path") {
 		rawTritonKeyPath = viper.GetString("triton_key_path")
+	} else if silentMode {
+		return "", errors.New("triton_key_path must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Triton Key Path",
@@ -112,6 +116,8 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	// Triton URL
 	if viper.IsSet("triton_url") {
 		cfg.TritonURL = viper.GetString("triton_url")
+	} else if silentMode {
+		return "", errors.New("triton_url must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton URL",
