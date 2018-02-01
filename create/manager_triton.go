@@ -251,12 +251,7 @@ func NewTritonManager(remoteBackend backend.Backend, silentMode bool) error {
 	// Rancher Server Image
 	if viper.IsSet("rancher_server_image") {
 		cfg.RancherServerImage = viper.GetString("rancher_server_image")
-	} else if silentMode {
-		// Set to default value for silent mode
-		defaultValue := "Default"
-		fmt.Printf("rancher_server_image not specified. Using %q\n", defaultValue)
-		cfg.RancherServerImage = defaultValue
-	} else {
+	} else if !silentMode {
 		prompt := promptui.Prompt{
 			Label:   "Rancher Server Image",
 			Default: "Default",
@@ -275,12 +270,7 @@ func NewTritonManager(remoteBackend backend.Backend, silentMode bool) error {
 	// Rancher Agent Image
 	if viper.IsSet("rancher_agent_image") {
 		cfg.RancherAgentImage = viper.GetString("rancher_agent_image")
-	} else if silentMode {
-		// Set to default value for silent mode
-		defaultValue := "Default"
-		fmt.Printf("rancher_agent_image not specified. Using %q\n", defaultValue)
-		cfg.RancherAgentImage = defaultValue
-	} else {
+	} else if !silentMode {
 		prompt := promptui.Prompt{
 			Label:   "Rancher Agent Image",
 			Default: "Default",
