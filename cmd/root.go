@@ -10,10 +10,6 @@ import (
 
 var cfgFile string
 
-// SilentMode represents whether or not the program is running in silent mode.
-// Silent mode causes the program to throw an error when config values are missing.
-var SilentMode bool
-
 // This represents the base command when called without any subcommands
 var rootCmd = &cobra.Command{
 	Use:   "triton-kubernetes",
