@@ -67,16 +67,18 @@ func DeleteManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	// Confirmation
-	label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
-	selected := fmt.Sprintf("Destroy %q", selectedClusterManager)
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Destroy manager canceled.")
-		return nil
+	if !silentMode {
+		// Confirmation
+		label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
+		selected := fmt.Sprintf("Destroy %q", selectedClusterManager)
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Destroy manager canceled.")
+			return nil
+		}
 	}
 
 	// Run Terraform destroy

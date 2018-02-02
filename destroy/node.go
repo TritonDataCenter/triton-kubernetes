@@ -149,16 +149,18 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		selectedNodeKey = nodes[value]
 	}
 
-	// Confirmation
-	label := fmt.Sprintf("Are you sure you want to destroy %q", nodeHostname)
-	selected := fmt.Sprintf("Destroy %q", nodeHostname)
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Destroy node canceled.")
-		return nil
+	if !silentMode {
+		// Confirmation
+		label := fmt.Sprintf("Are you sure you want to destroy %q", nodeHostname)
+		selected := fmt.Sprintf("Destroy %q", nodeHostname)
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Destroy node canceled.")
+			return nil
+		}
 	}
 
 	// Run terraform destroy
