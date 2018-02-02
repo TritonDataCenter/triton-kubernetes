@@ -39,7 +39,8 @@ type rancherHostLabelsConfig struct {
 	Compute       string `json:"compute,omitempty"`
 }
 
-func NewNode(remoteBackend backend.Backend, silentMode bool) error {
+func NewNode(remoteBackend backend.Backend) error {
+	silentMode := viper.GetBool("silent")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -132,7 +133,7 @@ func NewNode(remoteBackend backend.Backend, silentMode bool) error {
 		selectedClusterKey = clusters[value]
 	}
 
-	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
+	_, err = newNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	if err != nil {
 		return err
 	}
@@ -166,7 +167,7 @@ func NewNode(remoteBackend backend.Backend, silentMode bool) error {
 	return nil
 }
 
-func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currentState state.State, silentMode bool) ([]string, error) {
+func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
@@ -176,13 +177,13 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 
 	switch parts[1] {
 	case "triton":
-		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
+		return newTritonNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "aws":
-		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
+		return newAWSNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "gcp":
-		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
+		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "azure":
-		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState, silentMode)
+		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	default:
 		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
 	}

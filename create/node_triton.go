@@ -44,7 +44,8 @@ type tritonNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State, silentMode bool) ([]string, error) {
+func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	silentMode := viper.GetBool("silent")
 	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err

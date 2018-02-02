@@ -58,7 +58,8 @@ type tritonManagerTerraformConfig struct {
 	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
 }
 
-func NewTritonManager(remoteBackend backend.Backend, silentMode bool) error {
+func NewTritonManager(remoteBackend backend.Backend) error {
+	silentMode := viper.GetBool("silent")
 	cfg := tritonManagerTerraformConfig{}
 
 	baseSource := defaultSourceURL

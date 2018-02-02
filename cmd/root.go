@@ -46,6 +46,11 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
+	viper.BindPFlag("silent", rootCmd.Flags().Lookup("silent"))
+	if viper.GetBool("silent") {
+		fmt.Println("Running in silent mode")
+	}
+
 	if cfgFile != "" { // enable ability to specify config file via flag
 		viper.SetConfigFile(cfgFile)
 	} else {

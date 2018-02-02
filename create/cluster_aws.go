@@ -41,8 +41,9 @@ type awsClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newAWSCluster(remoteBackend backend.Backend, currentState state.State, silentMode bool) (string, error) {
-	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath, silentMode)
+func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
+	silentMode := viper.GetBool("silent")
+	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
 	}

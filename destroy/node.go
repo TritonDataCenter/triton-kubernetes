@@ -13,8 +13,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func DeleteNode(remoteBackend backend.Backend, silentMode bool) error {
-
+func DeleteNode(remoteBackend backend.Backend) error {
+	silentMode := viper.GetBool("silent")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err

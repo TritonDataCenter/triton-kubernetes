@@ -34,16 +34,7 @@ var getCmd = &cobra.Command{
 }
 
 func getCmdFunc(cmd *cobra.Command, args []string) {
-	// Get silent mode value
-	silentMode, err := cmd.Flags().GetBool("silent")
-	if err != nil {
-		silentMode = false
-	}
-	if silentMode {
-		fmt.Println("Running in silent mode")
-	}
-
-	remoteBackend, err := util.PromptForBackend(silentMode)
+	remoteBackend, err := util.PromptForBackend()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -53,14 +44,14 @@ func getCmdFunc(cmd *cobra.Command, args []string) {
 	switch getType {
 	case "manager":
 		fmt.Println("get manager called")
-		err := get.GetManager(remoteBackend, silentMode)
+		err := get.GetManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "cluster":
 		fmt.Println("get cluster called")
-		err := get.GetCluster(remoteBackend, silentMode)
+		err := get.GetCluster(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

@@ -51,7 +51,8 @@ type azureNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State, silentMode bool) ([]string, error) {
+func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	silentMode := viper.GetBool("silent")
 	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err

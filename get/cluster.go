@@ -14,7 +14,8 @@ import (
 	"github.com/spf13/viper"
 )
 
-func GetCluster(remoteBackend backend.Backend, silentMode bool) error {
+func GetCluster(remoteBackend backend.Backend) error {
+	silentMode := viper.GetBool("silent")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err

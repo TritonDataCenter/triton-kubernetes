@@ -34,16 +34,7 @@ var createCmd = &cobra.Command{
 }
 
 func createCmdFunc(cmd *cobra.Command, args []string) {
-	// Get silent mode value
-	silentMode, err := cmd.Flags().GetBool("silent")
-	if err != nil {
-		silentMode = false
-	}
-	if silentMode {
-		fmt.Println("Running in silent mode")
-	}
-
-	remoteBackend, err := util.PromptForBackend(silentMode)
+	remoteBackend, err := util.PromptForBackend()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -53,21 +44,21 @@ func createCmdFunc(cmd *cobra.Command, args []string) {
 	switch createType {
 	case "manager":
 		fmt.Println("create manager called")
-		err := create.NewTritonManager(remoteBackend, silentMode)
+		err := create.NewTritonManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "cluster":
 		fmt.Println("create cluster called")
-		err := create.NewCluster(remoteBackend, silentMode)
+		err := create.NewCluster(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "node":
 		fmt.Println("create node called")
-		err := create.NewNode(remoteBackend, silentMode)
+		err := create.NewNode(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

@@ -41,7 +41,8 @@ type awsNodeTerraformConfig struct {
 // - a slice of the hostnames added
 // - the new state
 // - error or nil
-func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State, silentMode bool) ([]string, error) {
+func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	silentMode := viper.GetBool("silent")
 	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err

@@ -34,16 +34,7 @@ var destroyCmd = &cobra.Command{
 }
 
 func destroyCmdFunc(cmd *cobra.Command, args []string) {
-	// Get silent mode value
-	silentMode, err := cmd.Flags().GetBool("silent")
-	if err != nil {
-		silentMode = false
-	}
-	if silentMode {
-		fmt.Println("Running in silent mode")
-	}
-
-	remoteBackend, err := util.PromptForBackend(silentMode)
+	remoteBackend, err := util.PromptForBackend()
 	if err != nil {
 		fmt.Println(err)
 		os.Exit(1)
@@ -53,21 +44,21 @@ func destroyCmdFunc(cmd *cobra.Command, args []string) {
 	switch destroyType {
 	case "manager":
 		fmt.Println("destroy manager called")
-		err := destroy.DeleteManager(remoteBackend, silentMode)
+		err := destroy.DeleteManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "cluster":
 		fmt.Println("destroy cluster called")
-		err := destroy.DeleteCluster(remoteBackend, silentMode)
+		err := destroy.DeleteCluster(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)
 		}
 	case "node":
 		fmt.Println("destroy node called")
-		err := destroy.DeleteNode(remoteBackend, silentMode)
+		err := destroy.DeleteNode(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

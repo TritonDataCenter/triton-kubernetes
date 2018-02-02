@@ -30,8 +30,9 @@ type tritonClusterTerraformConfig struct {
 }
 
 // Returns the name of the cluster that was created and the new state.
-func newTritonCluster(remoteBackend backend.Backend, currentState state.State, silentMode bool) (string, error) {
-	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath, silentMode)
+func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
+	silentMode := viper.GetBool("silent")
+	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
 	}

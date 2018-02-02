@@ -44,7 +44,8 @@ type baseClusterTerraformConfig struct {
 	KubernetesRegistryPassword string `json:"k8s_registry_password,omitempty"`
 }
 
-func NewCluster(remoteBackend backend.Backend, silentMode bool) error {
+func NewCluster(remoteBackend backend.Backend) error {
+	silentMode := viper.GetBool("silent")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -126,13 +127,13 @@ func NewCluster(remoteBackend backend.Backend, silentMode bool) error {
 	switch selectedCloudProvider {
 	case "triton":
 		// We pass the same Triton credentials used to get the cluster manager state to create the cluster.
-		clusterName, err = newTritonCluster(remoteBackend, currentState, silentMode)
+		clusterName, err = newTritonCluster(remoteBackend, currentState)
 	case "aws":
-		clusterName, err = newAWSCluster(remoteBackend, currentState, silentMode)
+		clusterName, err = newAWSCluster(remoteBackend, currentState)
 	case "gcp":
-		clusterName, err = newGCPCluster(remoteBackend, currentState, silentMode)
+		clusterName, err = newGCPCluster(remoteBackend, currentState)
 	case "azure":
-		clusterName, err = newAzureCluster(remoteBackend, currentState, silentMode)
+		clusterName, err = newAzureCluster(remoteBackend, currentState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
@@ -197,7 +198,7 @@ func NewCluster(remoteBackend backend.Backend, silentMode bool) error {
 			}
 
 			// Create the new node
-			newHostnames, err := newNode(selectedClusterManager, clusterKey, remoteBackend, currentState, silentMode)
+			newHostnames, err := newNode(selectedClusterManager, clusterKey, remoteBackend, currentState)
 			if err != nil {
 				return err
 			}
@@ -235,7 +236,7 @@ func NewCluster(remoteBackend backend.Backend, silentMode bool) error {
 
 		for shouldCreateNode {
 			// Add new nodes to the state
-			newHostnames, err := newNode(selectedClusterManager, clusterKey, remoteBackend, currentState, silentMode)
+			newHostnames, err := newNode(selectedClusterManager, clusterKey, remoteBackend, currentState)
 			if err != nil {
 				return err
 			}
@@ -278,7 +279,8 @@ func NewCluster(remoteBackend backend.Backend, silentMode bool) error {
 	return nil
 }
 
-func getBaseClusterTerraformConfig(terraformModulePath string, silentMode bool) (baseClusterTerraformConfig, error) {
+func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerraformConfig, error) {
+	silentMode := viper.GetBool("silent")
 	cfg := baseClusterTerraformConfig{
 		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
 

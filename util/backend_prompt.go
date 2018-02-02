@@ -16,7 +16,9 @@ import (
 	"github.com/spf13/viper"
 )
 
-func PromptForBackend(silentMode bool) (backend.Backend, error) {
+func PromptForBackend() (backend.Backend, error) {
+	silentMode := viper.GetBool("silent")
+
 	// Ask user what backend to use
 	selectedBackendProvider := ""
 	if viper.IsSet("backend_provider") {
