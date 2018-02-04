@@ -25,6 +25,18 @@ if [ "${rancher_registry}" != "" ]; then
 		'${rancher_host}/v2-beta/settings/registry.default'
 fi
 
+# Update default catalogs (library/community) to point directly to github repos
+curl -X PUT \
+	-H 'Accept: application/json' \
+	-H 'Content-Type: application/json' \
+	-d '{"activeValue":"{\"catalogs\":{\"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}, \"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\", \"branch\":\"master\"}}}", "id":"catalog.url", "name":"catalog.url", "source":"Database", "value":"{\"catalogs\":{\"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}, \"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\", \"branch\":\"master\"}}}"}' \
+	'${rancher_host}/v2-beta/settings/catalog.url'
+curl -X PUT \
+	-H 'Accept: application/json' \
+	-H 'Content-Type: application/json' \
+	-d '{"activeValue":"{\"catalogs\":{\"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\", \"branch\":\"master\"}, \"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}}}", "id":"default.cattle.catalog.url", "name":"default.cattle.catalog.url", "source":"Environment Variables", "value":"{\"catalogs\":{\"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\",\"branch\":\"master\"}, \"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}}}"}' \
+	'${rancher_host}/v2-beta/settings/default.cattle.catalog.url'
+
 # Delete default cattle environment
 curl -X POST \
 	-H 'Accept: application/json' \

@@ -9,7 +9,6 @@ import (
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/backend/local"
 	"github.com/joyent/triton-kubernetes/backend/manta"
-	"github.com/joyent/triton-kubernetes/shell"
 
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
@@ -117,7 +116,7 @@ func PromptForBackend() (backend.Backend, error) {
 		if viper.IsSet("triton_key_id") {
 			tritonKeyID = viper.GetString("triton_key_id")
 		} else {
-			keyID, err := shell.GetPublicKeyFingerprintFromPrivateKey(tritonKeyPath)
+			keyID, err := GetPublicKeyFingerprintFromPrivateKey(tritonKeyPath)
 			if err != nil {
 				return nil, err
 			}
