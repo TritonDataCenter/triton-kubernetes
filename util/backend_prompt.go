@@ -16,13 +16,13 @@ import (
 )
 
 func PromptForBackend() (backend.Backend, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 
 	// Ask user what backend to use
 	selectedBackendProvider := ""
 	if viper.IsSet("backend_provider") {
 		selectedBackendProvider = viper.GetString("backend_provider")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return nil, errors.New("backend_provider must be provided")
 	} else {
 		prompt := promptui.Select{
@@ -52,7 +52,7 @@ func PromptForBackend() (backend.Backend, error) {
 		tritonAccount := ""
 		if viper.IsSet("triton_account") {
 			tritonAccount = viper.GetString("triton_account")
-		} else if silentMode {
+		} else if nonInteractiveMode {
 			return nil, errors.New("triton_account must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -76,7 +76,7 @@ func PromptForBackend() (backend.Backend, error) {
 		rawTritonKeyPath := ""
 		if viper.IsSet("triton_key_path") {
 			rawTritonKeyPath = viper.GetString("triton_key_path")
-		} else if silentMode {
+		} else if nonInteractiveMode {
 			return nil, errors.New("triton_key_path must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -127,7 +127,7 @@ func PromptForBackend() (backend.Backend, error) {
 		tritonURL := ""
 		if viper.IsSet("triton_url") {
 			tritonURL = viper.GetString("triton_url")
-		} else if silentMode {
+		} else if nonInteractiveMode {
 			return nil, errors.New("triton_url must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -146,7 +146,7 @@ func PromptForBackend() (backend.Backend, error) {
 		mantaURL := ""
 		if viper.IsSet("manta_url") {
 			mantaURL = viper.GetString("manta_url")
-		} else if silentMode {
+		} else if nonInteractiveMode {
 			return nil, errors.New("manta_url must be specified")
 		} else {
 			prompt := promptui.Prompt{

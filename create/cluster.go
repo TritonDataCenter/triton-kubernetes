@@ -45,7 +45,7 @@ type baseClusterTerraformConfig struct {
 }
 
 func NewCluster(remoteBackend backend.Backend) error {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -58,7 +58,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
@@ -101,7 +101,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	selectedCloudProvider := ""
 	if viper.IsSet("cluster_cloud_provider") {
 		selectedCloudProvider = viper.GetString("cluster_cloud_provider")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_cloud_provider must be specified")
 	} else {
 		prompt := promptui.Select{
@@ -205,7 +205,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 			printNodesAddedMessage(newHostnames)
 		}
 	}
-	if !silentMode {
+	if !nonInteractiveMode {
 		// Ask user if they'd like to create a node for this cluster
 		createNodeOptions := []struct {
 			Name  string
@@ -280,7 +280,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 }
 
 func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerraformConfig, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	cfg := baseClusterTerraformConfig{
 		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
 
@@ -306,7 +306,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Name
 	if viper.IsSet("name") {
 		cfg.Name = viper.GetString("name")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return baseClusterTerraformConfig{}, errors.New("name must be specified")
 	} else {
 		prompt := promptui.Prompt{
@@ -327,7 +327,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Kubernetes Plane Isolation
 	if viper.IsSet("k8s_plane_isolation") {
 		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return baseClusterTerraformConfig{}, errors.New("k8s_plane_isolation must be specified")
 	} else {
 		prompt := promptui.Select{
@@ -357,7 +357,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Rancher Docker Registry
 	if viper.IsSet("private_registry") {
 		cfg.RancherRegistry = viper.GetString("private_registry")
-	} else if !silentMode {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "Private Registry",
 			Default: "None",
@@ -378,7 +378,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Username
 		if viper.IsSet("private_registry_username") {
 			cfg.RancherRegistryUsername = viper.GetString("private_registry_username")
-		} else if !silentMode {
+		} else if !nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("private_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -395,7 +395,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Password
 		if viper.IsSet("private_registry_password") {
 			cfg.RancherRegistryPassword = viper.GetString("private_registry_password")
-		} else if !silentMode {
+		} else if !nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("private_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -414,7 +414,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// k8s Docker Registry
 	if viper.IsSet("k8s_registry") {
 		cfg.KubernetesRegistry = viper.GetString("k8s_registry")
-	} else if !silentMode {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "k8s Registry",
 			Default: "None",
@@ -435,7 +435,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// k8s Registry Username
 		if viper.IsSet("k8s_registry_username") {
 			cfg.KubernetesRegistryUsername = viper.GetString("k8s_registry_username")
-		} else if silentMode {
+		} else if nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("k8s_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -452,7 +452,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Password
 		if viper.IsSet("k8s_registry_password") {
 			cfg.KubernetesRegistryPassword = viper.GetString("k8s_registry_password")
-		} else if silentMode {
+		} else if nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("k8s_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{

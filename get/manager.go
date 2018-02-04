@@ -14,7 +14,7 @@ import (
 )
 
 func GetManager(remoteBackend backend.Backend) error {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func GetManager(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{

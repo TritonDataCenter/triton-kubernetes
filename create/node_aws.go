@@ -42,7 +42,7 @@ type awsNodeTerraformConfig struct {
 // - the new state
 // - error or nil
 func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseNodeTerraformConfig(awsRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
@@ -76,7 +76,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		cfg.AWSAMIID = viper.GetString("aws_ami_id")
 
 		// TODO: Verify aws_ami_id
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("aws_ami_id must be specified")
 	} else {
 		// TODO: Ask the user for a search term
@@ -136,7 +136,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	// AWS Instance Type
 	if viper.IsSet("aws_instance_type") {
 		cfg.AWSInstanceType = viper.GetString("aws_instance_type")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("aws_instance_type must be specified")
 	} else {
 		// AWS doesn't have an API to get a list of available instance types

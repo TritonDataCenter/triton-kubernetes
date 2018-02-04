@@ -36,7 +36,7 @@ type gcpClusterTerraformConfig struct {
 
 // Returns the name of the cluster that was created and the new state.
 func newGCPCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseClusterTerraformConfig(gcpRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -50,7 +50,7 @@ func newGCPCluster(remoteBackend backend.Backend, currentState state.State) (str
 	rawGCPPathToCredentials := ""
 	if viper.IsSet("gcp_path_to_credentials") {
 		rawGCPPathToCredentials = viper.GetString("gcp_path_to_credentials")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return "", errors.New("gcp_path_to_credentials must be specified")
 	} else {
 		prompt := promptui.Prompt{
@@ -128,7 +128,7 @@ func newGCPCluster(remoteBackend backend.Backend, currentState state.State) (str
 			return "", fmt.Errorf("Selected GCP Compute Region '%s' does not exist.", cfg.GCPComputeRegion)
 		}
 
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return "", errors.New("gcp_compute_region must be specified")
 	} else {
 		searcher := func(input string, index int) bool {

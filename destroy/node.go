@@ -14,7 +14,7 @@ import (
 )
 
 func DeleteNode(remoteBackend backend.Backend) error {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func DeleteNode(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
@@ -81,7 +81,7 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedClusterKey = clusterKey
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_name must be specified")
 	} else {
 		clusterNames := make([]string, 0, len(clusters))
@@ -122,7 +122,7 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedNodeKey = nodeKey
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("hostname must be specified")
 	} else {
 		nodeNames := make([]string, 0, len(nodes))
@@ -149,7 +149,7 @@ func DeleteNode(remoteBackend backend.Backend) error {
 		selectedNodeKey = nodes[value]
 	}
 
-	if !silentMode {
+	if !nonInteractiveMode {
 		// Confirmation
 		label := fmt.Sprintf("Are you sure you want to destroy %q", nodeHostname)
 		selected := fmt.Sprintf("Destroy %q", nodeHostname)

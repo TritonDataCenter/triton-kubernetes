@@ -41,7 +41,7 @@ type gcpNodeTerraformConfig struct {
 // - the new state
 // - error or nil
 func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseNodeTerraformConfig(gcpRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
@@ -94,7 +94,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			return []string{}, fmt.Errorf("Selected GCP Instance Zone '%s' does not exist.", cfg.GCPInstanceZone)
 		}
 
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("gcp_instance_zone must be specified")
 	} else {
 		searcher := func(input string, index int) bool {
@@ -145,7 +145,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			return []string{}, fmt.Errorf("Selected GCP Machine Type '%s' does not exist.", cfg.GCPMachineType)
 		}
 
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("gcp_machine_type must be specified")
 	} else {
 		searcher := func(input string, index int) bool {
@@ -196,7 +196,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 			return []string{}, fmt.Errorf("Selected GCP Image '%s' does not exist.", cfg.GCPImage)
 		}
 
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("gcp_image must be specified")
 	} else {
 		searcher := func(input string, index int) bool {

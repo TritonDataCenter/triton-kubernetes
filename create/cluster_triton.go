@@ -31,7 +31,7 @@ type tritonClusterTerraformConfig struct {
 
 // Returns the name of the cluster that was created and the new state.
 func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseClusterTerraformConfig(tritonRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -44,7 +44,7 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	// Triton Account
 	if viper.IsSet("triton_account") {
 		cfg.TritonAccount = viper.GetString("triton_account")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return "", errors.New("triton_account must be specified")
 	} else {
 		prompt := promptui.Prompt{
@@ -68,7 +68,7 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	rawTritonKeyPath := ""
 	if viper.IsSet("triton_key_path") {
 		rawTritonKeyPath = viper.GetString("triton_key_path")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return "", errors.New("triton_key_path must be specified")
 	} else {
 		prompt := promptui.Prompt{
@@ -117,7 +117,7 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	// Triton URL
 	if viper.IsSet("triton_url") {
 		cfg.TritonURL = viper.GetString("triton_url")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return "", errors.New("triton_url must be specified")
 	} else {
 		prompt := promptui.Prompt{

@@ -37,7 +37,7 @@ func init() {
 	// will be global for your application.
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.triton-kubernetes.yaml)")
-	rootCmd.PersistentFlags().Bool("silent", false, "Prevent interactive prompts")
+	rootCmd.PersistentFlags().Bool("non-interactive", false, "Prevent interactive prompts")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -46,9 +46,9 @@ func init() {
 
 // initConfig reads in config file and ENV variables if set.
 func initConfig() {
-	viper.BindPFlag("silent", rootCmd.Flags().Lookup("silent"))
-	if viper.GetBool("silent") {
-		fmt.Println("Running in silent mode")
+	viper.BindPFlag("non-interactive", rootCmd.Flags().Lookup("non-interactive"))
+	if viper.GetBool("non-interactive") {
+		fmt.Println("Running in non interactive mode")
 	}
 
 	if cfgFile != "" { // enable ability to specify config file via flag

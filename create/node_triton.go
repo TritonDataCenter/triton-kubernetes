@@ -45,7 +45,7 @@ type tritonNodeTerraformConfig struct {
 // - the new state
 // - error or nil
 func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseNodeTerraformConfig(tritonRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
@@ -109,7 +109,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 				return []string{}, fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
 			}
 		}
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("triton_network_names must be specified")
 	} else {
 		networkPrompt := promptui.Select{
@@ -184,7 +184,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		cfg.TritonImageVersion = viper.GetString("triton_image_version")
 
 		// TODO: Verify Triton Image Name/Version
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("Both triton_image_name and triton_image_version must be specified")
 	} else {
 		listImageInput := compute.ListImagesInput{}
@@ -230,7 +230,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	// Triton SSH User
 	if viper.IsSet("triton_ssh_user") {
 		cfg.TritonSSHUser = viper.GetString("triton_ssh_user")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("triton_ssh_user must be specified")
 	} else {
 		prompt := promptui.Prompt{
@@ -250,7 +250,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		cfg.TritonMachinePackage = viper.GetString("triton_machine_package")
 
 		// TODO: Verify triton_machine_package
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return []string{}, errors.New("triton_machine_package must be specified")
 	} else {
 		listPackageInput := compute.ListPackagesInput{}

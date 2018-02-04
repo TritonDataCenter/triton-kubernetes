@@ -14,7 +14,7 @@ import (
 )
 
 func DeleteManager(remoteBackend backend.Backend) error {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -27,7 +27,7 @@ func DeleteManager(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_manager must be specified")
 	} else {
 		sort.Strings(clusterManagers)
@@ -67,7 +67,7 @@ func DeleteManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	if !silentMode {
+	if !nonInteractiveMode {
 		// Confirmation
 		label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
 		selected := fmt.Sprintf("Destroy %q", selectedClusterManager)

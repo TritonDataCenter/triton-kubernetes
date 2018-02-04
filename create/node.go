@@ -40,7 +40,7 @@ type rancherHostLabelsConfig struct {
 }
 
 func NewNode(remoteBackend backend.Backend) error {
-	silentMode := viper.GetBool("silent")
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -53,7 +53,7 @@ func NewNode(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
@@ -107,7 +107,7 @@ func NewNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedClusterKey = clusterKey
-	} else if silentMode {
+	} else if nonInteractiveMode {
 		return errors.New("cluster_name must be specified")
 	} else {
 		clusterNames := make([]string, 0, len(clusters))
@@ -139,7 +139,7 @@ func NewNode(remoteBackend backend.Backend) error {
 	}
 
 	// Confirmation Prompt
-	if !silentMode {
+	if !nonInteractiveMode {
 		label := "Proceed with the node creation"
 		selected := "Proceed"
 		confirmed, err := util.PromptForConfirmation(label, selected)
