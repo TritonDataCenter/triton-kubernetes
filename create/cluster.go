@@ -163,7 +163,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 			return errors.New("Could not read 'nodes' configuration")
 		}
 		for _, node := range nodesToAdd {
-			nodeToAdd, ok := node.(map[string]interface{})
+			nodeToAdd, ok := node.(map[interface{}]interface{})
 			if !ok {
 				return errors.New("Could not read node configuration")
 			}
