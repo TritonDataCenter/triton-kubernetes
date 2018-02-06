@@ -59,6 +59,7 @@ type tritonManagerTerraformConfig struct {
 }
 
 func NewTritonManager(remoteBackend backend.Backend) error {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	cfg := tritonManagerTerraformConfig{}
 
 	baseSource := defaultSourceURL
@@ -77,6 +78,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// Name
 	if viper.IsSet("name") {
 		cfg.Name = viper.GetString("name")
+	} else if nonInteractiveMode {
+		return errors.New("name must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Cluster Manager Name",
@@ -113,6 +116,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// HA
 	if viper.IsSet("ha") {
 		cfg.HA = viper.GetBool("ha")
+	} else if nonInteractiveMode {
+		return errors.New("ha must be specified")
 	} else {
 		options := []struct {
 			Name  string
@@ -153,6 +158,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		// HA enabled, ask user how many master nodes
 		if viper.IsSet("gcm_node_count") {
 			cfg.MasterNodeCount = viper.GetInt("gcm_node_count")
+		} else if nonInteractiveMode {
+			return errors.New("gcm_node_count must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "How many master nodes",
@@ -188,7 +195,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// Rancher Docker Registry
 	if viper.IsSet("private_registry") {
 		cfg.RancherRegistry = viper.GetString("private_registry")
-	} else {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "Private Registry",
 			Default: "None",
@@ -209,6 +216,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		// Rancher Registry Username
 		if viper.IsSet("private_registry_username") {
 			cfg.RancherRegistryUsername = viper.GetString("private_registry_username")
+		} else if nonInteractiveMode {
+			return errors.New("private_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Private Registry Username",
@@ -224,6 +233,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		// Rancher Registry Password
 		if viper.IsSet("private_registry_password") {
 			cfg.RancherRegistryPassword = viper.GetString("private_registry_password")
+		} else if nonInteractiveMode {
+			return errors.New("private_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Private Registry Password",
@@ -241,7 +252,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// Rancher Server Image
 	if viper.IsSet("rancher_server_image") {
 		cfg.RancherServerImage = viper.GetString("rancher_server_image")
-	} else {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "Rancher Server Image",
 			Default: "Default",
@@ -260,7 +271,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// Rancher Agent Image
 	if viper.IsSet("rancher_agent_image") {
 		cfg.RancherAgentImage = viper.GetString("rancher_agent_image")
-	} else {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "Rancher Agent Image",
 			Default: "Default",
@@ -279,6 +290,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// Triton Account
 	if viper.IsSet("triton_account") {
 		cfg.TritonAccount = viper.GetString("triton_account")
+	} else if nonInteractiveMode {
+		return errors.New("triton_account must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Triton Account Name",
@@ -301,6 +314,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	rawTritonKeyPath := ""
 	if viper.IsSet("triton_key_path") {
 		rawTritonKeyPath = viper.GetString("triton_key_path")
+	} else if nonInteractiveMode {
+		return errors.New("triton_key_path must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Triton Key Path",
@@ -348,6 +363,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	// Triton URL
 	if viper.IsSet("triton_url") {
 		cfg.TritonURL = viper.GetString("triton_url")
+	} else if nonInteractiveMode {
+		return errors.New("triton_url must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton URL",
@@ -414,6 +431,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 				return fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
 			}
 		}
+	} else if nonInteractiveMode {
+		return errors.New("triton_network_names must be specified")
 	} else {
 		networkPrompt := promptui.Select{
 			Label: "Triton Networks to attach",
@@ -502,6 +521,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		if !found {
 			return fmt.Errorf("Invalid Triton Image Name and Version '%s@%s'", cfg.TritonImageName, cfg.TritonImageVersion)
 		}
+	} else if nonInteractiveMode {
+		return errors.New("Both triton_image_name and triton_image_version must be specified")
 	} else {
 		searcher := func(input string, index int) bool {
 			image := images[index]
@@ -534,6 +555,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 	if viper.IsSet("triton_ssh_user") {
 		cfg.TritonSSHUser = viper.GetString("triton_ssh_user")
+	} else if nonInteractiveMode {
+		return errors.New("triton_ssh_user must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Triton SSH User",
@@ -572,6 +595,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		if !found {
 			return fmt.Errorf("Invalid Master Triton Machine Package '%s'", cfg.MasterTritonMachinePackage)
 		}
+	} else if nonInteractiveMode {
+		return errors.New("master_triton_machine_package must be specified")
 	} else {
 		searcher := func(input string, index int) bool {
 			pkg := packages[index]
@@ -616,6 +641,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		if !found {
 			return fmt.Errorf("Invalid Triton MySQL Image Name and Version '%s@%s'", cfg.TritonMySQLImageName, cfg.TritonMySQLImageVersion)
 		}
+	} else if cfg.HA && nonInteractiveMode {
+		return errors.New("Both triton_mysql_image_name and triton_mysql_image_version must be specified when HA is selected")
 	} else if cfg.HA {
 		searcher := func(input string, index int) bool {
 			image := images[index]
@@ -660,6 +687,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		if !found {
 			return fmt.Errorf("Invalid MySQL DB Triton Machine Package '%s'", cfg.MySQLDBTritonMachinePackage)
 		}
+	} else if cfg.HA && nonInteractiveMode {
+		return errors.New("mysqldb_triton_machine_package must be specified when HA is selected")
 	} else if cfg.HA {
 		searcher := func(input string, index int) bool {
 			pkg := packages[index]
@@ -697,15 +726,17 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	state.Add("module.cluster-manager", &cfg)
 	state.Add(remoteBackend.StateTerraformConfig(cfg.Name))
 
-	label := "Proceed with the manager creation"
-	selected := "Proceed"
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Manager creation canceled.")
-		return nil
+	if !nonInteractiveMode {
+		label := "Proceed with the manager creation"
+		selected := "Proceed"
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Manager creation canceled.")
+			return nil
+		}
 	}
 
 	err = shell.RunTerraformApplyWithState(state)

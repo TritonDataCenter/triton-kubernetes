@@ -1,6 +1,7 @@
 package destroy
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 
@@ -13,6 +14,7 @@ import (
 )
 
 func DeleteManager(remoteBackend backend.Backend) error {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -25,6 +27,8 @@ func DeleteManager(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if nonInteractiveMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		sort.Strings(clusterManagers)
 		prompt := promptui.Select{
@@ -63,16 +67,18 @@ func DeleteManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	// Confirmation
-	label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
-	selected := fmt.Sprintf("Destroy %q", selectedClusterManager)
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Destroy manager canceled.")
-		return nil
+	if !nonInteractiveMode {
+		// Confirmation
+		label := fmt.Sprintf("Are you sure you want to destroy %q", selectedClusterManager)
+		selected := fmt.Sprintf("Destroy %q", selectedClusterManager)
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Destroy manager canceled.")
+			return nil
+		}
 	}
 
 	// Run Terraform destroy

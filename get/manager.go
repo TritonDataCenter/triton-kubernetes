@@ -1,6 +1,7 @@
 package get
 
 import (
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -13,6 +14,7 @@ import (
 )
 
 func GetManager(remoteBackend backend.Backend) error {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -25,6 +27,8 @@ func GetManager(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if nonInteractiveMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",

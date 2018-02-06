@@ -36,6 +36,7 @@ type azureClusterTerraformConfig struct {
 
 // Returns the name of the cluster that was created and the new state.
 func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseClusterTerraformConfig(azureRancherKubernetesTerraformModulePath)
 	if err != nil {
 		return "", err
@@ -48,6 +49,8 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 	// Azure Subscription ID
 	if viper.IsSet("azure_subscription_id") {
 		cfg.AzureSubscriptionID = viper.GetString("azure_subscription_id")
+	} else if nonInteractiveMode {
+		return "", errors.New("azure_subscription_id must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Azure Subscription ID",
@@ -69,6 +72,8 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 	// Azure Client ID
 	if viper.IsSet("azure_client_id") {
 		cfg.AzureClientID = viper.GetString("azure_client_id")
+	} else if nonInteractiveMode {
+		return "", errors.New("azure_client_id must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Azure Client ID",
@@ -90,6 +95,8 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 	// Azure Client Secret
 	if viper.IsSet("azure_client_secret") {
 		cfg.AzureClientSecret = viper.GetString("azure_client_secret")
+	} else if nonInteractiveMode {
+		return "", errors.New("azure_client_secret must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Azure Client Secret",
@@ -111,6 +118,8 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 	// Azure Tenant ID
 	if viper.IsSet("azure_tenant_id") {
 		cfg.AzureTenantID = viper.GetString("azure_tenant_id")
+	} else if nonInteractiveMode {
+		return "", errors.New("azure_tenant_id must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Azure Tenant ID",
@@ -132,6 +141,8 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 	// Azure Environment
 	if viper.IsSet("azure_environment") {
 		cfg.AzureEnvironment = viper.GetString("azure_environment")
+	} else if nonInteractiveMode {
+		return "", errors.New("azure_environment must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Azure Environment",
@@ -203,6 +214,8 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 		if !found {
 			return "", fmt.Errorf("Invalid azure_location '%s', must be one of the following: %s", cfg.AzureLocation, strings.Join(azureLocations, ", "))
 		}
+	} else if nonInteractiveMode {
+		return "", errors.New("azure_location must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Azure Location",

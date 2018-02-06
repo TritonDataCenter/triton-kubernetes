@@ -40,6 +40,7 @@ type rancherHostLabelsConfig struct {
 }
 
 func NewNode(remoteBackend backend.Backend) error {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -52,6 +53,8 @@ func NewNode(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if nonInteractiveMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
@@ -104,6 +107,8 @@ func NewNode(remoteBackend backend.Backend) error {
 		}
 
 		selectedClusterKey = clusterKey
+	} else if nonInteractiveMode {
+		return errors.New("cluster_name must be specified")
 	} else {
 		clusterNames := make([]string, 0, len(clusters))
 		for name := range clusters {
@@ -134,15 +139,17 @@ func NewNode(remoteBackend backend.Backend) error {
 	}
 
 	// Confirmation Prompt
-	label := "Proceed with the node creation"
-	selected := "Proceed"
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Node creation canceled")
-		return nil
+	if !nonInteractiveMode {
+		label := "Proceed with the node creation"
+		selected := "Proceed"
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Node creation canceled")
+			return nil
+		}
 	}
 
 	// Get the new state and run terraform apply

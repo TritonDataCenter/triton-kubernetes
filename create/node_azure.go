@@ -52,6 +52,7 @@ type azureNodeTerraformConfig struct {
 // - the new state
 // - error or nil
 func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend backend.Backend, currentState state.State) ([]string, error) {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	baseConfig, err := getBaseNodeTerraformConfig(azureRancherKubernetesHostTerraformModulePath, selectedCluster, currentState)
 	if err != nil {
 		return []string{}, err
@@ -119,6 +120,8 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		if !found {
 			return []string{}, fmt.Errorf("Invalid azure_size '%s', must be one of the following: %s", cfg.AzureSize, strings.Join(azureVMSizes, ", "))
 		}
+	} else if nonInteractiveMode {
+		return []string{}, errors.New("azure_size must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Azure Size",
@@ -166,6 +169,8 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	// Azure SSH User
 	if viper.IsSet("azure_ssh_user") {
 		cfg.AzureSSHUser = viper.GetString("azure_ssh_user")
+	} else if nonInteractiveMode {
+		return []string{}, errors.New("azure_ssh_user must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label:   "Azure SSH User",
@@ -188,6 +193,8 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 
 		cfg.AzurePublicKeyPath = expandedPublicKeyPath
 
+	} else if nonInteractiveMode {
+		return []string{}, errors.New("azure_public_key_path must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Azure Public Key Path",

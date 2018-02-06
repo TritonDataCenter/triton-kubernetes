@@ -45,6 +45,7 @@ type baseClusterTerraformConfig struct {
 }
 
 func NewCluster(remoteBackend backend.Backend) error {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	clusterManagers, err := remoteBackend.States()
 	if err != nil {
 		return err
@@ -57,6 +58,8 @@ func NewCluster(remoteBackend backend.Backend) error {
 	selectedClusterManager := ""
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
+	} else if nonInteractiveMode {
+		return errors.New("cluster_manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
@@ -98,6 +101,8 @@ func NewCluster(remoteBackend backend.Backend) error {
 	selectedCloudProvider := ""
 	if viper.IsSet("cluster_cloud_provider") {
 		selectedCloudProvider = viper.GetString("cluster_cloud_provider")
+	} else if nonInteractiveMode {
+		return errors.New("cluster_cloud_provider must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
@@ -151,58 +156,112 @@ func NewCluster(remoteBackend backend.Backend) error {
 		return fmt.Errorf("Couldn't find cluster key for cluster '%s'.\n", clusterName)
 	}
 
-	// Ask user if they'd like to create a node for this cluster
-	createNodeOptions := []struct {
-		Name  string
-		Value bool
-	}{
-		{"Yes", true},
-		{"No", false},
+	// Add nodes from config
+	if viper.IsSet("nodes") {
+		nodesToAdd, ok := viper.Get("nodes").([]interface{})
+		if !ok {
+			return errors.New("Could not read 'nodes' configuration")
+		}
+		for _, node := range nodesToAdd {
+			nodeToAdd, ok := node.(map[interface{}]interface{})
+			if !ok {
+				return errors.New("Could not read node configuration")
+			}
+
+			// Add all variables to viper
+			viper.Set("rancher_host_label", nodeToAdd["rancher_host_label"])
+			viper.Set("node_count", nodeToAdd["node_count"])
+			viper.Set("hostname", nodeToAdd["hostname"])
+
+			// Figure out cloud provider
+			if selectedCloudProvider == "aws" {
+				// Copy aws node variables to viper
+				viper.Set("aws_ami_id", nodeToAdd["aws_ami_id"])
+				viper.Set("aws_instance_type", nodeToAdd["aws_instance_type"])
+			} else if selectedCloudProvider == "triton" {
+				// Copy triton variables to viper
+				viper.Set("triton_network_names", nodeToAdd["triton_network_names"])
+				viper.Set("triton_image_name", nodeToAdd["triton_image_name"])
+				viper.Set("triton_image_version", nodeToAdd["triton_image_version"])
+				viper.Set("triton_ssh_user", nodeToAdd["triton_ssh_user"])
+				viper.Set("triton_machine_package", nodeToAdd["triton_machine_package"])
+			} else if selectedCloudProvider == "gcp" {
+				// Copy gcp variables to viper
+				viper.Set("gcp_instance_zone", nodeToAdd["gcp_instance_zone"])
+				viper.Set("gcp_machine_type", nodeToAdd["gcp_machine_type"])
+				viper.Set("gcp_image", nodeToAdd["gcp_image"])
+			} else if selectedCloudProvider == "azure" {
+				// Copy azure variables to viper
+				viper.Set("azure_size", nodeToAdd["azure_size"])
+				viper.Set("azure_ssh_user", nodeToAdd["azure_ssh_user"])
+				viper.Set("azure_public_key_path", nodeToAdd["azure_public_key_path"])
+			}
+
+			// Create the new node
+			newHostnames, err := newNode(selectedClusterManager, clusterKey, remoteBackend, currentState)
+			if err != nil {
+				return err
+			}
+			printNodesAddedMessage(newHostnames)
+		}
 	}
-
-	createNodePrompt := promptui.Select{
-		Label: "Would you like to create nodes for this cluster",
-		Items: createNodeOptions,
-		Templates: &promptui.SelectTemplates{
-			Label:    "{{ . }}?",
-			Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-			Inactive: "  {{.Name}}",
-			Selected: "  Create new node? {{.Name}}",
-		},
-	}
-
-	i, _, err := createNodePrompt.Run()
-	if err != nil {
-		return err
-	}
-
-	shouldCreateNode := createNodeOptions[i].Value
-	createNodePrompt.Label = "Would you like to create more nodes for this cluster"
-
-	for shouldCreateNode {
-		// Add new nodes to the state
-		_, err = newNode(selectedClusterManager, clusterKey, remoteBackend, currentState)
-		if err != nil {
-			return err
+	if !nonInteractiveMode {
+		// Ask user if they'd like to create a node for this cluster
+		createNodeOptions := []struct {
+			Name  string
+			Value bool
+		}{
+			{"Yes", true},
+			{"No", false},
 		}
 
-		// Ask if user would like to create more nodes
+		createNodePrompt := promptui.Select{
+			Label: "Would you like to create nodes for this cluster",
+			Items: createNodeOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: "  {{.Name}}",
+				Selected: "  Create new node? {{.Name}}",
+			},
+		}
+
 		i, _, err := createNodePrompt.Run()
 		if err != nil {
 			return err
 		}
-		shouldCreateNode = createNodeOptions[i].Value
-	}
 
-	label := "Proceed with cluster creation"
-	selected := "Proceed"
-	confirmed, err := util.PromptForConfirmation(label, selected)
-	if err != nil {
-		return err
-	}
-	if !confirmed {
-		fmt.Println("Cluster creation canceled.")
-		return nil
+		shouldCreateNode := createNodeOptions[i].Value
+		createNodePrompt.Label = "Would you like to create more nodes for this cluster"
+
+		for shouldCreateNode {
+			// Add new nodes to the state
+			newHostnames, err := newNode(selectedClusterManager, clusterKey, remoteBackend, currentState)
+			if err != nil {
+				return err
+			}
+
+			printNodesAddedMessage(newHostnames)
+
+			// Ask if user would like to create more nodes
+			i, _, err := createNodePrompt.Run()
+			if err != nil {
+				return err
+			}
+			shouldCreateNode = createNodeOptions[i].Value
+		}
+
+		// Confirmation
+		label := "Proceed with cluster creation"
+		selected := "Proceed"
+		confirmed, err := util.PromptForConfirmation(label, selected)
+		if err != nil {
+			return err
+		}
+		if !confirmed {
+			fmt.Println("Cluster creation canceled.")
+			return nil
+		}
 	}
 
 	// Run terraform apply with state
@@ -221,6 +280,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 }
 
 func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerraformConfig, error) {
+	nonInteractiveMode := viper.GetBool("non-interactive")
 	cfg := baseClusterTerraformConfig{
 		RancherAPIURL: "http://${element(module.cluster-manager.masters, 0)}:8080",
 
@@ -246,6 +306,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Name
 	if viper.IsSet("name") {
 		cfg.Name = viper.GetString("name")
+	} else if nonInteractiveMode {
+		return baseClusterTerraformConfig{}, errors.New("name must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Cluster Name",
@@ -265,6 +327,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Kubernetes Plane Isolation
 	if viper.IsSet("k8s_plane_isolation") {
 		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
+	} else if nonInteractiveMode {
+		return baseClusterTerraformConfig{}, errors.New("k8s_plane_isolation must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Kubernetes Plane Isolation",
@@ -293,7 +357,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// Rancher Docker Registry
 	if viper.IsSet("private_registry") {
 		cfg.RancherRegistry = viper.GetString("private_registry")
-	} else {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "Private Registry",
 			Default: "None",
@@ -314,6 +378,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Username
 		if viper.IsSet("private_registry_username") {
 			cfg.RancherRegistryUsername = viper.GetString("private_registry_username")
+		} else if !nonInteractiveMode {
+			return baseClusterTerraformConfig{}, errors.New("private_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Private Registry Username",
@@ -329,6 +395,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Password
 		if viper.IsSet("private_registry_password") {
 			cfg.RancherRegistryPassword = viper.GetString("private_registry_password")
+		} else if !nonInteractiveMode {
+			return baseClusterTerraformConfig{}, errors.New("private_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "Private Registry Password",
@@ -346,7 +414,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	// k8s Docker Registry
 	if viper.IsSet("k8s_registry") {
 		cfg.KubernetesRegistry = viper.GetString("k8s_registry")
-	} else {
+	} else if !nonInteractiveMode {
 		prompt := promptui.Prompt{
 			Label:   "k8s Registry",
 			Default: "None",
@@ -367,6 +435,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// k8s Registry Username
 		if viper.IsSet("k8s_registry_username") {
 			cfg.KubernetesRegistryUsername = viper.GetString("k8s_registry_username")
+		} else if nonInteractiveMode {
+			return baseClusterTerraformConfig{}, errors.New("k8s_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "k8s Registry Username",
@@ -382,6 +452,8 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Password
 		if viper.IsSet("k8s_registry_password") {
 			cfg.KubernetesRegistryPassword = viper.GetString("k8s_registry_password")
+		} else if nonInteractiveMode {
+			return baseClusterTerraformConfig{}, errors.New("k8s_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{
 				Label: "k8s Registry Password",
@@ -397,4 +469,13 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	}
 
 	return cfg, nil
+}
+
+func printNodesAddedMessage(newHostnames []string) {
+	nodeCount := len(newHostnames)
+	if nodeCount == 1 {
+		fmt.Printf("1 node added: %v\n", strings.Join(newHostnames, ", "))
+	} else {
+		fmt.Printf("%d nodes added: %v\n", nodeCount, strings.Join(newHostnames, ", "))
+	}
 }
