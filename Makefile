@@ -5,10 +5,16 @@ FILE_COMMAND=triton-kubernetes
 OSX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_osx-amd64.zip
 OSX_BINARY_PATH=$(BUILD_PATH)/triton-kubernetes_osx-amd64
 
-LINUX_BINARY_PATH=$(BUILD_PATH)/triton-kubernetes_linux-amd64
+LINUX_BINARY_FILE_NAME=triton-kubernetes_linux-amd64
+LINUX_BINARY_PATH=$(BUILD_PATH)/$(LINUX_BINARY_FILE_NAME)
 
-RPM_PATH=$(BUILD_PATH)/triton-kubernetes_$(VERSION)_linux-amd64.rpm
-DEB_PATH=$(BUILD_PATH)/triton-kubernetes_$(VERSION)_linux-amd64.deb
+RPM_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.rpm
+RPM_PATH=$(BUILD_PATH)/$(RPM_FILE_NAME)
+
+DEB_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.deb
+DEB_PATH=$(BUILD_PATH)/$(DEB_FILE_NAME)
+DEB_INSTALL_DIR=/usr/bin
+DEB_TMP_DIR=$(BUILD_PATH)/build-deb-tmp
 
 clean:
 	@rm -rf ./build
@@ -30,11 +36,23 @@ build-linux: clean
 
 build-rpm: build-linux
 	@echo "Building RPM..."
-	@fpm --input-type dir --output-type rpm --name triton-kubernetes -v $(VERSION) --prefix /opt/triton-kubernetes --package $(RPM_PATH) $(LINUX_BINARY_PATH)
+	@fpm --input-type dir --output-type rpm --name triton-kubernetes --version $(VERSION) --prefix /opt/triton-kubernetes --package $(RPM_PATH) $(LINUX_BINARY_PATH)
 
 build-deb: build-linux
 	@echo "Building DEB..."
+#	Copying and renaming the linux binary to just 'triton-kubernetes'. Making a temp directory to avoid potential naming conflicts.
+	@mkdir -p $(DEB_TMP_DIR)
+	@cp $(LINUX_BINARY_PATH) $(DEB_TMP_DIR)/triton-kubernetes
 # 	fpm fails with a tar error when building the DEB package on OSX 10.10.
 # 	Current workaround is to modify PATH so that fpm uses gnu-tar instead of the regular tar command.
 #	Issue URL: https://github.com/jordansissel/fpm/issues/882
-	@PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$$PATH" fpm --input-type dir --output-type deb --name triton-kubernetes -v $(VERSION) --prefix /opt/triton-kubernetes --package $(DEB_PATH) $(LINUX_BINARY_PATH)
+	@PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$$PATH" fpm \
+		--chdir $(DEB_TMP_DIR) \
+		--input-type dir \
+		--output-type deb \
+		--name triton-kubernetes \
+		--version $(VERSION) \
+		--prefix $(DEB_INSTALL_DIR) \
+		--package $(DEB_PATH) triton-kubernetes
+#	Cleaning up the tmp directory
+	@rm -rf $(DEB_TMP_DIR)
