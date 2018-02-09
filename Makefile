@@ -10,6 +10,8 @@ LINUX_BINARY_PATH=$(BUILD_PATH)/$(LINUX_BINARY_FILE_NAME)
 
 RPM_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.rpm
 RPM_PATH=$(BUILD_PATH)/$(RPM_FILE_NAME)
+RPM_INSTALL_DIR=/usr/bin
+RPM_TMP_DIR=$(BUILD_PATH)/build-rpm-tmp
 
 DEB_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.deb
 DEB_PATH=$(BUILD_PATH)/$(DEB_FILE_NAME)
@@ -36,7 +38,20 @@ build-linux: clean
 
 build-rpm: build-linux
 	@echo "Building RPM..."
-	@fpm --input-type dir --output-type rpm --name triton-kubernetes --version $(VERSION) --prefix /opt/triton-kubernetes --package $(RPM_PATH) $(LINUX_BINARY_PATH)
+#	Copying and renaming the linux binary to just 'triton-kubernetes'. Making a temp directory to avoid potential naming conflicts.
+	@mkdir -p $(RPM_TMP_DIR)
+	@cp $(LINUX_BINARY_PATH) $(RPM_TMP_DIR)/triton-kubernetes
+	@fpm \
+		--chdir $(RPM_TMP_DIR) \
+		--input-type dir \
+		--output-type rpm \
+		--rpm-os linux \
+		--name triton-kubernetes \
+		--version $(VERSION) \
+		--prefix $(RPM_INSTALL_DIR) \
+		--package $(RPM_PATH) triton-kubernetes
+#	Cleaning up the tmp directory
+	@rm -rf $(RPM_TMP_DIR)
 
 build-deb: build-linux
 	@echo "Building DEB..."
