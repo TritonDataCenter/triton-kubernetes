@@ -45,6 +45,7 @@ build-rpm: build-linux
 		--chdir $(RPM_TMP_DIR) \
 		--input-type dir \
 		--output-type rpm \
+		--depends jq \
 		--rpm-os linux \
 		--name triton-kubernetes \
 		--version $(VERSION) \
@@ -65,6 +66,7 @@ build-deb: build-linux
 		--chdir $(DEB_TMP_DIR) \
 		--input-type dir \
 		--output-type deb \
+		--depends jq \
 		--name triton-kubernetes \
 		--version $(VERSION) \
 		--prefix $(DEB_INSTALL_DIR) \
