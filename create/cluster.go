@@ -378,7 +378,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Username
 		if viper.IsSet("private_registry_username") {
 			cfg.RancherRegistryUsername = viper.GetString("private_registry_username")
-		} else if !nonInteractiveMode {
+		} else if nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("private_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -395,7 +395,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Password
 		if viper.IsSet("private_registry_password") {
 			cfg.RancherRegistryPassword = viper.GetString("private_registry_password")
-		} else if !nonInteractiveMode {
+		} else if nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("private_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{
