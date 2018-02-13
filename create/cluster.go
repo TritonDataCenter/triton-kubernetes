@@ -137,6 +137,9 @@ func NewCluster(remoteBackend backend.Backend) error {
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
+	if err != nil {
+		return err
+	}
 
 	// TODO: Find a fix - state.Clusters() doesn't return any clusters added via state.Add().
 	// However, the new clusters appear in the result of state.Bytes(). The current workaround
