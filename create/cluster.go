@@ -137,6 +137,9 @@ func NewCluster(remoteBackend backend.Backend) error {
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
+	if err != nil {
+		return err
+	}
 
 	// TODO: Find a fix - state.Clusters() doesn't return any clusters added via state.Add().
 	// However, the new clusters appear in the result of state.Bytes(). The current workaround
@@ -378,7 +381,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Username
 		if viper.IsSet("private_registry_username") {
 			cfg.RancherRegistryUsername = viper.GetString("private_registry_username")
-		} else if !nonInteractiveMode {
+		} else if nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("private_registry_username must be specified")
 		} else {
 			prompt := promptui.Prompt{
@@ -395,7 +398,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		// Rancher Registry Password
 		if viper.IsSet("private_registry_password") {
 			cfg.RancherRegistryPassword = viper.GetString("private_registry_password")
-		} else if !nonInteractiveMode {
+		} else if nonInteractiveMode {
 			return baseClusterTerraformConfig{}, errors.New("private_registry_password must be specified")
 		} else {
 			prompt := promptui.Prompt{
