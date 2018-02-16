@@ -51,3 +51,11 @@ curl -X DELETE \
 	-H 'Content-Type: application/json' \
 	-d '{}' \
 	'${rancher_host}/v2-beta/projects/1a5/?action=delete'
+
+# Ensure local authentication is set up with hardcoded username and password
+echo "Configuring local authentication..."
+curl -X POST \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"enabled": true, "password": "testpass", "username": "testadmin"}' \
+    '${rancher_host}/v2-beta/localauthconfig'
