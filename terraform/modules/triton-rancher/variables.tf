@@ -65,6 +65,11 @@ variable "gcm_node_count" {
   description = "Number of Global Cluster Managers to cluster."
 }
 
+variable "gcm_private_network_name" {
+  default     = "Joyent-SDC-Private"
+  description = "Should Rancher be deployed in HA, this network will contain the mysqldb, Rancher master, nginx proxy, and bastion nodes. In non-HA mode, this will be ignored."
+}
+
 variable "mysqldb_triton_machine_package" {
   default     = ""
   description = "The Triton machine package to use for the Rancher mysqldb node. Defaults to master_triton_machine_package."

@@ -13,7 +13,7 @@ done
 curl -X PUT \
 	-H 'Accept: application/json' \
 	-H 'Content-Type: application/json' \
-	-d '{"id":"api.host","type":"activeSetting","baseType":"setting","name":"api.host","activeValue":null,"inDb":false,"source":null,"value":"http://${primary_ip}:8080"}' \
+	-d '{"id":"api.host","type":"activeSetting","baseType":"setting","name":"api.host","activeValue":null,"inDb":false,"source":null,"value":"${host_registration_url}"}' \
 	'${rancher_host}/v2-beta/settings/api.host'
 
 # Update default registry to private registry if requested
