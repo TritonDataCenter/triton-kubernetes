@@ -2,6 +2,14 @@ variable "name" {
   description = "Human readable name used as prefix to generated names."
 }
 
+variable "rancher_admin_username" {
+  description = "The Rancher admin username"
+}
+
+variable "rancher_admin_password" {
+  description = "The Rancher admin password"
+}
+
 variable "triton_account" {
   description = "The Triton account name, usually the username of your root user."
 }

@@ -57,5 +57,5 @@ echo "Configuring local authentication..."
 curl -X POST \
     -H 'Accept: application/json' \
     -H 'Content-Type: application/json' \
-    -d '{"enabled": true, "password": "testpass", "username": "testadmin"}' \
+    -d '{"enabled": true, "password": "${rancher_admin_password}", "username": "${rancher_admin_username}"}' \
     '${rancher_host}/v2-beta/localauthconfig'

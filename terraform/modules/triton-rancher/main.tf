@@ -210,6 +210,8 @@ data "template_file" "setup_rancher_k8s" {
     host_registration_url = "${local.rancher_url}"
 
     rancher_registry = "${var.rancher_registry}"
+    rancher_admin_username = "${var.rancher_admin_username}"
+    rancher_admin_password = "${var.rancher_admin_password}"
   }
 }
 
