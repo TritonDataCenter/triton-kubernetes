@@ -41,6 +41,7 @@ type tritonManagerTerraformConfig struct {
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
 
+	GCMPrivateNetworkName      string   `json:"gcm_private_network_name,omitempty"`
 	TritonNetworkNames         []string `json:"triton_network_names,omitempty"`
 	TritonImageName            string   `json:"triton_image_name,omitempty"`
 	TritonImageVersion         string   `json:"triton_image_version,omitempty"`
@@ -414,18 +415,53 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	validNetworksMap := map[string]struct{}{}
+	validNetworksSlice := []string{}
+	for _, validNetwork := range networks {
+		validNetworksMap[validNetwork.Name] = struct{}{}
+		validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
+	}
+
+	// GCM Private Network Name
+	if cfg.HA {
+		if viper.IsSet("gcm_private_network_name") {
+			cfg.GCMPrivateNetworkName = viper.GetString("gcm_private_network_name")
+
+			isValidName := false
+			for _, validNetwork := range networks {
+				if cfg.GCMPrivateNetworkName == validNetwork.Name {
+					isValidName = true
+					break
+				}
+			}
+			if !isValidName {
+				return fmt.Errorf("Invalid GCM private network name '%s', must be one of the following: %s", cfg.GCMPrivateNetworkName, strings.Join(validNetworksSlice, ", "))
+			}
+		} else {
+			// GCM Private Network Prompt
+			gcmNetworkPrompt := promptui.Select{
+				Label: "GCM Private Network",
+				Items: networks,
+				Templates: &promptui.SelectTemplates{
+					Label:    "{{ . }}?",
+					Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+					Inactive: "  {{.Name}}",
+					Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "GCM Private Network:" | bold}} {{ .Name }}`, promptui.IconGood),
+				},
+			}
+			i, _, err := gcmNetworkPrompt.Run()
+			if err != nil {
+				return err
+			}
+			cfg.GCMPrivateNetworkName = networks[i].Name
+		}
+	}
+
 	// Triton Network Names
 	if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
 
 		// Verify triton network names
-		validNetworksMap := map[string]struct{}{}
-		validNetworksSlice := []string{}
-		for _, validNetwork := range networks {
-			validNetworksMap[validNetwork.Name] = struct{}{}
-			validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
-		}
-
 		for _, network := range cfg.TritonNetworkNames {
 			if _, ok := validNetworksMap[network]; !ok {
 				return fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
