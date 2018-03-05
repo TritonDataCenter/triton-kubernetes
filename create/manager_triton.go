@@ -460,7 +460,11 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	}
 
 	// Triton Network Names
-	if viper.IsSet("triton_network_names") {
+	if cfg.HA {
+		// Since cluster manager nodes are in a private network,
+		// just set the network names to the private network.
+		cfg.TritonNetworkNames = []string{cfg.GCMPrivateNetworkName}
+	} else if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
 
 		// Verify triton network names
