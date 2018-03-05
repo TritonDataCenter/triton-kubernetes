@@ -52,6 +52,8 @@ type tritonManagerTerraformConfig struct {
 	TritonMySQLImageVersion     string `json:"triton_mysql_image_version,omitempty"`
 	MySQLDBTritonMachinePackage string `json:"mysqldb_triton_machine_package,omitempty"`
 
+	RancherAdminUsername    string `json:"rancher_admin_username,omitempty"`
+	RancherAdminPassword    string `json:"rancher_admin_password,omitempty"`
 	RancherServerImage      string `json:"rancher_server_image,omitempty"`
 	RancherAgentImage       string `json:"rancher_agent_image,omitempty"`
 	RancherRegistry         string `json:"rancher_registry,omitempty"`
@@ -752,6 +754,50 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 
 		cfg.MySQLDBTritonMachinePackage = packages[i].Name
+	}
+
+	// Rancher Admin Username
+	if viper.IsSet("rancher_admin_username") {
+		cfg.RancherAdminUsername = viper.GetString("rancher_admin_username")
+	} else if nonInteractiveMode {
+		return errors.New("rancher_admin_username must be specified")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Rancher Admin Username",
+			Default: "admin",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherAdminUsername = result
+	}
+
+	if cfg.RancherAdminUsername == "" {
+		return errors.New("Invalid Rancher Admin username")
+	}
+
+	// Rancher Admin Password
+	if viper.IsSet("rancher_admin_password") {
+		cfg.RancherAdminPassword = viper.GetString("rancher_admin_password")
+	} else if nonInteractiveMode {
+		return errors.New("rancher_admin_password must be specified")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Rancher Admin Password",
+			Mask:  '*',
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherAdminPassword = result
+	}
+
+	if cfg.RancherAdminPassword == "" {
+		return errors.New("Invalid Rancher Admin password")
 	}
 
 	state, err := remoteBackend.State(cfg.Name)
