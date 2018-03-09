@@ -6,9 +6,9 @@ provider "triton" {
 }
 
 locals {
-  rancher_fqdn = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
-  rancher_url = "${format("https://%s", local.rancher_fqdn)}"
   using_custom_tls_cert = "${var.rancher_tls_private_key_path != "" && var.rancher_tls_cert_path != ""}"
+  rancher_fqdn = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
+  rancher_url = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
 }
 
 data "triton_account" "main" {}
@@ -61,15 +61,27 @@ data "template_file" "install_nginx" {
   template = "${file("${path.module}/files/install_nginx.sh")}"
 
   vars {
-    nginx_config = "${replace(data.template_file.rancher_proxy_nginx_conf.rendered, "$", "\\$")}"
+    nginx_config = "${local.using_custom_tls_cert ?
+      replace(data.template_file.rancher_proxy_nginx_https_conf.rendered, "$", "\\$") :
+      replace(data.template_file.rancher_proxy_nginx_http_conf.rendered, "$", "\\$")}"
     triton_ssh_user = "${var.triton_ssh_user}"
-    ssl_private_key = "${element(coalescelist(data.local_file.custom_tls_private_key.*.content, tls_private_key.generated_ssl_key.*.private_key_pem), 0)}"
-    ssl_cert = "${element(coalescelist(data.local_file.custom_tls_cert.*.content, tls_self_signed_cert.generated_ssl_cert.*.cert_pem), 0)}"
+    ssl_private_key = "${element(coalescelist(data.local_file.custom_tls_private_key.*.content, tls_private_key.generated_ssl_key.*.private_key_pem, list("")), 0)}"
+    ssl_cert = "${element(coalescelist(data.local_file.custom_tls_cert.*.content, tls_self_signed_cert.generated_ssl_cert.*.cert_pem, list("")), 0)}"
   }
 }
 
-data "template_file" "rancher_proxy_nginx_conf" {
-  template = "${file("${path.module}/files/rancher_proxy_nginx.conf")}"
+data "template_file" "rancher_proxy_nginx_http_conf" {
+  template = "${file("${path.module}/files/rancher_proxy_nginx_http.conf")}"
+
+  vars {
+    # For HA, the upstream servers point to the rancher master ip addresses
+    # For non-HA, the nginx proxy is on the same box as the rancher master so upstream is set to 127.0.0.1
+    upstream_config = "${var.ha ? join("\n", formatlist("    server %s:8080;", triton_machine.rancher_master.*.primaryip)) : "    server 127.0.0.1:8080;"}"
+  }
+}
+
+data "template_file" "rancher_proxy_nginx_https_conf" {
+  template = "${file("${path.module}/files/rancher_proxy_nginx_https.conf")}"
 
   vars {
     # For HA, the upstream servers point to the rancher master ip addresses
@@ -79,14 +91,19 @@ data "template_file" "rancher_proxy_nginx_conf" {
 }
 
 # Self signed SSL Certificate and Key
+# NOTE: Rancher Agents currently do not work with Rancher masters that 
+# use self-signed SSL Certificates.
+# Temporarily disabling self-signing certificates until a solution is found.
 resource "tls_private_key" "generated_ssl_key" {
-  count = "${local.using_custom_tls_cert ? 0 : 1}"
+  # count = "${local.using_custom_tls_cert ? 0 : 1}"
+  count = 0
   algorithm = "RSA"
   rsa_bits = "2048"
 }
 
 resource "tls_self_signed_cert" "generated_ssl_cert" {
-  count = "${local.using_custom_tls_cert ? 0 : 1}"
+  # count = "${local.using_custom_tls_cert ? 0 : 1}"
+  count = 0
   key_algorithm = "RSA"
   private_key_pem = "${tls_private_key.generated_ssl_key.private_key_pem}"
   validity_period_hours = 12

@@ -4,22 +4,25 @@
 sudo apt-get update -y
 sudo apt-get install nginx -y
 
-# Installing the SSL private key
-PRIVATE_DIR=/etc/ssl/private
-if [ ! -d "$PRIVATE_DIR" ]; then
-    sudo mkdir $PRIVATE_DIR
-    sudo chmod 700 $PRIVATE_DIR
-fi
 
+PRIVATE_DIR=/etc/ssl/private
 PRIVATE_KEYNAME="nginx-selfsigned.key"
 PRIVATE_KEY="${ssl_private_key}"
-echo "$PRIVATE_KEY" | sudo tee $PRIVATE_DIR/$PRIVATE_KEYNAME > /dev/null
 
-# Installing the SSL Certificate
 CERT_DIR=/etc/ssl/certs
 CERT_NAME=nginx-selfsigned.crt
 CERT="${ssl_cert}"
-echo "$CERT" | sudo tee $CERT_DIR/$CERT_NAME > /dev/null
+
+if [ "$PRIVATE_KEY" != "" ] && [ "$CERT" != "" ]; then
+    if [ ! -d "$PRIVATE_DIR" ]; then
+        sudo mkdir $PRIVATE_DIR
+        sudo chmod 700 $PRIVATE_DIR
+    fi
+
+    # Installing the SSL Certificate
+    echo "$PRIVATE_KEY" | sudo tee $PRIVATE_DIR/$PRIVATE_KEYNAME > /dev/null
+    echo "$CERT" | sudo tee $CERT_DIR/$CERT_NAME > /dev/null
+fi
 
 # Removing nginx default config
 sudo rm -f /etc/nginx/sites-enabled/default
