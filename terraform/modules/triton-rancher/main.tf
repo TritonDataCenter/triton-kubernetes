@@ -6,7 +6,9 @@ provider "triton" {
 }
 
 locals {
-  rancher_url = "${var.ha ? format("https://%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : format("https://%s", element(triton_machine.rancher_master.*.primaryip, 0))}"
+  rancher_fqdn = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
+  rancher_url = "${format("https://%s", local.rancher_fqdn)}"
+  using_custom_tls_cert = "${var.rancher_tls_private_key_path != "" && var.rancher_tls_cert_path != ""}"
 }
 
 data "triton_account" "main" {}
@@ -45,14 +47,24 @@ data "template_file" "install_rancher_mysqldb" {
   }
 }
 
+data "local_file" "custom_tls_private_key" {
+  count = "${local.using_custom_tls_cert ? 1 : 0}"
+  filename = "${var.rancher_tls_private_key_path}"
+}
+
+data "local_file" "custom_tls_cert" {
+  count = "${local.using_custom_tls_cert ? 1 : 0}"
+  filename = "${var.rancher_tls_cert_path}"
+}
+
 data "template_file" "install_nginx" {
   template = "${file("${path.module}/files/install_nginx.sh")}"
 
   vars {
     nginx_config = "${replace(data.template_file.rancher_proxy_nginx_conf.rendered, "$", "\\$")}"
     triton_ssh_user = "${var.triton_ssh_user}"
-    ssl_private_key = "${tls_private_key.generated_ssl_key.private_key_pem}"
-    ssl_cert = "${tls_self_signed_cert.generated_ssl_cert.cert_pem}"
+    ssl_private_key = "${element(coalescelist(data.local_file.custom_tls_private_key.*.content, tls_private_key.generated_ssl_key.*.private_key_pem), 0)}"
+    ssl_cert = "${element(coalescelist(data.local_file.custom_tls_cert.*.content, tls_self_signed_cert.generated_ssl_cert.*.cert_pem), 0)}"
   }
 }
 
@@ -68,11 +80,13 @@ data "template_file" "rancher_proxy_nginx_conf" {
 
 # Self signed SSL Certificate and Key
 resource "tls_private_key" "generated_ssl_key" {
+  count = "${local.using_custom_tls_cert ? 0 : 1}"
   algorithm = "RSA"
   rsa_bits = "2048"
 }
 
 resource "tls_self_signed_cert" "generated_ssl_cert" {
+  count = "${local.using_custom_tls_cert ? 0 : 1}"
   key_algorithm = "RSA"
   private_key_pem = "${tls_private_key.generated_ssl_key.private_key_pem}"
   validity_period_hours = 12
@@ -84,10 +98,10 @@ resource "tls_self_signed_cert" "generated_ssl_cert" {
   ]
 
   subject {
-    common_name = "${local.rancher_url}"
+    common_name = "${local.rancher_fqdn}"
     organization = "Joyent"
     organizational_unit = "triton-kubernetes"
-    locality = "Los Angeles"
+    locality = "San Francisco"
     province = "California"
     country = "US"
   }

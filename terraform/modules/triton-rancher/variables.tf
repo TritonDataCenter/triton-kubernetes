@@ -127,3 +127,13 @@ variable "rancher_registry_password" {
   default     = ""
   description = "The password to use."
 }
+
+variable "rancher_tls_private_key_path" {
+  default = ""
+  description = "The path to the TLS private key"
+}
+
+variable "rancher_tls_cert_path" {
+  default = ""
+  description = "The path to the TLS certificate"
+}

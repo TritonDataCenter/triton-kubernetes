@@ -52,13 +52,15 @@ type tritonManagerTerraformConfig struct {
 	TritonMySQLImageVersion     string `json:"triton_mysql_image_version,omitempty"`
 	MySQLDBTritonMachinePackage string `json:"mysqldb_triton_machine_package,omitempty"`
 
-	RancherAdminUsername    string `json:"rancher_admin_username,omitempty"`
-	RancherAdminPassword    string `json:"rancher_admin_password,omitempty"`
-	RancherServerImage      string `json:"rancher_server_image,omitempty"`
-	RancherAgentImage       string `json:"rancher_agent_image,omitempty"`
-	RancherRegistry         string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
+	RancherAdminUsername      string `json:"rancher_admin_username,omitempty"`
+	RancherAdminPassword      string `json:"rancher_admin_password,omitempty"`
+	RancherServerImage        string `json:"rancher_server_image,omitempty"`
+	RancherAgentImage         string `json:"rancher_agent_image,omitempty"`
+	RancherRegistry           string `json:"rancher_registry,omitempty"`
+	RancherRegistryUsername   string `json:"rancher_registry_username,omitempty"`
+	RancherRegistryPassword   string `json:"rancher_registry_password,omitempty"`
+	RancherTLSPrivateKeyPath  string `json:"rancher_tls_private_key_path"`
+	RancherTLSCertificatePath string `json:"rancher_tls_cert_path"`
 }
 
 func NewTritonManager(remoteBackend backend.Backend) error {
@@ -802,6 +804,95 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 	if cfg.RancherAdminPassword == "" {
 		return errors.New("Invalid Rancher Admin password")
+	}
+
+	// TLS Certificate Prompt
+	if nonInteractiveMode {
+		// In non-interactive mode, both private key and cert are required.
+		// If only one of them is defined, show an error
+		// If neither are defined, then assume the user does not want to go through.
+		errTemplate := "%s was set, but %s was not. Both the TLS private key and certificate must be specified"
+		if viper.IsSet("rancher_tls_private_key_path") && viper.IsSet("rancher_tls_cert_path") {
+			cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
+			cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
+		} else if viper.IsSet("rancher_tls_private_key_path") {
+			return fmt.Errorf(errTemplate, "rancher_tls_private_key_path", "rancher_tls_cert_path")
+		} else if viper.IsSet("rancher_tls_cert_path") {
+			return fmt.Errorf(errTemplate, "rancher_tls_cert_path", "rancher_tls_private_key_path")
+		}
+	} else {
+		shouldGetTLSFiles, err := util.PromptForConfirmation("Would you like to provide your own TLS certificate and private key", "Providing TLS cert")
+		if err != nil {
+			return err
+		}
+
+		if shouldGetTLSFiles {
+			// TLS Private Key Path
+			if viper.IsSet("rancher_tls_private_key_path") {
+				cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "TLS Private Key Path",
+					Validate: func(input string) error {
+						expandedPath, err := homedir.Expand(input)
+						if err != nil {
+							return err
+						}
+
+						_, err = os.Stat(expandedPath)
+						if err != nil {
+							if os.IsNotExist(err) {
+								return errors.New("File not found")
+							}
+						}
+						return nil
+					},
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return err
+				}
+				expandedTLSPrivateKeyPath, err := homedir.Expand(result)
+				if err != nil {
+					return err
+				}
+				cfg.RancherTLSPrivateKeyPath = expandedTLSPrivateKeyPath
+			}
+
+			// TLS Certificate Key Path
+			if viper.IsSet("rancher_tls_cert_path") {
+				cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "TLS Certificate Path",
+					Validate: func(input string) error {
+						expandedPath, err := homedir.Expand(input)
+						if err != nil {
+							return err
+						}
+
+						_, err = os.Stat(expandedPath)
+						if err != nil {
+							if os.IsNotExist(err) {
+								return errors.New("File not found")
+							}
+						}
+						return nil
+					},
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return err
+				}
+				expandedTLSCertPath, err := homedir.Expand(result)
+				if err != nil {
+					return err
+				}
+				cfg.RancherTLSCertificatePath = expandedTLSCertPath
+			}
+		}
 	}
 
 	state, err := remoteBackend.State(cfg.Name)
