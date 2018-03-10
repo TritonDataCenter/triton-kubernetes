@@ -61,6 +61,7 @@ type tritonManagerTerraformConfig struct {
 	RancherRegistryPassword   string `json:"rancher_registry_password,omitempty"`
 	RancherTLSPrivateKeyPath  string `json:"rancher_tls_private_key_path"`
 	RancherTLSCertificatePath string `json:"rancher_tls_cert_path"`
+	RancherDomainName         string `json:"rancher_domain_name"`
 }
 
 func NewTritonManager(remoteBackend backend.Backend) error {
@@ -808,17 +809,17 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 
 	// TLS Certificate Prompt
 	if nonInteractiveMode {
-		// In non-interactive mode, both private key and cert are required.
-		// If only one of them is defined, show an error
-		// If neither are defined, then assume the user does not want to go through.
-		errTemplate := "%s was set, but %s was not. Both the TLS private key and certificate must be specified"
-		if viper.IsSet("rancher_tls_private_key_path") && viper.IsSet("rancher_tls_cert_path") {
+		// In non-interactive mode, private key, cert, and HTTPS URL are required.
+		// If none are defined, then assume the user does not want to use HTTPS.
+		privateKeyIsSet := viper.IsSet("rancher_tls_private_key_path")
+		certIsSet := viper.IsSet("rancher_tls_cert_path")
+		httpsURLIsSet := viper.IsSet("rancher_domain_name")
+		if privateKeyIsSet && certIsSet && httpsURLIsSet {
 			cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
 			cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
-		} else if viper.IsSet("rancher_tls_private_key_path") {
-			return fmt.Errorf(errTemplate, "rancher_tls_private_key_path", "rancher_tls_cert_path")
-		} else if viper.IsSet("rancher_tls_cert_path") {
-			return fmt.Errorf(errTemplate, "rancher_tls_cert_path", "rancher_tls_private_key_path")
+			cfg.RancherDomainName = viper.GetString("rancher_domain_name")
+		} else if !privateKeyIsSet || !certIsSet || !httpsURLIsSet {
+			return fmt.Errorf("rancher_tls_private_key_path, rancher_tls_cert_path, rancher_domain_name must all be set or none of them")
 		}
 	} else {
 		shouldGetTLSFiles, err := util.PromptForConfirmation("Would you like to provide your own TLS certificate and private key", "Providing TLS cert")
@@ -891,6 +892,21 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 					return err
 				}
 				cfg.RancherTLSCertificatePath = expandedTLSCertPath
+			}
+
+			// Rancher Domain Name
+			if viper.IsSet("rancher_domain_name") {
+				cfg.RancherDomainName = viper.GetString("rancher_domain_name")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "Your Domain Name",
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return err
+				}
+				cfg.RancherDomainName = result
 			}
 		}
 	}

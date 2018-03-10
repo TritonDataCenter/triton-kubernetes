@@ -8,7 +8,8 @@ provider "triton" {
 locals {
   using_custom_tls_cert = "${var.rancher_tls_private_key_path != "" && var.rancher_tls_cert_path != ""}"
   rancher_fqdn = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
-  rancher_url = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
+  rancher_internal_url = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
+  rancher_url = "${local.using_custom_tls_cert ? format("https://%s", var.rancher_domain_name) : format("http://%s", local.rancher_fqdn)}"
 }
 
 data "triton_account" "main" {}
@@ -87,6 +88,7 @@ data "template_file" "rancher_proxy_nginx_https_conf" {
     # For HA, the upstream servers point to the rancher master ip addresses
     # For non-HA, the nginx proxy is on the same box as the rancher master so upstream is set to 127.0.0.1
     upstream_config = "${var.ha ? join("\n", formatlist("    server %s:8080;", triton_machine.rancher_master.*.primaryip)) : "    server 127.0.0.1:8080;"}"
+    rancher_domain_name = "${var.rancher_domain_name}"
   }
 }
 

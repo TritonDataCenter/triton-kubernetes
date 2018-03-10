@@ -137,3 +137,8 @@ variable "rancher_tls_cert_path" {
   default = ""
   description = "The path to the TLS certificate"
 }
+
+variable "rancher_domain_name" {
+  default = ""
+  description = "When a TLS/SSL certificate has been provided, this should be set to the domain name that is compatible with the certificate"
+}
