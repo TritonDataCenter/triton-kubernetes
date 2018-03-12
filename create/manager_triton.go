@@ -41,6 +41,7 @@ type tritonManagerTerraformConfig struct {
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
 
+	GCMPrivateNetworkName      string   `json:"gcm_private_network_name,omitempty"`
 	TritonNetworkNames         []string `json:"triton_network_names,omitempty"`
 	TritonImageName            string   `json:"triton_image_name,omitempty"`
 	TritonImageVersion         string   `json:"triton_image_version,omitempty"`
@@ -51,11 +52,16 @@ type tritonManagerTerraformConfig struct {
 	TritonMySQLImageVersion     string `json:"triton_mysql_image_version,omitempty"`
 	MySQLDBTritonMachinePackage string `json:"mysqldb_triton_machine_package,omitempty"`
 
-	RancherServerImage      string `json:"rancher_server_image,omitempty"`
-	RancherAgentImage       string `json:"rancher_agent_image,omitempty"`
-	RancherRegistry         string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
+	RancherAdminUsername      string `json:"rancher_admin_username,omitempty"`
+	RancherAdminPassword      string `json:"rancher_admin_password,omitempty"`
+	RancherServerImage        string `json:"rancher_server_image,omitempty"`
+	RancherAgentImage         string `json:"rancher_agent_image,omitempty"`
+	RancherRegistry           string `json:"rancher_registry,omitempty"`
+	RancherRegistryUsername   string `json:"rancher_registry_username,omitempty"`
+	RancherRegistryPassword   string `json:"rancher_registry_password,omitempty"`
+	RancherTLSPrivateKeyPath  string `json:"rancher_tls_private_key_path"`
+	RancherTLSCertificatePath string `json:"rancher_tls_cert_path"`
+	RancherDomainName         string `json:"rancher_domain_name"`
 }
 
 func NewTritonManager(remoteBackend backend.Backend) error {
@@ -414,18 +420,57 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
+	validNetworksMap := map[string]struct{}{}
+	validNetworksSlice := []string{}
+	for _, validNetwork := range networks {
+		validNetworksMap[validNetwork.Name] = struct{}{}
+		validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
+	}
+
+	// GCM Private Network Name
+	if cfg.HA {
+		if viper.IsSet("gcm_private_network_name") {
+			cfg.GCMPrivateNetworkName = viper.GetString("gcm_private_network_name")
+
+			isValidName := false
+			for _, validNetwork := range networks {
+				if cfg.GCMPrivateNetworkName == validNetwork.Name {
+					isValidName = true
+					break
+				}
+			}
+			if !isValidName {
+				return fmt.Errorf("Invalid GCM private network name '%s', must be one of the following: %s", cfg.GCMPrivateNetworkName, strings.Join(validNetworksSlice, ", "))
+			}
+		} else {
+			// GCM Private Network Prompt
+			gcmNetworkPrompt := promptui.Select{
+				Label: "GCM Private Network",
+				Items: networks,
+				Templates: &promptui.SelectTemplates{
+					Label:    "{{ . }}?",
+					Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+					Inactive: "  {{.Name}}",
+					Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "GCM Private Network:" | bold}} {{ .Name }}`, promptui.IconGood),
+				},
+			}
+			i, _, err := gcmNetworkPrompt.Run()
+			if err != nil {
+				return err
+			}
+			cfg.GCMPrivateNetworkName = networks[i].Name
+		}
+	}
+
 	// Triton Network Names
-	if viper.IsSet("triton_network_names") {
+	if cfg.HA {
+		// Since cluster manager nodes are in a private network,
+		// just set the network names to the private network.
+		cfg.TritonNetworkNames = []string{cfg.GCMPrivateNetworkName}
+	} else if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
 
 		// Verify triton network names
-		validNetworksMap := map[string]struct{}{}
-		validNetworksSlice := []string{}
-		for _, validNetwork := range networks {
-			validNetworksMap[validNetwork.Name] = struct{}{}
-			validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
-		}
-
 		for _, network := range cfg.TritonNetworkNames {
 			if _, ok := validNetworksMap[network]; !ok {
 				return fmt.Errorf("Invalid Triton Network '%s', must be one of the following: %s", network, strings.Join(validNetworksSlice, ", "))
@@ -716,6 +761,154 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 
 		cfg.MySQLDBTritonMachinePackage = packages[i].Name
+	}
+
+	// Rancher Admin Username
+	if viper.IsSet("rancher_admin_username") {
+		cfg.RancherAdminUsername = viper.GetString("rancher_admin_username")
+	} else if nonInteractiveMode {
+		return errors.New("rancher_admin_username must be specified")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "Rancher Admin Username",
+			Default: "admin",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherAdminUsername = result
+	}
+
+	if cfg.RancherAdminUsername == "" {
+		return errors.New("Invalid Rancher Admin username")
+	}
+
+	// Rancher Admin Password
+	if viper.IsSet("rancher_admin_password") {
+		cfg.RancherAdminPassword = viper.GetString("rancher_admin_password")
+	} else if nonInteractiveMode {
+		return errors.New("rancher_admin_password must be specified")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "Rancher Admin Password",
+			Mask:  '*',
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.RancherAdminPassword = result
+	}
+
+	if cfg.RancherAdminPassword == "" {
+		return errors.New("Invalid Rancher Admin password")
+	}
+
+	// TLS Certificate Prompt
+	if nonInteractiveMode {
+		// In non-interactive mode, private key, cert, and HTTPS URL are required.
+		// If none are defined, then assume the user does not want to use HTTPS.
+		privateKeyIsSet := viper.IsSet("rancher_tls_private_key_path")
+		certIsSet := viper.IsSet("rancher_tls_cert_path")
+		httpsURLIsSet := viper.IsSet("rancher_domain_name")
+		if privateKeyIsSet && certIsSet && httpsURLIsSet {
+			cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
+			cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
+			cfg.RancherDomainName = viper.GetString("rancher_domain_name")
+		} else if !privateKeyIsSet || !certIsSet || !httpsURLIsSet {
+			return fmt.Errorf("rancher_tls_private_key_path, rancher_tls_cert_path, rancher_domain_name must all be set or none of them")
+		}
+	} else {
+		shouldGetTLSFiles, err := util.PromptForConfirmation("Would you like to provide your own TLS certificate and private key", "Providing TLS cert")
+		if err != nil {
+			return err
+		}
+
+		if shouldGetTLSFiles {
+			// TLS Private Key Path
+			if viper.IsSet("rancher_tls_private_key_path") {
+				cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "TLS Private Key Path",
+					Validate: func(input string) error {
+						expandedPath, err := homedir.Expand(input)
+						if err != nil {
+							return err
+						}
+
+						_, err = os.Stat(expandedPath)
+						if err != nil {
+							if os.IsNotExist(err) {
+								return errors.New("File not found")
+							}
+						}
+						return nil
+					},
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return err
+				}
+				expandedTLSPrivateKeyPath, err := homedir.Expand(result)
+				if err != nil {
+					return err
+				}
+				cfg.RancherTLSPrivateKeyPath = expandedTLSPrivateKeyPath
+			}
+
+			// TLS Certificate Key Path
+			if viper.IsSet("rancher_tls_cert_path") {
+				cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "TLS Certificate Path",
+					Validate: func(input string) error {
+						expandedPath, err := homedir.Expand(input)
+						if err != nil {
+							return err
+						}
+
+						_, err = os.Stat(expandedPath)
+						if err != nil {
+							if os.IsNotExist(err) {
+								return errors.New("File not found")
+							}
+						}
+						return nil
+					},
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return err
+				}
+				expandedTLSCertPath, err := homedir.Expand(result)
+				if err != nil {
+					return err
+				}
+				cfg.RancherTLSCertificatePath = expandedTLSCertPath
+			}
+
+			// Rancher Domain Name
+			if viper.IsSet("rancher_domain_name") {
+				cfg.RancherDomainName = viper.GetString("rancher_domain_name")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "Your Domain Name",
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return err
+				}
+				cfg.RancherDomainName = result
+			}
+		}
 	}
 
 	state, err := remoteBackend.State(cfg.Name)

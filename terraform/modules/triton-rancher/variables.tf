@@ -2,6 +2,14 @@ variable "name" {
   description = "Human readable name used as prefix to generated names."
 }
 
+variable "rancher_admin_username" {
+  description = "The Rancher admin username"
+}
+
+variable "rancher_admin_password" {
+  description = "The Rancher admin password"
+}
+
 variable "triton_account" {
   description = "The Triton account name, usually the username of your root user."
 }
@@ -65,6 +73,11 @@ variable "gcm_node_count" {
   description = "Number of Global Cluster Managers to cluster."
 }
 
+variable "gcm_private_network_name" {
+  default     = "Joyent-SDC-Private"
+  description = "Should Rancher be deployed in HA, this network will contain the mysqldb, Rancher master, nginx proxy, and bastion nodes. In non-HA mode, this will be ignored."
+}
+
 variable "mysqldb_triton_machine_package" {
   default     = ""
   description = "The Triton machine package to use for the Rancher mysqldb node. Defaults to master_triton_machine_package."
@@ -113,4 +126,19 @@ variable "rancher_registry_username" {
 variable "rancher_registry_password" {
   default     = ""
   description = "The password to use."
+}
+
+variable "rancher_tls_private_key_path" {
+  default = ""
+  description = "The path to the TLS private key"
+}
+
+variable "rancher_tls_cert_path" {
+  default = ""
+  description = "The path to the TLS certificate"
+}
+
+variable "rancher_domain_name" {
+  default = ""
+  description = "When a TLS/SSL certificate has been provided, this should be set to the domain name that is compatible with the certificate"
 }
