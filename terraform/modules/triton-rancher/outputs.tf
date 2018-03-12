@@ -10,3 +10,7 @@ output "rancher_url" {
 output "ssh_bastion_ip" {
   value = "${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}"
 }
+
+output "rancher_internal_url" {
+  value = "${local.rancher_internal_url}"
+}

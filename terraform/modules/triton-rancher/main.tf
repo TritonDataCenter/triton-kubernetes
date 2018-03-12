@@ -6,7 +6,10 @@ provider "triton" {
 }
 
 locals {
-  rancher_url = "${var.ha ? format("http://%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : format("http://%s:8080", element(triton_machine.rancher_master.*.primaryip, 0))}"
+  using_custom_tls_cert = "${var.rancher_tls_private_key_path != "" && var.rancher_tls_cert_path != ""}"
+  rancher_fqdn = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
+  rancher_internal_url = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
+  rancher_url = "${local.using_custom_tls_cert ? format("https://%s", var.rancher_domain_name) : format("http://%s", local.rancher_fqdn)}"
 }
 
 data "triton_account" "main" {}
@@ -45,18 +48,81 @@ data "template_file" "install_rancher_mysqldb" {
   }
 }
 
+data "local_file" "custom_tls_private_key" {
+  count = "${local.using_custom_tls_cert ? 1 : 0}"
+  filename = "${var.rancher_tls_private_key_path}"
+}
+
+data "local_file" "custom_tls_cert" {
+  count = "${local.using_custom_tls_cert ? 1 : 0}"
+  filename = "${var.rancher_tls_cert_path}"
+}
+
 data "template_file" "install_nginx" {
   template = "${file("${path.module}/files/install_nginx.sh")}"
 
   vars {
-    nginx_config = "${replace(data.template_file.rancher_proxy_nginx_conf.rendered, "$", "\\$")}"
+    nginx_config = "${local.using_custom_tls_cert ?
+      replace(data.template_file.rancher_proxy_nginx_https_conf.rendered, "$", "\\$") :
+      replace(data.template_file.rancher_proxy_nginx_http_conf.rendered, "$", "\\$")}"
+    triton_ssh_user = "${var.triton_ssh_user}"
+    ssl_private_key = "${element(coalescelist(data.local_file.custom_tls_private_key.*.content, tls_private_key.generated_ssl_key.*.private_key_pem, list("")), 0)}"
+    ssl_cert = "${element(coalescelist(data.local_file.custom_tls_cert.*.content, tls_self_signed_cert.generated_ssl_cert.*.cert_pem, list("")), 0)}"
   }
 }
 
-data "template_file" "rancher_proxy_nginx_conf" {
-  template = "${file("${path.module}/files/rancher_proxy_nginx.conf")}"
+data "template_file" "rancher_proxy_nginx_http_conf" {
+  template = "${file("${path.module}/files/rancher_proxy_nginx_http.conf")}"
+
   vars {
-    upstream_config = "${join("\n", formatlist("    server %s:8080;", triton_machine.rancher_master.*.primaryip))}"
+    # For HA, the upstream servers point to the rancher master ip addresses
+    # For non-HA, the nginx proxy is on the same box as the rancher master so upstream is set to 127.0.0.1
+    upstream_config = "${var.ha ? join("\n", formatlist("    server %s:8080;", triton_machine.rancher_master.*.primaryip)) : "    server 127.0.0.1:8080;"}"
+  }
+}
+
+data "template_file" "rancher_proxy_nginx_https_conf" {
+  template = "${file("${path.module}/files/rancher_proxy_nginx_https.conf")}"
+
+  vars {
+    # For HA, the upstream servers point to the rancher master ip addresses
+    # For non-HA, the nginx proxy is on the same box as the rancher master so upstream is set to 127.0.0.1
+    upstream_config = "${var.ha ? join("\n", formatlist("    server %s:8080;", triton_machine.rancher_master.*.primaryip)) : "    server 127.0.0.1:8080;"}"
+    rancher_domain_name = "${var.rancher_domain_name}"
+  }
+}
+
+# Self signed SSL Certificate and Key
+# NOTE: Rancher Agents currently do not work with Rancher masters that 
+# use self-signed SSL Certificates.
+# Temporarily disabling self-signing certificates until a solution is found.
+resource "tls_private_key" "generated_ssl_key" {
+  # count = "${local.using_custom_tls_cert ? 0 : 1}"
+  count = 0
+  algorithm = "RSA"
+  rsa_bits = "2048"
+}
+
+resource "tls_self_signed_cert" "generated_ssl_cert" {
+  # count = "${local.using_custom_tls_cert ? 0 : 1}"
+  count = 0
+  key_algorithm = "RSA"
+  private_key_pem = "${tls_private_key.generated_ssl_key.private_key_pem}"
+  validity_period_hours = 12
+
+  allowed_uses = [
+    "key_encipherment",
+    "digital_signature",
+    "server_auth"
+  ]
+
+  subject {
+    common_name = "${local.rancher_fqdn}"
+    organization = "Joyent"
+    organizational_unit = "triton-kubernetes"
+    locality = "San Francisco"
+    province = "California"
+    country = "US"
   }
 }
 
@@ -175,6 +241,33 @@ data "template_file" "install_rancher_master" {
     rancher_registry          = "${var.rancher_registry}"
     rancher_registry_username = "${var.rancher_registry_username}"
     rancher_registry_password = "${var.rancher_registry_password}"
+  }
+}
+
+# For non-HA Rancher, this installs nginx on the rancher master itself since there
+# are no nginx proxy instances.
+resource "null_resource" "install_rancher_master_nginx" {
+  depends_on = ["null_resource.install_rancher_master"]
+
+  count = "${var.ha ? 0 : 1}"
+
+  # Changes to any instance of the cluster requires re-provisioning
+  triggers {
+    rancher_master_ids = "${join(",", triton_machine.rancher_master.*.id)}"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "${var.triton_ssh_user}"
+    bastion_host = "${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}"
+    host        = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
+    private_key = "${file(var.triton_key_path)}"
+  }
+
+  provisioner "remote-exec" {
+    inline = <<EOF
+      ${data.template_file.install_nginx.rendered}
+      EOF
   }
 }
 
