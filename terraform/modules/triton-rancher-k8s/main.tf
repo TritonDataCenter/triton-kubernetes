@@ -7,8 +7,8 @@ provider "triton" {
 
 provider "rancher" {
   api_url    = "${var.rancher_api_url}"
-  access_key = "2594FD14620DC702102A"
-  secret_key = "QcUNzwK1HWLHk6W52hFWg3hD6tQXxY7NaMc3XGLz"
+  access_key = "${var.rancher_access_key}"
+  secret_key = "${var.rancher_secret_key}"
 }
 
 data "triton_network" "networks" {
@@ -26,8 +26,8 @@ data "external" "rancher_environment_template" {
 
   query = {
     rancher_api_url     = "${var.rancher_api_url}"
-    rancher_access_key  = "2594FD14620DC702102A"
-    rancher_secret_key  = "QcUNzwK1HWLHk6W52hFWg3hD6tQXxY7NaMc3XGLz"
+    rancher_access_key  = "${var.rancher_access_key}"
+    rancher_secret_key  = "${var.rancher_secret_key}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"
