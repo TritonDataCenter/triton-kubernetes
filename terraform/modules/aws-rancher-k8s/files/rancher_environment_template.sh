@@ -10,19 +10,21 @@ set -e
 # Extract "name" argument from the input into name shell variable.
 # jq will ensure that the values are properly quoted
 # and escaped for consumption by the shell.
-eval "$(jq -r '@sh "rancher_api_url=\(.rancher_api_url) name=\(.name) k8s_plane_isolation=\(.k8s_plane_isolation) k8s_registry=\(.k8s_registry)"')"
+eval "$(jq -r '@sh "rancher_api_url=\(.rancher_api_url) rancher_access_key=\(.rancher_access_key) rancher_secret_key=\(.rancher_secret_key) name=\(.name) k8s_plane_isolation=\(.k8s_plane_isolation) k8s_registry=\(.k8s_registry)"')"
 
 kube_template=''
 template_already_existed=false
-if [ "$(curl --silent $rancher_api_url/v2-beta/projecttemplates/?name=$name | jq -r '.data | length')" != "0" ]; then
+if [ "$(curl --silent -u $rancher_access_key:$rancher_secret_key $rancher_api_url/v2-beta/projecttemplates/?name=$name | jq -r '.data | length')" != "0" ]; then
 	# Look to see if a template exists with the same name
 	kube_template=$(curl -X GET \
+		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
 		"$rancher_api_url/v2-beta/projecttemplates/?name=$name")
 	template_already_existed=true
 else
 	# otherwise clone default kubernetes template
 	kube_template=$(curl -X GET \
+		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
 		"$rancher_api_url/v2-beta/projecttemplates/?name=kubernetes")
 fi
@@ -38,6 +40,7 @@ if [ "$template_already_existed" = true ]; then
 	TEMPLATE_ID=$(echo $kube_template | jq -r '.id')
 
 	output=$(curl -X PUT \
+		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
 		-H 'Content-Type: application/json' \
 		-d "$kube_template" \
@@ -48,6 +51,7 @@ else
 
 	# create new template
 	TEMPLATE_ID=$(curl -X POST \
+		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
 		-H 'Content-Type: application/json' \
 		-d "$kube_template" \

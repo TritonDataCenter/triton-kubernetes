@@ -4,7 +4,7 @@ output "masters" {
 
 output "rancher_url" {
   depends_on = ["triton_machine.rancher_proxy"]
-  value = "${local.rancher_url}"
+  value      = "${local.rancher_url}"
 }
 
 output "ssh_bastion_ip" {
@@ -13,4 +13,12 @@ output "ssh_bastion_ip" {
 
 output "rancher_internal_url" {
   value = "${local.rancher_internal_url}"
+}
+
+output "rancher_access_key" {
+  value = "${chomp(module.rancher_access_key.stdout)}"
+}
+
+output "rancher_secret_key" {
+  value = "${chomp(module.rancher_secret_key.stdout)}"
 }

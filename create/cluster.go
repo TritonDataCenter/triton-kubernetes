@@ -285,7 +285,9 @@ func NewCluster(remoteBackend backend.Backend) error {
 func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerraformConfig, error) {
 	nonInteractiveMode := viper.GetBool("non-interactive")
 	cfg := baseClusterTerraformConfig{
-		RancherAPIURL: "${module.cluster-manager.rancher_url}",
+		RancherAPIURL:    "${module.cluster-manager.rancher_url}",
+		RancherAccessKey: "${module.cluster-manager.rancher_access_key}",
+		RancherSecretKey: "${module.cluster-manager.rancher_secret_key}",
 
 		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
 		EtcdNodeCount:          "0",

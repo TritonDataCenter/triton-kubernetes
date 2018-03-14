@@ -7,9 +7,9 @@ provider "triton" {
 
 locals {
   using_custom_tls_cert = "${var.rancher_tls_private_key_path != "" && var.rancher_tls_cert_path != ""}"
-  rancher_fqdn = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
-  rancher_internal_url = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
-  rancher_url = "${local.using_custom_tls_cert ? format("https://%s", var.rancher_domain_name) : format("http://%s", local.rancher_fqdn)}"
+  rancher_fqdn          = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
+  rancher_internal_url  = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
+  rancher_url           = "${local.using_custom_tls_cert ? format("https://%s", var.rancher_domain_name) : format("http://%s", local.rancher_fqdn)}"
 }
 
 data "triton_account" "main" {}
@@ -49,12 +49,12 @@ data "template_file" "install_rancher_mysqldb" {
 }
 
 data "local_file" "custom_tls_private_key" {
-  count = "${local.using_custom_tls_cert ? 1 : 0}"
+  count    = "${local.using_custom_tls_cert ? 1 : 0}"
   filename = "${var.rancher_tls_private_key_path}"
 }
 
 data "local_file" "custom_tls_cert" {
-  count = "${local.using_custom_tls_cert ? 1 : 0}"
+  count    = "${local.using_custom_tls_cert ? 1 : 0}"
   filename = "${var.rancher_tls_cert_path}"
 }
 
@@ -65,9 +65,10 @@ data "template_file" "install_nginx" {
     nginx_config = "${local.using_custom_tls_cert ?
       replace(data.template_file.rancher_proxy_nginx_https_conf.rendered, "$", "\\$") :
       replace(data.template_file.rancher_proxy_nginx_http_conf.rendered, "$", "\\$")}"
+
     triton_ssh_user = "${var.triton_ssh_user}"
     ssl_private_key = "${element(coalescelist(data.local_file.custom_tls_private_key.*.content, tls_private_key.generated_ssl_key.*.private_key_pem, list("")), 0)}"
-    ssl_cert = "${element(coalescelist(data.local_file.custom_tls_cert.*.content, tls_self_signed_cert.generated_ssl_cert.*.cert_pem, list("")), 0)}"
+    ssl_cert        = "${element(coalescelist(data.local_file.custom_tls_cert.*.content, tls_self_signed_cert.generated_ssl_cert.*.cert_pem, list("")), 0)}"
   }
 }
 
@@ -88,6 +89,7 @@ data "template_file" "rancher_proxy_nginx_https_conf" {
     # For HA, the upstream servers point to the rancher master ip addresses
     # For non-HA, the nginx proxy is on the same box as the rancher master so upstream is set to 127.0.0.1
     upstream_config = "${var.ha ? join("\n", formatlist("    server %s:8080;", triton_machine.rancher_master.*.primaryip)) : "    server 127.0.0.1:8080;"}"
+
     rancher_domain_name = "${var.rancher_domain_name}"
   }
 }
@@ -98,31 +100,31 @@ data "template_file" "rancher_proxy_nginx_https_conf" {
 # Temporarily disabling self-signing certificates until a solution is found.
 resource "tls_private_key" "generated_ssl_key" {
   # count = "${local.using_custom_tls_cert ? 0 : 1}"
-  count = 0
+  count     = 0
   algorithm = "RSA"
-  rsa_bits = "2048"
+  rsa_bits  = "2048"
 }
 
 resource "tls_self_signed_cert" "generated_ssl_cert" {
   # count = "${local.using_custom_tls_cert ? 0 : 1}"
-  count = 0
-  key_algorithm = "RSA"
-  private_key_pem = "${tls_private_key.generated_ssl_key.private_key_pem}"
+  count                 = 0
+  key_algorithm         = "RSA"
+  private_key_pem       = "${tls_private_key.generated_ssl_key.private_key_pem}"
   validity_period_hours = 12
 
   allowed_uses = [
     "key_encipherment",
     "digital_signature",
-    "server_auth"
+    "server_auth",
   ]
 
   subject {
-    common_name = "${local.rancher_fqdn}"
-    organization = "Joyent"
+    common_name         = "${local.rancher_fqdn}"
+    organization        = "Joyent"
     organizational_unit = "triton-kubernetes"
-    locality = "San Francisco"
-    province = "California"
-    country = "US"
+    locality            = "San Francisco"
+    province            = "California"
+    country             = "US"
   }
 }
 
@@ -137,10 +139,11 @@ data "triton_network" "gcm_private_network" {
 resource "triton_machine" "rancher_proxy" {
   # Only make rancher_proxy when HA is configured
   count = "${var.ha ? 2 : 0}"
+
   # Should package/image be hardcoded to a specific machine package?
   package = "${var.master_triton_machine_package}"
-  image = "${data.triton_image.image.id}"
-  name = "${var.name}-proxy-${count.index + 1}"
+  image   = "${data.triton_image.image.id}"
+  name    = "${var.name}-proxy-${count.index + 1}"
 
   # Attach to private network and public network
   networks = ["${data.triton_network.public.id}", "${data.triton_network.gcm_private_network.id}"]
@@ -164,8 +167,8 @@ resource "triton_machine" "rancher_ssh_bastion" {
 
   # Should package/image be hardcoded to a specific machine package?
   package = "${var.master_triton_machine_package}"
-  image = "${data.triton_image.image.id}"
-  name = "${var.name}-ssh"
+  image   = "${data.triton_image.image.id}"
+  name    = "${var.name}-ssh"
 
   # Attach to private network and public network
   networks = ["${data.triton_network.public.id}", "${data.triton_network.gcm_private_network.id}"]
@@ -257,11 +260,11 @@ resource "null_resource" "install_rancher_master_nginx" {
   }
 
   connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
+    type         = "ssh"
+    user         = "${var.triton_ssh_user}"
     bastion_host = "${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}"
-    host        = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
-    private_key = "${file(var.triton_key_path)}"
+    host         = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
+    private_key  = "${file(var.triton_key_path)}"
   }
 
   provisioner "remote-exec" {
@@ -280,11 +283,11 @@ resource "null_resource" "install_rancher_master" {
   }
 
   connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
+    type         = "ssh"
+    user         = "${var.triton_ssh_user}"
     bastion_host = "${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}"
-    host        = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
-    private_key = "${file(var.triton_key_path)}"
+    host         = "${element(triton_machine.rancher_master.*.primaryip, count.index)}"
+    private_key  = "${file(var.triton_key_path)}"
   }
 
   provisioner "remote-exec" {
@@ -298,11 +301,11 @@ data "template_file" "setup_rancher_k8s" {
   template = "${file("${path.module}/files/setup_rancher.sh.tpl")}"
 
   vars {
-    name         = "${var.name}"
-    rancher_host = "http://127.0.0.1:8080"
+    name                  = "${var.name}"
+    rancher_host          = "http://127.0.0.1:8080"
     host_registration_url = "${local.rancher_url}"
 
-    rancher_registry = "${var.rancher_registry}"
+    rancher_registry       = "${var.rancher_registry}"
     rancher_admin_username = "${var.rancher_admin_username}"
     rancher_admin_password = "${var.rancher_admin_password}"
   }
@@ -319,11 +322,11 @@ resource "null_resource" "setup_rancher_k8s" {
   # Setup script can run on any rancher master
   # So we just choose the first in this case
   connection {
-    type        = "ssh"
-    user        = "${var.triton_ssh_user}"
+    type         = "ssh"
+    user         = "${var.triton_ssh_user}"
     bastion_host = "${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}"
-    host        = "${element(triton_machine.rancher_master.*.primaryip, 0)}"
-    private_key = "${file(var.triton_key_path)}"
+    host         = "${element(triton_machine.rancher_master.*.primaryip, 0)}"
+    private_key  = "${file(var.triton_key_path)}"
   }
 
   provisioner "remote-exec" {
@@ -331,4 +334,25 @@ resource "null_resource" "setup_rancher_k8s" {
       ${data.template_file.setup_rancher_k8s.rendered}
       EOF
   }
+}
+
+// The setup_rancher_k8s script will have stored a file with an api key
+// We need to retrieve the contents of that file and output it.
+// This is a hack to get around the Terraform Rancher provider not having resources for api keys.
+module "rancher_access_key" {
+  source  = "matti/resource/shell"
+  version = "0.0.1"
+
+  // We ssh into the remote box and cat the file.
+  // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
+  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${var.triton_key_path} ${var.triton_ssh_user}@${element(triton_machine.rancher_master.*.primaryip, 0)} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .publicValue'"
+}
+
+module "rancher_secret_key" {
+  source  = "matti/resource/shell"
+  version = "0.0.1"
+
+  // We ssh into the remote box and cat the file.
+  // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
+  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${var.triton_key_path} ${var.triton_ssh_user}@${element(triton_machine.rancher_master.*.primaryip, 0)} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .secretValue'"
 }

@@ -129,16 +129,16 @@ variable "rancher_registry_password" {
 }
 
 variable "rancher_tls_private_key_path" {
-  default = ""
+  default     = ""
   description = "The path to the TLS private key"
 }
 
 variable "rancher_tls_cert_path" {
-  default = ""
+  default     = ""
   description = "The path to the TLS certificate"
 }
 
 variable "rancher_domain_name" {
-  default = ""
+  default     = ""
   description = "When a TLS/SSL certificate has been provided, this should be set to the domain name that is compatible with the certificate"
 }

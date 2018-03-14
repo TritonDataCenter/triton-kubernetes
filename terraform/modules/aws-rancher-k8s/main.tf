@@ -15,7 +15,9 @@ resource "aws_vpc" "default" {
 }
 
 provider "rancher" {
-  api_url = "${var.rancher_api_url}"
+  api_url    = "${var.rancher_api_url}"
+  access_key = "${var.rancher_access_key}"
+  secret_key = "${var.rancher_secret_key}"
 }
 
 data "external" "rancher_environment_template" {
@@ -23,6 +25,8 @@ data "external" "rancher_environment_template" {
 
   query = {
     rancher_api_url     = "${var.rancher_api_url}"
+    rancher_access_key  = "${var.rancher_access_key}"
+    rancher_secret_key  = "${var.rancher_secret_key}"
     name                = "${var.name}-kubernetes"
     k8s_plane_isolation = "${var.k8s_plane_isolation}"
     k8s_registry        = "${var.k8s_registry}"
@@ -32,6 +36,12 @@ data "external" "rancher_environment_template" {
 resource "rancher_environment" "k8s" {
   name                = "${var.name}"
   project_template_id = "${data.external.rancher_environment_template.result.id}"
+
+  member {
+    external_id      = "1a1"
+    external_id_type = "rancher_id"
+    role             = "owner"
+  }
 }
 
 resource "rancher_registry" "rancher_registry" {

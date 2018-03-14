@@ -191,7 +191,10 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 
 func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, currentState state.State) (baseNodeTerraformConfig, error) {
 	cfg := baseNodeTerraformConfig{
-		RancherAPIURL:        "${module.cluster-manager.rancher_url}",
+		RancherAPIURL:    "${module.cluster-manager.rancher_url}",
+		RancherAccessKey: "${module.cluster-manager.rancher_access_key}",
+		RancherSecretKey: "${module.cluster-manager.rancher_secret_key}",
+
 		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
 
 		// Grab registry variables from cluster config
