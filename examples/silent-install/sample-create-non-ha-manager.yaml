@@ -2,11 +2,11 @@ backend_provider: local
 name: non-ha-manager
 ha: false
 gcm_node_count: 1
-private_registry: "docker-registry.joyent.com:5000"
+private_registry: ""
 private_registry_username: ""
 private_registry_password: ""
-rancher_server_image: "docker-registry.joyent.com:5000/rancher/server:v1.6.14"
-rancher_agent_image: "docker-registry.joyent.com:5000/rancher/agent:v1.2.9"
+rancher_server_image: ""
+rancher_agent_image: ""
 triton_account: fayazg
 triton_key_path: ~/.ssh/id_rsa
 triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
