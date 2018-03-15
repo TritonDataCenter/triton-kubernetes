@@ -339,13 +339,17 @@ resource "null_resource" "setup_rancher_k8s" {
 // The setup_rancher_k8s script will have stored a file with an api key
 // We need to retrieve the contents of that file and output it.
 // This is a hack to get around the Terraform Rancher provider not having resources for api keys.
+locals {
+  ssh_proxy_command_arg = "-o ProxyCommand='ssh -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null -i ${var.triton_key_path} -W %h:%p ${var.triton_ssh_user}@${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}'"
+}
+
 module "rancher_access_key" {
   source  = "matti/outputs/shell"
   version = "0.0.1"
 
   // We ssh into the remote box and cat the file.
   // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
-  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${var.triton_key_path} ${var.triton_ssh_user}@${element(triton_machine.rancher_master.*.primaryip, 0)} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .publicValue'"
+  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${var.ha ? local.ssh_proxy_command_arg : ""} -i ${var.triton_key_path} ${var.triton_ssh_user}@${element(triton_machine.rancher_master.*.primaryip, 0)} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .publicValue'"
 }
 
 module "rancher_secret_key" {
@@ -354,5 +358,5 @@ module "rancher_secret_key" {
 
   // We ssh into the remote box and cat the file.
   // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
-  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${var.triton_key_path} ${var.triton_ssh_user}@${element(triton_machine.rancher_master.*.primaryip, 0)} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .secretValue'"
+  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no ${var.ha ? local.ssh_proxy_command_arg : ""} -i ${var.triton_key_path} ${var.triton_ssh_user}@${element(triton_machine.rancher_master.*.primaryip, 0)} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .secretValue'"
 }
