@@ -340,7 +340,7 @@ resource "null_resource" "setup_rancher_k8s" {
 // We need to retrieve the contents of that file and output it.
 // This is a hack to get around the Terraform Rancher provider not having resources for api keys.
 module "rancher_access_key" {
-  source  = "matti/resource/shell"
+  source  = "matti/outputs/shell"
   version = "0.0.1"
 
   // We ssh into the remote box and cat the file.
@@ -349,7 +349,7 @@ module "rancher_access_key" {
 }
 
 module "rancher_secret_key" {
-  source  = "matti/resource/shell"
+  source  = "matti/outputs/shell"
   version = "0.0.1"
 
   // We ssh into the remote box and cat the file.
