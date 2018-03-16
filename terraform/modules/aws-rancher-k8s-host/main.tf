@@ -5,7 +5,9 @@ provider "aws" {
 }
 
 provider "rancher" {
-  api_url = "${var.rancher_api_url}"
+  api_url    = "${var.rancher_api_url}"
+  access_key = "${var.rancher_access_key}"
+  secret_key = "${var.rancher_secret_key}"
 }
 
 resource "rancher_registration_token" "token" {

@@ -1,13 +1,13 @@
 #!/bin/bash
 
-sudo apt-get install jq -y || sudo yum install jq -y
-
 # Wait for Rancher UI to boot
 printf 'Waiting for Rancher to start'
 until $(curl --output /dev/null --silent --head --fail ${rancher_host}); do
     printf '.'
     sleep 5
 done
+
+sudo apt-get install jq -y || sudo yum install jq -y
 
 # Setup api.host
 curl -X PUT \
@@ -52,10 +52,19 @@ curl -X DELETE \
 	-d '{}' \
 	'${rancher_host}/v2-beta/projects/1a5/?action=delete'
 
+# Create API Key before turning on local authentication
+# Save output from request to ~/rancher_api_key so we can retrieve it later
+echo "Creating api key..."
+curl -X POST \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"accountId": "1a1", "name": "terraform_api_key"}' \
+'${rancher_host}/v2-beta/apikeys' > ~/rancher_api_key
+
 # Ensure local authentication is set up with hardcoded username and password
-# echo "Configuring local authentication..."
-# curl -X POST \
-#     -H 'Accept: application/json' \
-#     -H 'Content-Type: application/json' \
-#     -d '{"enabled": true, "password": "${rancher_admin_password}", "username": "${rancher_admin_username}"}' \
-#     '${rancher_host}/v2-beta/localauthconfig'
+echo "Configuring local authentication..."
+curl -X POST \
+    -H 'Accept: application/json' \
+    -H 'Content-Type: application/json' \
+    -d '{"enabled": true, "password": "${rancher_admin_password}", "username": "${rancher_admin_username}"}' \
+'${rancher_host}/v2-beta/localauthconfig'
