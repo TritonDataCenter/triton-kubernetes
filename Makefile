@@ -1,4 +1,4 @@
-VERSION=0.0.1
+VERSION=0.0.0
 BUILD_PATH=build
 FILE_COMMAND=triton-kubernetes
 
