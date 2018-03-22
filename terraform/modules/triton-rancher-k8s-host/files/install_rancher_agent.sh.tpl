@@ -31,3 +31,12 @@ fi
 
 # Run Rancher agent container
 ${rancher_agent_command}
+
+# Mount Volume
+if [ "${mount_path}" != "" ]; then
+	sudo apt-get update
+	sudo apt-get install -y nfs-common
+	sudo mkdir -p ${mount_path}
+	sudo echo '${nfs_path}	${mount_path}	nfs	auto,nofail,noatime,nolock,intr,tcp,actimeo=1800	0	0' >> /etc/fstab
+	sudo mount -a
+fi

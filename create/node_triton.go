@@ -32,11 +32,12 @@ type tritonNodeTerraformConfig struct {
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
 
-	TritonNetworkNames   []string `json:"triton_network_names,omitempty"`
-	TritonImageName      string   `json:"triton_image_name,omitempty"`
-	TritonImageVersion   string   `json:"triton_image_version,omitempty"`
-	TritonSSHUser        string   `json:"triton_ssh_user,omitempty"`
-	TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
+	TritonNetworkNames    []string `json:"triton_network_names,omitempty"`
+	TritonImageName       string   `json:"triton_image_name,omitempty"`
+	TritonImageVersion    string   `json:"triton_image_version,omitempty"`
+	TritonSSHUser         string   `json:"triton_ssh_user,omitempty"`
+	TritonMachinePackage  string   `json:"triton_machine_package,omitempty"`
+	TritonVolumeMountPath string   `json:"triton_volume_mount_path"`
 }
 
 // Adds new Triton nodes to the given cluster and manager.

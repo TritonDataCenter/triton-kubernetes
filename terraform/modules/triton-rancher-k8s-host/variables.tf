@@ -91,3 +91,8 @@ variable "rancher_registry_password" {
   default     = ""
   description = "The password to use."
 }
+
+variable "triton_volume_mount_path" {
+  default = ""
+  description = "The mount point on the node"
+}
