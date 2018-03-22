@@ -62,3 +62,8 @@ resource "triton_machine" "host" {
     role = "${element(keys(var.rancher_host_labels), 0)}"
   }
 }
+
+resource "triton_volume" "host_volume" {
+  name = "${var.hostname}-Volume"
+  networks = ["${data.triton_network.networks.*.id}"]
+}
