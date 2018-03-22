@@ -79,14 +79,16 @@ func GetManager(remoteBackend backend.Backend) error {
 		WorkingDir: tempDir,
 	}
 
+	terraformCmd := "/Users/chrisguevara/homdna-service/bin/terraform"
+
 	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = shell.RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform output
-	err = shell.RunShellCommand(&shellOptions, "terraform", "output", "-module", "cluster-manager")
+	err = shell.RunShellCommand(&shellOptions, terraformCmd, "output", "-module", "cluster-manager")
 	if err != nil {
 		return err
 	}

@@ -8,6 +8,8 @@ import (
 	"github.com/joyent/triton-kubernetes/state"
 )
 
+const terraformCmd = "/Users/chrisguevara/homdna-service/bin/terraform"
+
 func RunTerraformApplyWithState(state state.State) error {
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
@@ -29,13 +31,13 @@ func RunTerraformApplyWithState(state state.State) error {
 	}
 
 	// Run terraform init
-	err = RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform apply
-	err = RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
+	err = RunShellCommand(&shellOptions, terraformCmd, "apply", "-auto-approve")
 	if err != nil {
 		return err
 	}
@@ -64,14 +66,14 @@ func RunTerraformDestroyWithState(currentState state.State, args []string) error
 	}
 
 	// Run terraform init
-	err = RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform destroy
 	allArgs := append([]string{"destroy", "-force"}, args...)
-	err = RunShellCommand(&shellOptions, "terraform", allArgs...)
+	err = RunShellCommand(&shellOptions, terraformCmd, allArgs...)
 	if err != nil {
 		return err
 	}
