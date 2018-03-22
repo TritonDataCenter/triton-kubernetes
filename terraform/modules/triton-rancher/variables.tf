@@ -74,7 +74,7 @@ variable "gcm_node_count" {
 }
 
 variable "gcm_private_network_name" {
-  default     = "Joyent-SDC-Private"
+  default     = "My-Fabric-Network"
   description = "Should Rancher be deployed in HA, this network will contain the mysqldb, Rancher master, nginx proxy, and bastion nodes. In non-HA mode, this will be ignored."
 }
 

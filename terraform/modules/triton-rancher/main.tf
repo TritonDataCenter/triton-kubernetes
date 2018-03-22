@@ -7,7 +7,7 @@ provider "triton" {
 
 locals {
   using_custom_tls_cert = "${var.rancher_tls_private_key_path != "" && var.rancher_tls_cert_path != ""}"
-  rancher_fqdn          = "${var.ha ? format("%s-proxy.svc.%s.us-east-1.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
+  rancher_fqdn          = "${var.ha ? format("%s-proxy.svc.%s.us-east-3b.triton.zone", lower(var.name), data.triton_account.main.id) : element(triton_machine.rancher_master.*.primaryip, 0)}"
   rancher_internal_url  = "${local.using_custom_tls_cert ? format("https://%s", local.rancher_fqdn) : format("http://%s", local.rancher_fqdn)}"
   rancher_url           = "${local.using_custom_tls_cert ? format("https://%s", var.rancher_domain_name) : format("http://%s", local.rancher_fqdn)}"
 }
@@ -21,10 +21,6 @@ data "triton_network" "networks" {
 
 data "triton_network" "public" {
   name = "Joyent-SDC-Public"
-}
-
-data "triton_network" "private" {
-  name = "Joyent-SDC-Private"
 }
 
 data "triton_image" "image" {
