@@ -78,6 +78,21 @@ func (state *State) Clusters() (map[string]string, error) {
 	return result, nil
 }
 
+// Returns the cluster backup key for the given cluster
+// If the cluster has no key, then the string will be empty
+func (state *State) ClusterBackup(clusterKey string) (string, error) {
+	children, err := state.configJSON.S("module").ChildrenMap()
+	if err != nil {
+		return "", err
+	}
+	for key := range children {
+		if key == fmt.Sprintf("cluster-backup_%s", clusterKey) {
+			return key, nil
+		}
+	}
+	return "", nil
+}
+
 // Returns map of node name to node key for all nodes in a cluster
 // node keys are prefixed with 'node_'
 func (state *State) Nodes(clusterKey string) (map[string]string, error) {
