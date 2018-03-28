@@ -21,6 +21,10 @@ data "template_file" "setup_ark_backup" {
 
   vars {
     kubeconfig_filedata = "${data.template_file.kubeconfig.rendered}"
+    aws_access_key      = "${var.aws_access_key}"
+    aws_secret_key      = "${var.aws_secret_key}"
+    aws_s3_bucket          = "${var.aws_s3_bucket}"
+    aws_region          = "${var.aws_region}"
   }
 }
 

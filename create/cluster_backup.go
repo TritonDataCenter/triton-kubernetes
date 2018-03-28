@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"sort"
+	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
@@ -142,14 +143,38 @@ func NewClusterBackup(remoteBackend backend.Backend) error {
 		return errors.New("Backup already exists for this cluster.")
 	}
 
-	cfg, err := getBaseClusterBackupTerraformConfig(clusterBackupTerraformModulePath, selectedClusterKey)
-	if err != nil {
-		return err
+	// TODO Prompt for backup storage type
+	// Backup Storage Type
+	selectedStorageType := ""
+	if viper.IsSet("cluster_backup_storage_type") {
+		selectedStorageType = viper.GetString("cluster_backup_storage_type")
+	} else if nonInteractiveMode {
+		return errors.New("cluster_backup_storage_type must be specified")
+	} else {
+		prompt := promptui.Select{
+			Label: "Create Cluster Backup in which storage",
+			Items: []string{"S3"},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Storage:" | bold}} {{ . }}`, promptui.IconGood),
+			},
+		}
+
+		_, value, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		selectedStorageType = strings.ToLower(value)
 	}
 
-	err = currentState.Add(fmt.Sprintf(clusterBackupKeyFormat, selectedClusterKey), cfg)
-	if err != nil {
-		return err
+	switch selectedStorageType {
+	case "s3":
+		_, err = newS3ClusterBackup(selectedClusterKey, currentState)
+	default:
+		return fmt.Errorf("Unsupported cluster backup storage '%s', cannot create backup", selectedStorageType)
 	}
 
 	if !nonInteractiveMode {

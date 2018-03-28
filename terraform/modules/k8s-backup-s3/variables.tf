@@ -42,3 +42,23 @@ variable "triton_key_path" {
   default     = ""
   description = "The path to a private key that is authorized to communicate with the triton_ssh_host."
 }
+
+variable "aws_access_key" {
+  default     = ""
+  description = "AWS access key"
+}
+
+variable "aws_secret_key" {
+  default     = ""
+  description = "AWS secret key"
+}
+
+variable "aws_region" {
+  default     = ""
+  description = "AWS region where the Heptio ARK backup will be stored."
+}
+
+variable "aws_s3_bucket" {
+  default     = ""
+  description = "Name of the AWS bucket where the Heptio ARK backup will be stored."
+}
