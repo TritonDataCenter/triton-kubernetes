@@ -143,7 +143,6 @@ func NewClusterBackup(remoteBackend backend.Backend) error {
 		return errors.New("Backup already exists for this cluster.")
 	}
 
-	// TODO Prompt for backup storage type
 	// Backup Storage Type
 	selectedStorageType := ""
 	if viper.IsSet("cluster_backup_storage_type") {
@@ -153,7 +152,7 @@ func NewClusterBackup(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster Backup in which storage",
-			Items: []string{"S3"},
+			Items: []string{"Manta", "S3"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -171,6 +170,8 @@ func NewClusterBackup(remoteBackend backend.Backend) error {
 	}
 
 	switch selectedStorageType {
+	case "manta":
+		_, err = newMantaClusterBackup(selectedClusterKey, currentState)
 	case "s3":
 		_, err = newS3ClusterBackup(selectedClusterKey, currentState)
 	default:
