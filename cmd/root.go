@@ -38,6 +38,7 @@ func init() {
 
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is $HOME/.triton-kubernetes.yaml)")
 	rootCmd.PersistentFlags().Bool("non-interactive", false, "Prevent interactive prompts")
+	rootCmd.PersistentFlags().String("terraform-binary", "terraform", "The command to use for running the terraform binary. Defaults to 'terraform'.")
 
 	// Cobra also supports local flags, which will only run
 	// when this action is called directly.
@@ -49,6 +50,12 @@ func initConfig() {
 	viper.BindPFlag("non-interactive", rootCmd.Flags().Lookup("non-interactive"))
 	if viper.GetBool("non-interactive") {
 		fmt.Println("Running in non interactive mode")
+	}
+
+	viper.BindPFlag("terraform-binary", rootCmd.Flags().Lookup("terraform-binary"))
+	terraformBinary := viper.GetString("terraform-binary")
+	if terraformBinary != "terraform" {
+		fmt.Printf("Running terraform binary: %s\n", terraformBinary)
 	}
 
 	if cfgFile != "" { // enable ability to specify config file via flag

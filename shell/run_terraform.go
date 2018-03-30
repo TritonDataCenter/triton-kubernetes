@@ -6,9 +6,8 @@ import (
 	"os"
 
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/spf13/viper"
 )
-
-const terraformCmd = "/Users/chrisguevara/homdna-service/bin/terraform"
 
 func RunTerraformApplyWithState(state state.State) error {
 	// Create a temporary directory
@@ -29,6 +28,9 @@ func RunTerraformApplyWithState(state state.State) error {
 	shellOptions := ShellOptions{
 		WorkingDir: tempDir,
 	}
+
+	terraformCmd := getTerraformCmd()
+	fmt.Printf("Using terraform binary: %s\n", terraformCmd)
 
 	// Run terraform init
 	err = RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
@@ -65,6 +67,9 @@ func RunTerraformDestroyWithState(currentState state.State, args []string) error
 		WorkingDir: tempDir,
 	}
 
+	terraformCmd := getTerraformCmd()
+	fmt.Printf("Using terraform binary: %s\n", terraformCmd)
+
 	// Run terraform init
 	err = RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
@@ -79,4 +84,14 @@ func RunTerraformDestroyWithState(currentState state.State, args []string) error
 	}
 
 	return nil
+}
+
+// Returns the command to use to run terraform.
+// Returns the value of the terraform_binary config variable.
+// If that's not set, returns "terraform".
+func getTerraformCmd() string {
+	if viper.IsSet("terraform-binary") {
+		return viper.GetString("terraform-binary")
+	}
+	return "terraform"
 }
