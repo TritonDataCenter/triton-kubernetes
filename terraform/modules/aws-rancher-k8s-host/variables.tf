@@ -75,3 +75,23 @@ variable "aws_security_group_id" {
 variable "aws_key_name" {
   description = "The AWS key name to use to deploy the instance."
 }
+
+variable "ebs_volume_device_name" {
+  default     = ""
+  description = "The EBS Device name"
+}
+
+variable "ebs_volume_mount_path" {
+  default     = ""
+  description = "The EBS volume mount path"
+}
+
+variable "ebs_volume_type" {
+  default     = "standard"
+  description = "The EBS volume type. This can be gp2 for General Purpose SSD, io1 for Provisioned IOPS SSD, st1 for Throughput Optimized HDD, sc1 for Cold HDD, or standard for Magnetic volumes."
+}
+
+variable "ebs_volume_size" {
+  default     = ""
+  description = "The size of the volume, in GiBs."
+}
