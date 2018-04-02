@@ -26,7 +26,7 @@ data "template_file" "install_rancher_agent" {
   }
 }
 
-resource "null_resource" "install_rancher_master" {
+resource "null_resource" "install_rancher_agent" {
   triggers {
     host = "${var.host}"
   }
