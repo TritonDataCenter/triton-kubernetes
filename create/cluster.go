@@ -106,7 +106,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
-			Items: []string{"Triton", "AWS", "GCP", "Azure"},
+			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -134,6 +134,8 @@ func NewCluster(remoteBackend backend.Backend) error {
 		clusterName, err = newGCPCluster(remoteBackend, currentState)
 	case "azure":
 		clusterName, err = newAzureCluster(remoteBackend, currentState)
+	case "baremetal":
+		clusterName, err = newBareMetalCluster(remoteBackend, currentState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
@@ -198,6 +200,11 @@ func NewCluster(remoteBackend backend.Backend) error {
 				viper.Set("azure_size", nodeToAdd["azure_size"])
 				viper.Set("azure_ssh_user", nodeToAdd["azure_ssh_user"])
 				viper.Set("azure_public_key_path", nodeToAdd["azure_public_key_path"])
+			} else if selectedCloudProvider == "baremetal" {
+				viper.Set("ssh_user", nodeToAdd["ssh_user"])
+				viper.Set("key_path", nodeToAdd["key_path"])
+				viper.Set("bastion_host", nodeToAdd["bastion_host"])
+				viper.Set("hosts", nodeToAdd["hosts"])
 			}
 
 			// Create the new node
