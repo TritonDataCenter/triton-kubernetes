@@ -72,3 +72,18 @@ variable "gcp_image" {
 variable "gcp_compute_network_name" {
   description = "Network to deploy GCP machine in"
 }
+
+variable "gcp_disk_type" {
+  default     = ""
+  description = "The disk type which can be either 'pd-ssd' for SSD or 'pd-standard' for Standard"
+}
+
+variable "gcp_disk_size" {
+  default     = ""
+  description = "The disk size"
+}
+
+variable "gcp_disk_mount_path" {
+  default     = ""
+  description = "The mount path"
+}

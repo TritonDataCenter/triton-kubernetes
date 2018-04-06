@@ -55,6 +55,7 @@ resource "aws_ebs_volume" "host_volume" {
   availability_zone = "${aws_instance.host.availability_zone}"
   type              = "${var.ebs_volume_type}"
   size              = "${var.ebs_volume_size}"
+
   tags = {
     Name = "${var.hostname}-volume"
   }
