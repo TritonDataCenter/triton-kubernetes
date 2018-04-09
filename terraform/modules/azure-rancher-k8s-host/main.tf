@@ -76,8 +76,12 @@ resource "azurerm_virtual_machine" "host" {
   network_interface_ids = ["${azurerm_network_interface.nic.id}"]
   vm_size               = "${var.azure_size}"
 
-  delete_os_disk_on_termination    = true
-  delete_data_disks_on_termination = true
+  delete_os_disk_on_termination = true
+
+  # delete_data_disks_on_termination should be set to false
+  # if the user chooses to attach a managed disk.
+  # Otherwise, terraform will hang when trying to delete the managed disk.
+  delete_data_disks_on_termination = "${var.azure_disk_mount_path == ""}"
 
   storage_image_reference {
     publisher = "${var.azure_image_publisher}"
