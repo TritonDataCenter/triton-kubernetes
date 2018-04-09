@@ -40,6 +40,9 @@ data "template_file" "install_rancher_agent" {
     rancher_registry          = "${var.rancher_registry}"
     rancher_registry_username = "${var.rancher_registry_username}"
     rancher_registry_password = "${var.rancher_registry_password}"
+
+    mount_path = "${var.triton_volume_mount_path}"
+    nfs_path   = "${element(coalescelist(triton_volume.host_volume.*.filesystem_path, list("")), 0)}"
   }
 }
 
@@ -61,4 +64,12 @@ resource "triton_machine" "host" {
   tags = {
     role = "${element(keys(var.rancher_host_labels), 0)}"
   }
+}
+
+resource "triton_volume" "host_volume" {
+  count    = "${var.triton_volume_mount_path != "" ? 1 : 0}"
+  name     = "${var.hostname}-Volume"
+  size     = "${var.triton_volume_size}"
+  type     = "${var.triton_volume_type}"
+  networks = ["${data.triton_network.networks.*.id}"]
 }

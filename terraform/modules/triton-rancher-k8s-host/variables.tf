@@ -91,3 +91,18 @@ variable "rancher_registry_password" {
   default     = ""
   description = "The password to use."
 }
+
+variable "triton_volume_mount_path" {
+  default     = ""
+  description = "The mount point on the node"
+}
+
+variable "triton_volume_size" {
+  default     = "10240"
+  description = "The desired minimum storage capacity for the triton volume in mebibytes."
+}
+
+variable "triton_volume_type" {
+  default     = "tritonnfs"
+  description = "The type of volume. Currently only tritonnfs is supported."
+}

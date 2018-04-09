@@ -125,14 +125,16 @@ func GetCluster(remoteBackend backend.Backend) error {
 		WorkingDir: tempDir,
 	}
 
+	terraformCmd := "/Users/chrisguevara/homdna-service/bin/terraform"
+
 	// Run terraform init
-	err = shell.RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = shell.RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform output
-	err = shell.RunShellCommand(&shellOptions, "terraform", "output", "-module", selectedClusterKey)
+	err = shell.RunShellCommand(&shellOptions, terraformCmd, "output", "-module", selectedClusterKey)
 	if err != nil {
 		return err
 	}

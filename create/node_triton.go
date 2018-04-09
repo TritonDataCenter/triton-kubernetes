@@ -6,10 +6,12 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
@@ -18,6 +20,34 @@ import (
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
+
+// TODO Get volume sizes from triton-go once triton-go supports the ListVolumeSizes call
+type VolumeSize struct {
+	Size int
+	Type string
+}
+
+var tritonVolumeSizes = []VolumeSize{
+	VolumeSize{10240, "tritonnfs"},
+	VolumeSize{20480, "tritonnfs"},
+	VolumeSize{30720, "tritonnfs"},
+	VolumeSize{40960, "tritonnfs"},
+	VolumeSize{51200, "tritonnfs"},
+	VolumeSize{61440, "tritonnfs"},
+	VolumeSize{71680, "tritonnfs"},
+	VolumeSize{81920, "tritonnfs"},
+	VolumeSize{92160, "tritonnfs"},
+	VolumeSize{102400, "tritonnfs"},
+	VolumeSize{204800, "tritonnfs"},
+	VolumeSize{307200, "tritonnfs"},
+	VolumeSize{409600, "tritonnfs"},
+	VolumeSize{512000, "tritonnfs"},
+	VolumeSize{614400, "tritonnfs"},
+	VolumeSize{716800, "tritonnfs"},
+	VolumeSize{819200, "tritonnfs"},
+	VolumeSize{921600, "tritonnfs"},
+	VolumeSize{1024000, "tritonnfs"},
+}
 
 const (
 	tritonNodeKeyFormat                            = "module.node_triton_%s"
@@ -32,11 +62,14 @@ type tritonNodeTerraformConfig struct {
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
 
-	TritonNetworkNames   []string `json:"triton_network_names,omitempty"`
-	TritonImageName      string   `json:"triton_image_name,omitempty"`
-	TritonImageVersion   string   `json:"triton_image_version,omitempty"`
-	TritonSSHUser        string   `json:"triton_ssh_user,omitempty"`
-	TritonMachinePackage string   `json:"triton_machine_package,omitempty"`
+	TritonNetworkNames    []string `json:"triton_network_names,omitempty"`
+	TritonImageName       string   `json:"triton_image_name,omitempty"`
+	TritonImageVersion    string   `json:"triton_image_version,omitempty"`
+	TritonSSHUser         string   `json:"triton_ssh_user,omitempty"`
+	TritonMachinePackage  string   `json:"triton_machine_package,omitempty"`
+	TritonVolumeMountPath string   `json:"triton_volume_mount_path"`
+	TritonVolumeSize      string   `json:"triton_volume_size"`
+	TritonVolumeType      string   `json:"triton_volume_type"`
 }
 
 // Adds new Triton nodes to the given cluster and manager.
@@ -292,6 +325,74 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 		cfg.TritonMachinePackage = packages[i].Name
 	}
 
+	// Triton Volume
+	mountPathIsSet := viper.IsSet("triton_volume_mount_path")
+	volumeSizeIsSet := viper.IsSet("triton_volume_size")
+	volumeTypeIsSet := viper.IsSet("triton_volume_type")
+	if mountPathIsSet {
+		cfg.TritonVolumeMountPath = viper.GetString("triton_volume_mount_path")
+		if volumeSizeIsSet {
+			cfg.TritonVolumeSize = viper.GetString("triton_volume_size")
+		}
+		if volumeTypeIsSet {
+			cfg.TritonVolumeType = viper.GetString("triton_volume_type")
+		}
+	} else if nonInteractiveMode && (volumeSizeIsSet || volumeTypeIsSet) {
+		return []string{}, errors.New("triton_volume_mount_path must be specified if volume size or type are set")
+	} else if !nonInteractiveMode {
+		// Ask if user wants to add a volume
+		shouldCreateVolume, err := util.PromptForConfirmation("Create a volume for this node", "Volume Created")
+		if err != nil {
+			return nil, err
+		}
+
+		if shouldCreateVolume {
+			// Mount path
+			if mountPathIsSet {
+				cfg.TritonVolumeMountPath = viper.GetString("triton_volume_mount_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "Volume Mount Path",
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.TritonVolumeMountPath = result
+			}
+
+			// Triton Volume Size and Type
+			shouldPromptSizeAndType := true
+			if volumeSizeIsSet && volumeTypeIsSet {
+				cfg.TritonVolumeSize = viper.GetString("triton_volume_size")
+				cfg.TritonVolumeType = viper.GetString("triton_volume_type")
+				shouldPromptSizeAndType = !isValidTritonVolumeSizeAndType(cfg.TritonVolumeSize, cfg.TritonVolumeType)
+			}
+
+			if shouldPromptSizeAndType {
+				prompt := promptui.Select{
+					Label: "Triton Volume Type And Size",
+					Items: tritonVolumeSizes,
+					Templates: &promptui.SelectTemplates{
+						Label:    "{{ . }}?",
+						Active:   fmt.Sprintf(`%s {{ .Type | underline}}{{ " - " | underline }}{{ .Size | underline }}{{ "MB" | underline }}`, promptui.IconSelect),
+						Inactive: `  {{ .Type }} - {{ .Size }}MB`,
+						Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Volume Type And Size:" | bold}} {{ .Type }}{{ " - " }}{{ .Size }}MB`, promptui.IconGood),
+					},
+				}
+
+				i, _, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+
+				cfg.TritonVolumeSize = strconv.Itoa(tritonVolumeSizes[i].Size)
+				cfg.TritonVolumeType = tritonVolumeSizes[i].Type
+			}
+		}
+	}
+
 	// Get existing node names
 	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
@@ -316,4 +417,13 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	}
 
 	return newHostnames, nil
+}
+
+func isValidTritonVolumeSizeAndType(volumeSize, volumeType string) bool {
+	for _, volume := range tritonVolumeSizes {
+		if strconv.Itoa(volume.Size) == volumeSize && volume.Type == volumeType {
+			return true
+		}
+	}
+	return false
 }

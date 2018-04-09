@@ -6,6 +6,7 @@ import (
 	"os"
 
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/spf13/viper"
 )
 
 func RunTerraformApplyWithState(state state.State) error {
@@ -28,14 +29,17 @@ func RunTerraformApplyWithState(state state.State) error {
 		WorkingDir: tempDir,
 	}
 
+	terraformCmd := getTerraformCmd()
+	fmt.Printf("Using terraform binary: %s\n", terraformCmd)
+
 	// Run terraform init
-	err = RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform apply
-	err = RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
+	err = RunShellCommand(&shellOptions, terraformCmd, "apply", "-auto-approve")
 	if err != nil {
 		return err
 	}
@@ -63,18 +67,31 @@ func RunTerraformDestroyWithState(currentState state.State, args []string) error
 		WorkingDir: tempDir,
 	}
 
+	terraformCmd := getTerraformCmd()
+	fmt.Printf("Using terraform binary: %s\n", terraformCmd)
+
 	// Run terraform init
-	err = RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = RunShellCommand(&shellOptions, terraformCmd, "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform destroy
 	allArgs := append([]string{"destroy", "-force"}, args...)
-	err = RunShellCommand(&shellOptions, "terraform", allArgs...)
+	err = RunShellCommand(&shellOptions, terraformCmd, allArgs...)
 	if err != nil {
 		return err
 	}
 
 	return nil
+}
+
+// Returns the command to use to run terraform.
+// Returns the value of the terraform_binary config variable.
+// If that's not set, returns "terraform".
+func getTerraformCmd() string {
+	if viper.IsSet("terraform-binary") {
+		return viper.GetString("terraform-binary")
+	}
+	return "terraform"
 }
