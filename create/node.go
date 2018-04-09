@@ -184,8 +184,10 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 		return newGCPNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "azure":
 		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+	case "baremetal":
+		return newBareMetalNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	default:
-		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[0])
+		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[1])
 	}
 }
 
