@@ -14,29 +14,42 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
+variable k8s_version {
+  default = "v1.9.5-rancher1-1"
 }
 
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
+variable k8s_network_provider {
+  default = "flannel"
 }
 
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for Rancher images"
 }
 
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
 }
 
-variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
-  description = "The URL to the shell script to install the docker engine."
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
+
+variable "k8s_registry" {
+  default     = ""
+  description = "The docker registry to use for Kubernetes images"
+}
+
+variable "k8s_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "k8s_registry_password" {
+  default     = ""
+  description = "The password to use."
 }
 
 variable "triton_account" {
@@ -57,73 +70,4 @@ variable "triton_key_id" {
 variable "triton_url" {
   default     = ""
   description = "The CloudAPI endpoint URL. e.g. https://us-west-1.api.joyent.com"
-}
-
-variable "triton_network_names" {
-  type        = "list"
-  description = "List of Triton network names that the node(s) should be attached to."
-
-  default = [
-    "Joyent-SDC-Public",
-  ]
-}
-
-variable "triton_image_name" {
-  default     = "ubuntu-certified-16.04"
-  description = "The name of the Triton image to use."
-}
-
-variable "triton_image_version" {
-  default     = "20170619.1"
-  description = "The version/tag of the Triton image to use."
-}
-
-variable "triton_ssh_user" {
-  default     = "ubuntu"
-  description = "The ssh user to use."
-}
-
-variable "etcd_triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for Kubernetes etcd node(s). Defaults to k4-highcpu-kvm-1.75G."
-}
-
-variable "orchestration_triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for Kubernetes orchestration node(s). Defaults to k4-highcpu-kvm-1.75G."
-}
-
-variable "compute_triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for Kubernetes compute node(s). Defaults to k4-highcpu-kvm-1.75G."
-}
-
-variable "rancher_registry" {
-  default     = ""
-  description = "The docker registry to use for rancher images"
-}
-
-variable "rancher_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "rancher_registry_password" {
-  default     = ""
-  description = "The password to use."
-}
-
-variable "k8s_registry" {
-  default     = ""
-  description = "The docker registry to use for k8s images"
-}
-
-variable "k8s_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "k8s_registry_password" {
-  default     = ""
-  description = "The password to use."
 }

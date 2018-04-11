@@ -1,18 +1,9 @@
 output "masters" {
-  value = "${triton_machine.rancher_master.*.primaryip}"
+  value = "${triton_machine.rancher_master.primaryip}"
 }
 
 output "rancher_url" {
-  depends_on = ["triton_machine.rancher_proxy"]
-  value      = "${local.rancher_url}"
-}
-
-output "ssh_bastion_ip" {
-  value = "${element(coalescelist(triton_machine.rancher_ssh_bastion.*.primaryip, list("")), 0)}"
-}
-
-output "rancher_internal_url" {
-  value = "${local.rancher_internal_url}"
+  value = "https://${triton_machine.rancher_master.primaryip}"
 }
 
 output "rancher_access_key" {

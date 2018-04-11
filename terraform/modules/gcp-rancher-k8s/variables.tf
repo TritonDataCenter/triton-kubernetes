@@ -14,71 +14,17 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
+variable k8s_version {
+  default = "v1.9.5-rancher1-1"
 }
 
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
-  description = "The URL to the shell script to install the docker engine."
-}
-
-variable "gcp_path_to_credentials" {
-  description = "Location of GCP JSON credentials file."
-}
-
-variable "gcp_compute_region" {
-  description = "GCP region to host your network"
-}
-
-variable "gcp_project_id" {
-  description = "GCP project ID that will be running the instances and managing the network"
-}
-
-variable etcd_gcp_machine_type {
-  default     = "n1-standard-1"
-  description = "GCP machine type to launch the etcd instance with"
-}
-
-variable orchestration_gcp_machine_type {
-  default     = "n1-standard-1"
-  description = "GCP machine type to launch the orchestration instance with"
-}
-
-variable compute_gcp_machine_type {
-  default     = "n1-standard-1"
-  description = "GCP machine type to launch the compute instance with"
-}
-
-variable "gcp_instance_zone" {
-  description = "Zone to deploy GCP machine in"
-  default     = ""
-}
-
-variable "gcp_image" {
-  description = "GCP image to be used for instance"
-  default     = "ubuntu-1604-xenial-v20171121a"
+variable k8s_network_provider {
+  default = "flannel"
 }
 
 variable "rancher_registry" {
   default     = ""
-  description = "The docker registry to use for rancher images"
+  description = "The docker registry to use for Rancher images"
 }
 
 variable "rancher_registry_username" {
@@ -93,7 +39,7 @@ variable "rancher_registry_password" {
 
 variable "k8s_registry" {
   default     = ""
-  description = "The docker registry to use for k8s images"
+  description = "The docker registry to use for Kubernetes images"
 }
 
 variable "k8s_registry_username" {
@@ -104,4 +50,16 @@ variable "k8s_registry_username" {
 variable "k8s_registry_password" {
   default     = ""
   description = "The password to use."
+}
+
+variable "gcp_path_to_credentials" {
+  description = "Location of GCP JSON credentials file."
+}
+
+variable "gcp_compute_region" {
+  description = "GCP region to host your network"
+}
+
+variable "gcp_project_id" {
+  description = "GCP project ID that will be running the instances and managing the network"
 }
