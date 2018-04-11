@@ -22,11 +22,12 @@ type baseNodeTerraformConfig struct {
 	Hostname  string `json:"hostname"`
 	NodeCount int    `json:"-"`
 
-	RancherAPIURL        string                  `json:"rancher_api_url"`
-	RancherAccessKey     string                  `json:"rancher_access_key"`
-	RancherSecretKey     string                  `json:"rancher_secret_key"`
-	RancherEnvironmentID string                  `json:"rancher_environment_id"`
-	RancherHostLabels    rancherHostLabelsConfig `json:"rancher_host_labels"`
+	RancherAPIURL                   string                  `json:"rancher_api_url"`
+	RancherClusterRegistrationToken string                  `json:"rancher_cluster_registration_token"`
+	RancherClusterCAChecksum        string                  `json:"rancher_cluster_ca_checksum"`
+	RancherHostLabels               rancherHostLabelsConfig `json:"rancher_host_labels"`
+
+	RancherAgentImage string `json:"rancher_agent_image,omitempty"`
 
 	RancherRegistry         string `json:"rancher_registry,omitempty"`
 	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
@@ -34,9 +35,9 @@ type baseNodeTerraformConfig struct {
 }
 
 type rancherHostLabelsConfig struct {
-	Orchestration string `json:"orchestration,omitempty"`
-	Etcd          string `json:"etcd,omitempty"`
-	Compute       string `json:"compute,omitempty"`
+	Control string `json:"control,omitempty"`
+	Etcd    string `json:"etcd,omitempty"`
+	Worker  string `json:"worker,omitempty"`
 }
 
 func NewNode(remoteBackend backend.Backend) error {
@@ -171,7 +172,7 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 	// Determine which cloud the selected cluster is in and call the appropriate newNode func
 	parts := strings.Split(selectedClusterKey, "_")
 	if len(parts) < 3 {
-		// clusterKey is `cluster_{provider}_{hostname}`
+		// clusterKey is `cluster_{provider}_{clusterName}`
 		return []string{}, fmt.Errorf("Could not determine cloud provider for cluster '%s'", selectedClusterKey)
 	}
 
@@ -191,11 +192,11 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 
 func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, currentState state.State) (baseNodeTerraformConfig, error) {
 	cfg := baseNodeTerraformConfig{
-		RancherAPIURL:    "${module.cluster-manager.rancher_url}",
-		RancherAccessKey: "${module.cluster-manager.rancher_access_key}",
-		RancherSecretKey: "${module.cluster-manager.rancher_secret_key}",
+		RancherAPIURL:                   "${module.cluster-manager.rancher_url}",
+		RancherClusterRegistrationToken: fmt.Sprintf("${module.%s.rancher_cluster_registration_token}", selectedCluster),
+		RancherClusterCAChecksum:        fmt.Sprintf("${module.%s.rancher_cluster_ca_checksum}", selectedCluster),
 
-		RancherEnvironmentID: fmt.Sprintf("${module.%s.rancher_environment_id}", selectedCluster),
+		RancherAgentImage: currentState.Get("module.cluster-manager.rancher_agent_image"),
 
 		// Grab registry variables from cluster config
 		RancherRegistry:         currentState.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
@@ -218,9 +219,9 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 	// Rancher Host Label
 	selectedHostLabel := ""
 	hostLabelOptions := []string{
-		"compute",
+		"worker",
 		"etcd",
-		"orchestration",
+		"control",
 	}
 	if viper.IsSet("rancher_host_label") {
 		selectedHostLabel = viper.GetString("rancher_host_label")
@@ -245,21 +246,21 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 	}
 
 	switch selectedHostLabel {
-	case "compute":
-		cfg.RancherHostLabels.Compute = "true"
+	case "worker":
+		cfg.RancherHostLabels.Worker = "true"
 	case "etcd":
 		cfg.RancherHostLabels.Etcd = "true"
-	case "orchestration":
-		cfg.RancherHostLabels.Orchestration = "true"
+	case "control":
+		cfg.RancherHostLabels.Control = "true"
 	default:
-		return baseNodeTerraformConfig{}, fmt.Errorf("Invalid rancher_host_label '%s', must be 'compute', 'etcd' or 'orchestration'", selectedHostLabel)
+		return baseNodeTerraformConfig{}, fmt.Errorf("Invalid rancher_host_label '%s', must be 'worker', 'etcd' or 'control'", selectedHostLabel)
 	}
 
 	// Allow user to specify number of nodes to be created.
 	var countInput string
 	if viper.IsSet("node_count") {
 		countInput = viper.GetString("node_count")
-	} else if cfg.RancherHostLabels.Compute == "true" {
+	} else if cfg.RancherHostLabels.Worker == "true" {
 		prompt := promptui.Prompt{
 			Label: "Number of nodes to create",
 			Validate: func(input string) error {

@@ -25,15 +25,12 @@ type baseClusterTerraformConfig struct {
 
 	Name string `json:"name"`
 
-	EtcdNodeCount          string `json:"etcd_node_count"`
-	OrchestrationNodeCount string `json:"orchestration_node_count"`
-	ComputeNodeCount       string `json:"compute_node_count"`
-
-	KubernetesPlaneIsolation string `json:"k8s_plane_isolation"`
-
 	RancherAPIURL    string `json:"rancher_api_url"`
 	RancherAccessKey string `json:"rancher_access_key"`
 	RancherSecretKey string `json:"rancher_secret_key"`
+
+	KubernetesVersion         string `json:"k8s_version,omitempty"`
+	KubernetesNetworkProvider string `json:"k8s_network_provider,omitempty"`
 
 	RancherRegistry         string `json:"rancher_registry,omitempty"`
 	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
@@ -288,11 +285,6 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		RancherAPIURL:    "${module.cluster-manager.rancher_url}",
 		RancherAccessKey: "${module.cluster-manager.rancher_access_key}",
 		RancherSecretKey: "${module.cluster-manager.rancher_secret_key}",
-
-		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-		EtcdNodeCount:          "0",
-		OrchestrationNodeCount: "0",
-		ComputeNodeCount:       "0",
 	}
 
 	baseSource := defaultSourceURL
@@ -329,20 +321,20 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		return baseClusterTerraformConfig{}, errors.New("Invalid Cluster Name")
 	}
 
-	// Kubernetes Plane Isolation
-	if viper.IsSet("k8s_plane_isolation") {
-		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
+	// Kubernetes Version
+	if viper.IsSet("k8s_version") {
+		cfg.KubernetesVersion = viper.GetString("k8s_version")
 	} else if nonInteractiveMode {
-		return baseClusterTerraformConfig{}, errors.New("k8s_plane_isolation must be specified")
+		return baseClusterTerraformConfig{}, errors.New("k8s_version must be specified")
 	} else {
 		prompt := promptui.Select{
-			Label: "Kubernetes Plane Isolation",
-			Items: []string{"required", "none"},
+			Label: "Kubernetes Version",
+			Items: []string{"v1.8.10-rancher1-1", "v1.9.5-rancher1-1", "v1.10.0-rancher1-1"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
 				Inactive: `  {{ . }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "k8s Plane Isolation:" | bold}} {{ . }}`, promptui.IconGood),
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ . }}`, promptui.IconGood),
 			},
 		}
 
@@ -351,12 +343,32 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			return baseClusterTerraformConfig{}, err
 		}
 
-		cfg.KubernetesPlaneIsolation = value
+		cfg.KubernetesVersion = value
 	}
 
-	// Verify selected plane isolation is valid
-	if cfg.KubernetesPlaneIsolation != "required" && cfg.KubernetesPlaneIsolation != "none" {
-		return baseClusterTerraformConfig{}, fmt.Errorf("Invalid k8s_plane_isolation '%s', must be 'required' or 'none'", cfg.KubernetesPlaneIsolation)
+	// Kubernetes Network Provider
+	if viper.IsSet("k8s_network_provider") {
+		cfg.KubernetesNetworkProvider = viper.GetString("k8s_network_provider")
+	} else if nonInteractiveMode {
+		return baseClusterTerraformConfig{}, errors.New("k8s_network_provider must be specified")
+	} else {
+		prompt := promptui.Select{
+			Label: "Kubernetes Network Provider",
+			Items: []string{"calico", "flannel"},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Network Provider:" | bold}} {{ . }}`, promptui.IconGood),
+			},
+		}
+
+		_, value, err := prompt.Run()
+		if err != nil {
+			return baseClusterTerraformConfig{}, err
+		}
+
+		cfg.KubernetesNetworkProvider = value
 	}
 
 	// Rancher Docker Registry
