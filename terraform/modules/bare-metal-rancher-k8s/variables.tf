@@ -14,29 +14,17 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
+variable k8s_version {
+  default = "v1.9.5-rancher1-1"
 }
 
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
+variable k8s_network_provider {
+  default = "flannel"
 }
 
 variable "rancher_registry" {
   default     = ""
-  description = "The docker registry to use for rancher images"
+  description = "The docker registry to use for Rancher images"
 }
 
 variable "rancher_registry_username" {
@@ -51,7 +39,7 @@ variable "rancher_registry_password" {
 
 variable "k8s_registry" {
   default     = ""
-  description = "The docker registry to use for k8s images"
+  description = "The docker registry to use for Kubernetes images"
 }
 
 variable "k8s_registry_username" {
