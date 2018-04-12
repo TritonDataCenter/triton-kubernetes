@@ -15,6 +15,7 @@ eval "$(jq -r '@sh "rancher_api_url=\(.rancher_api_url) rancher_access_key=\(.ra
 cluster_id=''
 cluster_already_existed=false
 cluster_search=$(curl -X GET \
+	--silent \
 	--insecure \
 	-u $rancher_access_key:$rancher_secret_key \
 	-H 'Accept: application/json' \
@@ -25,12 +26,13 @@ if [ "$(echo $cluster_search | jq -r '.data | length')" != "0" ]; then
 	cluster_id=$(echo $cluster_search | jq -r '.data[0].id')
 else
 	k8s_registry_json=''
-	if [ $k8s_registry != "" ]; then
+	if [ "$k8s_registry" != "" ]; then
 		k8s_registry_json=',"privateRegistries":[{"url":"'$k8s_registry'","user":"'$k8s_registry_username'","password":"'$k8s_registry_password'"}]'
 	fi
 
 	# Create cluster
 	cluster_response=$(curl -X POST \
+		--silent \
 		--insecure \
 		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
@@ -40,11 +42,17 @@ else
 	cluster_id=$(echo $cluster_response | jq -r '.id')
 fi
 
+if [ "$cluster_id" == "" ] || [ "$cluster_id" == "null" ]; then
+	echo "Unable to create cluster!" >&2;
+	exit 1
+fi
+
 # Cluster registration token
 registration_token='';
 if [ "$cluster_already_existed" == true ]; then
 	# Get existing registration token
 	get_registration_token_response=$(curl -X GET \
+		--silent \
 		--insecure \
 		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
@@ -54,6 +62,7 @@ if [ "$cluster_already_existed" == true ]; then
 else
 	# Create cluster registration token
 	create_registration_token_response=$(curl -X POST \
+		--silent \
 		--insecure \
 		-u $rancher_access_key:$rancher_secret_key \
 		-H 'Accept: application/json' \
@@ -64,8 +73,14 @@ else
 	registration_token=$(echo $create_registration_token_response | jq -r '.token')
 fi
 
+if [ "$registration_token" == "" ] || [ "$registration_token" == "null" ]; then
+	echo "Unable to create cluster registration token!" >&2 ;
+	exit 1
+fi
+
 # Retrieve CA checksum
 cacerts_response=$(curl -X GET \
+	--silent \
 	--insecure \
 	-u $rancher_access_key:$rancher_secret_key \
 	-H 'Accept: application/json' \
