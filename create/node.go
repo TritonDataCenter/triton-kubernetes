@@ -321,6 +321,13 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Hostname prefix",
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("hostname prefix cannot be blank")
+				}
+
+				return nil
+			},
 		}
 
 		result, err := prompt.Run()

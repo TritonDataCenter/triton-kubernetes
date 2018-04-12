@@ -550,6 +550,13 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		prompt := promptui.Prompt{
 			Label: "Rancher Admin Password",
 			Mask:  '*',
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("password cannot be blank")
+				}
+
+				return nil
+			},
 		}
 
 		result, err := prompt.Run()

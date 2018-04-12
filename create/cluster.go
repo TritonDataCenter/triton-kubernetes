@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/shell"
@@ -308,6 +309,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	// Name
+	clusterNameRegexp := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$")
 	if viper.IsSet("name") {
 		cfg.Name = viper.GetString("name")
 	} else if nonInteractiveMode {
@@ -315,6 +317,13 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Cluster Name",
+			Validate: func(input string) error {
+				if !clusterNameRegexp.MatchString(input) {
+					return errors.New("A DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character")
+				}
+
+				return nil
+			},
 		}
 
 		result, err := prompt.Run()
@@ -324,7 +333,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		cfg.Name = result
 	}
 
-	if cfg.Name == "" {
+	if cfg.Name == "" || !clusterNameRegexp.MatchString(cfg.Name) {
 		return baseClusterTerraformConfig{}, errors.New("Invalid Cluster Name")
 	}
 
