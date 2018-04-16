@@ -140,7 +140,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		}
 
 		prompt := promptui.Select{
-			Label: "Make Cluster Manager Highly Available?",
+			Label: "Make Cluster Manager Highly Available",
 			Items: options,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
