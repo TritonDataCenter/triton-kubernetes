@@ -13,7 +13,7 @@ func TestGet(t *testing.T) {
 
 	dumyKey := stateObj.Get("config.triton.key")
 	if dumyKey != "55fd4s" {
-		t.Errorf("Object in state, got: %s, want: %s.", dumyKey, "")
+		t.Errorf("value in state object, got: %s, want: %s.", dumyKey, "")
 	}
 }
 
@@ -31,7 +31,7 @@ func TestAdd(t *testing.T) {
 
 	notEmptyPath := stateObj.Get("config.triton.dns")
 	if notEmptyPath != "aws-provider" {
-		t.Errorf("Value in state object, got: %s, want: %s", notEmptyPath, "aws-provider")
+		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "aws-provider")
 	}
 }
 
@@ -49,7 +49,7 @@ func TestDelete(t *testing.T) {
 
 	deletedKey := stateObj.Get("config.triton.key")
 	if deletedKey != "" {
-		t.Errorf("Object in state, got: %s, want: %s.", deletedKey, "")
+		t.Errorf("value in state object, got: %s, want: %s.", deletedKey, "")
 	}
 }
 
