@@ -345,7 +345,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else {
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",
-			Items: []string{"v1.8.10-rancher1-1", "v1.9.5-rancher1-1", "v1.10.0-rancher1-1"},
+			Items: []string{"v1.8.10", "v1.9.5", "v1.10.0"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
