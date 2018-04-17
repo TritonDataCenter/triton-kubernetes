@@ -8,7 +8,7 @@ while [ -z "$(command -v docker)" ]; do
 done
 
 # Wait for rancher_server_image to finish downloading
-printf 'Waiting for Rancher Server Image to download'
+printf 'Waiting for Rancher Server Image to download\n'
 while [ -z "$(sudo docker images -q ${rancher_server_image})" ]; do
 	printf '.'
 	sleep 5

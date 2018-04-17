@@ -545,10 +545,10 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	if viper.IsSet("rancher_admin_password") {
 		cfg.RancherAdminPassword = viper.GetString("rancher_admin_password")
 	} else if nonInteractiveMode {
-		return errors.New("rancher_admin_password must be specified")
+		return errors.New("UI Admin Password must be specified")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Rancher Admin Password",
+			Label: "Set UI Admin Password",
 			Mask:  '*',
 			Validate: func(input string) error {
 				if input == "" {
@@ -567,7 +567,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	}
 
 	if cfg.RancherAdminPassword == "" {
-		return errors.New("Invalid Rancher Admin password")
+		return errors.New("Invalid UI Admin password")
 	}
 
 	state, err := remoteBackend.State(cfg.Name)
