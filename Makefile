@@ -1,4 +1,5 @@
-VERSION=0.0.0
+VERSION=0.0.1
+LDFLAGS=-X  github.com/joyent/triton-kubernetes/cmd.cliVersion=$(VERSION)
 BUILD_PATH=build
 FILE_COMMAND=triton-kubernetes
 
@@ -31,7 +32,7 @@ build-osx: clean
 	@echo "Building OSX..."
 	@mkdir -p $(BUILD_PATH)
 	@GOOS=darwin GOARCH=amd64 go build -o $(OSX_BINARY_PATH)
-	go build -o $(BUILD_PATH)/$(FILE_COMMAND)
+	go build -v -ldflags="$(LDFLAGS)" -o $(BUILD_PATH)/$(FILE_COMMAND)
 	@zip --junk-paths $(OSX_ARCHIVE_PATH) $(OSX_BINARY_PATH)
 
 build-linux: clean
