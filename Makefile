@@ -25,10 +25,13 @@ build: clean build-osx build-linux build-rpm build-deb
 	@echo "Generating checksums..."
 	@cd build; shasum -a 256 * > sha256-checksums.txt
 
+build-local: clean build-osx
+
 build-osx: clean
 	@echo "Building OSX..."
 	@mkdir -p $(BUILD_PATH)
 	@GOOS=darwin GOARCH=amd64 go build -o $(OSX_BINARY_PATH)
+	go build -o $(BUILD_PATH)/$(FILE_COMMAND)
 	@zip --junk-paths $(OSX_ARCHIVE_PATH) $(OSX_BINARY_PATH)
 
 build-linux: clean
@@ -73,3 +76,5 @@ build-deb: build-linux
 		--package $(DEB_PATH) triton-kubernetes
 #	Cleaning up the tmp directory
 	@rm -rf $(DEB_TMP_DIR)
+
+	
