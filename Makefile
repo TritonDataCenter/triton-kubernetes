@@ -1,5 +1,5 @@
 VERSION=0.0.1
-LDFLAGS=-X  github.com/joyent/triton-kubernetes/cmd.cliVersion=$(VERSION)
+LDFLAGS=-X github.com/joyent/triton-kubernetes/cmd.cliVersion=$(shell git rev-list -1 HEAD)
 BUILD_PATH=build
 FILE_COMMAND=triton-kubernetes
 
