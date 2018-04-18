@@ -14,26 +14,6 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
-}
-
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
-}
-
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
-}
-
 variable "rancher_registry" {
   default     = ""
   description = "The docker registry to use for rancher images"
@@ -64,30 +44,38 @@ variable "k8s_registry_password" {
   description = "The password to use."
 }
 
-variable "vsphere_user" {
+variable "k8s_version" {
+  default = "v1.9.5-rancher1-1"
+}
 
+variable "k8s_network_provider" {
+  default = "flannel"
+}
+
+variable "vsphere_user" {
+  description = "The username of the vCenter Server user."
 }
 
 variable "vsphere_password" {
-
+  description = "The password of the vCenter Server user."
 }
 
 variable "vsphere_server" {
-
+  description = "The IP address or FQDN of the vCenter Server."
 }
 
 variable "vsphere_datacenter_name" {
-
+  description = "Name of the datacenter to use."
 }
 
 variable "vsphere_datastore_name" {
-
+  description = "Name of the datastore to use."
 }
 
 variable "vsphere_resource_pool_name" {
-
+  description = "Name of the resource pool to use."
 }
 
 variable "vsphere_network_name" {
-  
+  description = "Name of the network to use."
 }

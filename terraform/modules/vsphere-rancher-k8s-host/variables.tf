@@ -6,21 +6,18 @@ variable "rancher_api_url" {
   description = ""
 }
 
-variable "rancher_access_key" {
-  description = ""
-}
+variable "rancher_cluster_registration_token" {}
 
-variable "rancher_secret_key" {
-  description = ""
-}
-
-variable "rancher_environment_id" {
-  description = "The ID of the Rancher environment this host should register itself to"
-}
+variable "rancher_cluster_ca_checksum" {}
 
 variable "rancher_host_labels" {
   type        = "map"
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
+}
+
+variable "rancher_agent_image" {
+  default     = "rancher/agent:v2.0.0-beta2"
+  description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
 variable "rancher_registry" {
@@ -43,21 +40,44 @@ variable "docker_engine_install_url" {
   description = "The URL to the shell script to install the docker engine."
 }
 
+variable "vsphere_user" {
+  description = "The username of the vCenter Server user."
+}
+
+variable "vsphere_password" {
+  description = "The password of the vCenter Server user."
+}
+
+variable "vsphere_server" {
+  description = "The IP address or FQDN of the vCenter Server."
+}
+
+variable "vsphere_datacenter_name" {
+  description = "Name of the datacenter to use."
+}
+
+variable "vsphere_datastore_name" {
+  description = "Name of the datastore to use."
+}
+
+variable "vsphere_resource_pool_name" {
+  description = "Name of the resource pool to use."
+}
+
+variable "vsphere_network_name" {
+  description = "Name of the network to use."
+}
+
+variable "vsphere_template_name" {
+  description = "VM template to use."
+}
+
 variable "ssh_user" {
-  default = "ubuntu"
-  description = ""
-}
-
-variable "host" {
-  description = ""
-}
-
-variable "bastion_host" {
-  default = ""
+  default     = "ubuntu"
   description = ""
 }
 
 variable "key_path" {
-  default = "~/.ssh/id_rsa"
+  default     = "~/.ssh/id_rsa"
   description = ""
 }

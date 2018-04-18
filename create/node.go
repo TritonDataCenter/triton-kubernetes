@@ -187,6 +187,8 @@ func newNode(selectedClusterManager, selectedClusterKey string, remoteBackend ba
 		return newAzureNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	case "baremetal":
 		return newBareMetalNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
+	case "vsphere":
+		return newVSphereNode(selectedClusterManager, selectedClusterKey, remoteBackend, currentState)
 	default:
 		return []string{}, fmt.Errorf("Unsupported cloud provider '%s', cannot create node", parts[1])
 	}
