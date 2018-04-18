@@ -75,3 +75,37 @@ func TestGetClusters(t *testing.T) {
 		t.Errorf("wrong length of map: %v", len(clusterMap))
 	}
 }
+
+
+func TestGetNodes(t *testing.T) {
+
+	clusterStateObj, err := New("ClusterState", []byte(`{"config":{"triton":{"key":"cluster_triton_dev-cluster","url":"https://api.storage.com"}}}`))
+
+
+	clusterKeyString := clusterStateObj.Get("config.triton.key")
+
+	stateObj, err := New("NodeState", []byte(`{
+    "module":{
+      "node_triton_dev-cluster_1":{"hostname":"dev-worker1"},
+      "node_triton_dev-cluster_2":{"hostname":"dev-etcd1"},
+      "node_triton_dev-cluster_3":{"hostname":"dev-control1"},
+      "node_aws_dev-cluster_1":{"hostname":"dev-control2"},
+	  "node_aws_dev-cluster_2":{"hostname":"dev-control3"}
+    }
+    }`))
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	nodeMap, err := stateObj.Nodes(clusterKeyString)
+
+	if err != nil {
+		t.Error(err)
+	}
+
+	if len(nodeMap) != 3 {
+		t.Errorf("wrong length of map: %v", len(nodeMap))
+	}
+
+}
