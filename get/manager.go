@@ -28,7 +28,7 @@ func GetManager(remoteBackend backend.Backend) error {
 	if viper.IsSet("cluster_manager") {
 		selectedClusterManager = viper.GetString("cluster_manager")
 	} else if nonInteractiveMode {
-		return errors.New("cluster_manager must be specified")
+		return errors.New("Cluster manager must be specified")
 	} else {
 		prompt := promptui.Select{
 			Label: "Cluster Manager",
