@@ -2,7 +2,6 @@ package create
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"fmt"
 	"io/ioutil"
@@ -370,13 +369,4 @@ func isValidDiskType(validDiskTypes []*compute.DiskType, diskTypeName string) bo
 		}
 	}
 	return false
-}
-
-func printCfgForTesting(cfg gcpNodeTerraformConfig) error {
-	jsonCfg, err := json.Marshal(cfg)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(jsonCfg))
-	return nil
 }
