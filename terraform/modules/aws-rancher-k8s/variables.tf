@@ -14,29 +14,42 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
+variable k8s_version {
+  default = "v1.9.5-rancher1-1"
 }
 
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
+variable k8s_network_provider {
+  default = "flannel"
 }
 
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for Rancher images"
 }
 
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
 }
 
-variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
-  description = "The URL to the shell script to install the docker engine."
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
+
+variable "k8s_registry" {
+  default     = ""
+  description = "The docker registry to use for Kubernetes images"
+}
+
+variable "k8s_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "k8s_registry_password" {
+  default     = ""
+  description = "The password to use."
 }
 
 variable "aws_access_key" {
@@ -73,49 +86,4 @@ variable "aws_public_key_path" {
 
 variable "aws_key_name" {
   description = "Name of the public key to be used for provisioning"
-}
-
-variable "etcd_aws_instance_type" {
-  default     = "t2.micro"
-  description = "The AWS instance type to use for Kubernetes etcd node(s). Defaults to t2.micro."
-}
-
-variable "orchestration_aws_instance_type" {
-  default     = "t2.micro"
-  description = "The AWS instance type to use for Kubernetes orchestration node(s). Defaults to t2.micro."
-}
-
-variable "compute_aws_instance_type" {
-  default     = "t2.micro"
-  description = "The AWS instance type to use for Kubernetes compute node(s). Defaults to t2.micro."
-}
-
-variable "rancher_registry" {
-  default     = ""
-  description = "The docker registry to use for rancher images"
-}
-
-variable "rancher_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "rancher_registry_password" {
-  default     = ""
-  description = "The password to use."
-}
-
-variable "k8s_registry" {
-  default     = ""
-  description = "The docker registry to use for k8s images"
-}
-
-variable "k8s_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "k8s_registry_password" {
-  default     = ""
-  description = "The password to use."
 }

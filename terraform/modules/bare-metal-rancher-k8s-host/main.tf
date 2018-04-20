@@ -1,20 +1,3 @@
-provider "triton" {
-  account      = "${var.triton_account}"
-  key_material = "${file(var.triton_key_path)}"
-  key_id       = "${var.triton_key_id}"
-  url          = "${var.triton_url}"
-}
-
-data "triton_network" "networks" {
-  count = "${length(var.triton_network_names)}"
-  name  = "${element(var.triton_network_names, count.index)}"
-}
-
-data "triton_image" "image" {
-  name    = "${var.triton_image_name}"
-  version = "${var.triton_image_version}"
-}
-
 locals {
   rancher_node_role = "${element(keys(var.rancher_host_labels), 0)}"
 }
@@ -38,22 +21,22 @@ data "template_file" "install_rancher_agent" {
   }
 }
 
-resource "triton_machine" "host" {
-  package = "${var.triton_machine_package}"
-  image   = "${data.triton_image.image.id}"
-  name    = "${var.hostname}"
-
-  user_script = "${data.template_file.install_rancher_agent.rendered}"
-
-  networks = ["${data.triton_network.networks.*.id}"]
-
-  cns = {
-    services = ["${element(keys(var.rancher_host_labels), 0)}.${var.hostname}"]
+resource "null_resource" "install_rancher_agent" {
+  triggers {
+    host = "${var.host}"
   }
 
-  affinity = ["role!=~${element(keys(var.rancher_host_labels), 0)}"]
+  connection {
+    type         = "ssh"
+    user         = "${var.ssh_user}"
+    bastion_host = "${var.bastion_host}"
+    host         = "${var.host}"
+    private_key  = "${file(var.key_path)}"
+  }
 
-  tags = {
-    role = "${element(keys(var.rancher_host_labels), 0)}"
+  provisioner "remote-exec" {
+    inline = <<EOF
+      ${data.template_file.install_rancher_agent.rendered}
+      EOF
   }
 }

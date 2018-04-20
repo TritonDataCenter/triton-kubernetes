@@ -83,19 +83,26 @@ func (state *State) Clusters() (map[string]string, error) {
 func (state *State) Nodes(clusterKey string) (map[string]string, error) {
 	result := map[string]string{}
 
+	parts := strings.Split(clusterKey, "_")
+	if len(parts) < 3 {
+		// clusterKey is `cluster_{provider}_{clusterName}`
+		return result, fmt.Errorf("Could not determine cloud provider for cluster '%s'", clusterKey)
+	}
+
+	cloudProvider := parts[1]
+	clusterName := parts[2]
+
+	// Nodes are named `node_{provider}_{clusterName}-{nodeName}-{nodeNumber}
+	// nodePrefix is `node_{provider}_{clusterName}`
+	nodePrefix := fmt.Sprintf("node_%s_%s", cloudProvider, clusterName)
+
 	children, err := state.configJSON.S("module").ChildrenMap()
 	if err != nil {
 		return nil, err
 	}
 
 	for key, child := range children {
-		if strings.Index(key, "node_") == 0 {
-			// Ignoring node if it doesn't belong to the cluster
-			envID, ok := child.Path("rancher_environment_id").Data().(string)
-			if !ok || !strings.Contains(envID, fmt.Sprintf(".%s.", clusterKey)) {
-				continue
-			}
-
+		if strings.Index(key, nodePrefix) == 0 {
 			// Retrieving hostname
 			hostname, ok := child.Path("hostname").Data().(string)
 			if !ok {

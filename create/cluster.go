@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/shell"
@@ -25,15 +26,12 @@ type baseClusterTerraformConfig struct {
 
 	Name string `json:"name"`
 
-	EtcdNodeCount          string `json:"etcd_node_count"`
-	OrchestrationNodeCount string `json:"orchestration_node_count"`
-	ComputeNodeCount       string `json:"compute_node_count"`
-
-	KubernetesPlaneIsolation string `json:"k8s_plane_isolation"`
-
 	RancherAPIURL    string `json:"rancher_api_url"`
 	RancherAccessKey string `json:"rancher_access_key"`
 	RancherSecretKey string `json:"rancher_secret_key"`
+
+	KubernetesVersion         string `json:"k8s_version,omitempty"`
+	KubernetesNetworkProvider string `json:"k8s_network_provider,omitempty"`
 
 	RancherRegistry         string `json:"rancher_registry,omitempty"`
 	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
@@ -106,7 +104,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
-			Items: []string{"Triton", "AWS", "GCP", "Azure"},
+			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -134,6 +132,8 @@ func NewCluster(remoteBackend backend.Backend) error {
 		clusterName, err = newGCPCluster(remoteBackend, currentState)
 	case "azure":
 		clusterName, err = newAzureCluster(remoteBackend, currentState)
+	case "baremetal":
+		clusterName, err = newBareMetalCluster(remoteBackend, currentState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
@@ -198,6 +198,11 @@ func NewCluster(remoteBackend backend.Backend) error {
 				viper.Set("azure_size", nodeToAdd["azure_size"])
 				viper.Set("azure_ssh_user", nodeToAdd["azure_ssh_user"])
 				viper.Set("azure_public_key_path", nodeToAdd["azure_public_key_path"])
+			} else if selectedCloudProvider == "baremetal" {
+				viper.Set("ssh_user", nodeToAdd["ssh_user"])
+				viper.Set("key_path", nodeToAdd["key_path"])
+				viper.Set("bastion_host", nodeToAdd["bastion_host"])
+				viper.Set("hosts", nodeToAdd["hosts"])
 			}
 
 			// Create the new node
@@ -288,11 +293,6 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		RancherAPIURL:    "${module.cluster-manager.rancher_url}",
 		RancherAccessKey: "${module.cluster-manager.rancher_access_key}",
 		RancherSecretKey: "${module.cluster-manager.rancher_secret_key}",
-
-		// Set node counts to 0 since we manage nodes individually in triton-kubernetes cli
-		EtcdNodeCount:          "0",
-		OrchestrationNodeCount: "0",
-		ComputeNodeCount:       "0",
 	}
 
 	baseSource := defaultSourceURL
@@ -309,6 +309,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	// Name
+	clusterNameRegexp := regexp.MustCompile("^[a-z0-9]([-a-z0-9]*[a-z0-9])?(\\.[a-z0-9]([-a-z0-9]*[a-z0-9])?)*$")
 	if viper.IsSet("name") {
 		cfg.Name = viper.GetString("name")
 	} else if nonInteractiveMode {
@@ -316,6 +317,13 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Cluster Name",
+			Validate: func(input string) error {
+				if !clusterNameRegexp.MatchString(input) {
+					return errors.New("A DNS-1123 subdomain must consist of lower case alphanumeric characters, '-' or '.', and must start and end with an alphanumeric character")
+				}
+
+				return nil
+			},
 		}
 
 		result, err := prompt.Run()
@@ -325,24 +333,24 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		cfg.Name = result
 	}
 
-	if cfg.Name == "" {
+	if cfg.Name == "" || !clusterNameRegexp.MatchString(cfg.Name) {
 		return baseClusterTerraformConfig{}, errors.New("Invalid Cluster Name")
 	}
 
-	// Kubernetes Plane Isolation
-	if viper.IsSet("k8s_plane_isolation") {
-		cfg.KubernetesPlaneIsolation = viper.GetString("k8s_plane_isolation")
+	// Kubernetes Version
+	if viper.IsSet("k8s_version") {
+		cfg.KubernetesVersion = viper.GetString("k8s_version")
 	} else if nonInteractiveMode {
-		return baseClusterTerraformConfig{}, errors.New("k8s_plane_isolation must be specified")
+		return baseClusterTerraformConfig{}, errors.New("k8s_version must be specified")
 	} else {
 		prompt := promptui.Select{
-			Label: "Kubernetes Plane Isolation",
-			Items: []string{"required", "none"},
+			Label: "Kubernetes Version",
+			Items: []string{"v1.8.10", "v1.9.5", "v1.10.0"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
 				Inactive: `  {{ . }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "k8s Plane Isolation:" | bold}} {{ . }}`, promptui.IconGood),
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ . }}`, promptui.IconGood),
 			},
 		}
 
@@ -351,12 +359,32 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			return baseClusterTerraformConfig{}, err
 		}
 
-		cfg.KubernetesPlaneIsolation = value
+		cfg.KubernetesVersion = value
 	}
 
-	// Verify selected plane isolation is valid
-	if cfg.KubernetesPlaneIsolation != "required" && cfg.KubernetesPlaneIsolation != "none" {
-		return baseClusterTerraformConfig{}, fmt.Errorf("Invalid k8s_plane_isolation '%s', must be 'required' or 'none'", cfg.KubernetesPlaneIsolation)
+	// Kubernetes Network Provider
+	if viper.IsSet("k8s_network_provider") {
+		cfg.KubernetesNetworkProvider = viper.GetString("k8s_network_provider")
+	} else if nonInteractiveMode {
+		return baseClusterTerraformConfig{}, errors.New("k8s_network_provider must be specified")
+	} else {
+		prompt := promptui.Select{
+			Label: "Kubernetes Network Provider",
+			Items: []string{"calico", "flannel"},
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Network Provider:" | bold}} {{ . }}`, promptui.IconGood),
+			},
+		}
+
+		_, value, err := prompt.Run()
+		if err != nil {
+			return baseClusterTerraformConfig{}, err
+		}
+
+		cfg.KubernetesNetworkProvider = value
 	}
 
 	// Rancher Docker Registry

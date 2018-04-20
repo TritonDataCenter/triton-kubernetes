@@ -2,69 +2,46 @@
 
 # Wait for Rancher UI to boot
 printf 'Waiting for Rancher to start'
-until $(curl --output /dev/null --silent --head --fail ${rancher_host}); do
+until $(curl --output /dev/null --silent --head --insecure --fail ${rancher_host}); do
     printf '.'
     sleep 5
 done
 
 sudo apt-get install jq -y || sudo yum install jq -y
 
-# Setup api.host
-curl -X PUT \
+# Login as default admin user
+login_response=$(curl -X POST \
+	--insecure \
+	-d '{"description":"Initial Token", "password":"admin", "ttl": 60000, "username":"admin"}' \
+	'${rancher_host}/v3-public/localProviders/local?action=login')
+initial_token=$(echo $login_response | jq -r '.token')
+
+# Create token
+token_response=$(curl -X POST \
+	--insecure \
+	-u $initial_token \
 	-H 'Accept: application/json' \
 	-H 'Content-Type: application/json' \
-	-d '{"id":"api.host","type":"activeSetting","baseType":"setting","name":"api.host","activeValue":null,"inDb":false,"source":null,"value":"${host_registration_url}"}' \
-	'${rancher_host}/v2-beta/settings/api.host'
+	-d '{"expired":false,"isDerived":false,"ttl":0,"type":"token","description":"Managed by Terraform","name":"triton-kubernetes"}' \
+	'${rancher_host}/v3/token')
+echo $token_response > ~/rancher_api_key
+access_key=$(echo $token_response | jq -r '.name')
+secret_key=$(echo $token_response | jq -r '.token' | cut -d: -f2)
 
-# Update default registry to private registry if requested
-if [ "${rancher_registry}" != "" ]; then
-	curl -X PUT \
-		-H 'Accept: application/json' \
-		-H 'Content-Type: application/json' \
-		-d '{"id":"registry.default","type":"activeSetting","baseType":"setting","name":"registry.default","activeValue":"","inDb":false,"source":"Code Packaged Defaults","value":"${rancher_registry}"}' \
-		'${rancher_host}/v2-beta/settings/registry.default'
-fi
-
-# Update default catalogs (library/community) to point directly to github repos
-curl -X PUT \
-	-H 'Accept: application/json' \
-	-H 'Content-Type: application/json' \
-	-d '{"activeValue":"{\"catalogs\":{\"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}, \"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\", \"branch\":\"master\"}}}", "id":"catalog.url", "name":"catalog.url", "source":"Database", "value":"{\"catalogs\":{\"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}, \"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\", \"branch\":\"master\"}}}"}' \
-	'${rancher_host}/v2-beta/settings/catalog.url'
-curl -X PUT \
-	-H 'Accept: application/json' \
-	-H 'Content-Type: application/json' \
-	-d '{"activeValue":"{\"catalogs\":{\"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\", \"branch\":\"master\"}, \"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}}}", "id":"default.cattle.catalog.url", "name":"default.cattle.catalog.url", "source":"Environment Variables", "value":"{\"catalogs\":{\"community\":{\"url\":\"https://github.com/rancher/community-catalog.git\",\"branch\":\"master\"}, \"library\":{\"url\":\"https://github.com/rancher/rancher-catalog.git\", \"branch\":\"v1.6-release\"}}}"}' \
-	'${rancher_host}/v2-beta/settings/default.cattle.catalog.url'
-
-# Delete default cattle environment
+# Change default admin password
 curl -X POST \
+	--insecure \
+	-u $access_key:$secret_key \
 	-H 'Accept: application/json' \
 	-H 'Content-Type: application/json' \
-	-d '{}' \
-	'${rancher_host}/v2-beta/projects/1a5/?action=deactivate'
+	-d '{"currentPassword":"admin","newPassword":"${rancher_admin_password}"}' \
+	'${rancher_host}/v3/users?action=changepassword'
 
-sleep 5
-
-curl -X DELETE \
+# Setup server url
+curl -X PUT \
+	--insecure \
+	-u $access_key:$secret_key \
 	-H 'Accept: application/json' \
 	-H 'Content-Type: application/json' \
-	-d '{}' \
-	'${rancher_host}/v2-beta/projects/1a5/?action=delete'
-
-# Create API Key before turning on local authentication
-# Save output from request to ~/rancher_api_key so we can retrieve it later
-echo "Creating api key..."
-curl -X POST \
-    -H 'Accept: application/json' \
-    -H 'Content-Type: application/json' \
-    -d '{"accountId": "1a1", "name": "terraform_api_key"}' \
-'${rancher_host}/v2-beta/apikeys' > ~/rancher_api_key
-
-# Ensure local authentication is set up with hardcoded username and password
-echo "Configuring local authentication..."
-curl -X POST \
-    -H 'Accept: application/json' \
-    -H 'Content-Type: application/json' \
-    -d '{"enabled": true, "password": "${rancher_admin_password}", "username": "${rancher_admin_username}"}' \
-'${rancher_host}/v2-beta/localauthconfig'
+	-d '{"baseType": "setting", "id": "server-url", "name": "server-url", "type": "setting", "value": "${host_registration_url}" }' \
+	'${rancher_host}/v3/settings/server-url'

@@ -51,23 +51,3 @@ variable "k8s_registry_password" {
   default     = ""
   description = "The password to use."
 }
-
-variable "triton_account" {
-  default     = ""
-  description = "The Triton account name, usually the username of your root user."
-}
-
-variable "triton_key_path" {
-  default     = ""
-  description = "The path to a private key that is authorized to communicate with the Triton API."
-}
-
-variable "triton_key_id" {
-  default     = ""
-  description = "The md5 fingerprint of the key at triton_key_path. Obtained by running `ssh-keygen -E md5 -lf ~/path/to.key`"
-}
-
-variable "triton_url" {
-  default     = ""
-  description = "The CloudAPI endpoint URL. e.g. https://us-west-1.api.joyent.com"
-}

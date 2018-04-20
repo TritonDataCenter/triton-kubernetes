@@ -40,58 +40,21 @@ variable "docker_engine_install_url" {
   description = "The URL to the shell script to install the docker engine."
 }
 
-variable "azure_subscription_id" {}
-
-variable "azure_client_id" {}
-
-variable "azure_client_secret" {}
-
-variable "azure_tenant_id" {}
-
-variable "azure_environment" {
-  default = "public"
+variable "ssh_user" {
+  default = "ubuntu"
+  description = ""
 }
 
-variable "azure_location" {}
-
-variable "azure_resource_group_name" {}
-
-variable "azure_network_security_group_id" {}
-
-variable "azure_subnet_id" {}
-
-variable "azure_size" {
-  default = "Standard_A0"
+variable "host" {
+  description = ""
 }
 
-variable "azure_image_publisher" {
-  default = "Canonical"
-}
-
-variable "azure_image_offer" {
-  default = "UbuntuServer"
-}
-
-variable "azure_image_sku" {
-  default = "16.04-LTS"
-}
-
-variable "azure_image_version" {
-  default = "latest"
-}
-
-variable "azure_ssh_user" {
-  default = "root"
-}
-
-variable "azure_public_key_path" {
-  default = "~/.ssh/id_rsa.pub"
-}
-
-variable "azure_disk_mount_path" {
+variable "bastion_host" {
   default = ""
+  description = ""
 }
 
-variable "azure_disk_size" {
-  default = ""
+variable "key_path" {
+  default = "~/.ssh/id_rsa"
+  description = ""
 }

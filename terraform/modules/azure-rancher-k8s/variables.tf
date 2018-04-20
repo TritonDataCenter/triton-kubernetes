@@ -14,29 +14,42 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "k8s_plane_isolation" {
-  default     = "none"
-  description = "Plane isolation of the Kubernetes cluster. required or none"
+variable k8s_version {
+  default = "v1.9.5-rancher1-1"
 }
 
-variable "etcd_node_count" {
-  default     = "3"
-  description = "The number of etcd node(s) to initialize in the Kubernetes cluster."
+variable k8s_network_provider {
+  default = "flannel"
 }
 
-variable "orchestration_node_count" {
-  default     = "3"
-  description = "The number of orchestration node(s) to initialize in the Kubernetes cluster."
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for Rancher images"
 }
 
-variable "compute_node_count" {
-  default     = "3"
-  description = "The number of compute node(s) to initialize in the Kubernetes cluster."
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
 }
 
-variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
-  description = "The URL to the shell script to install the docker engine."
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
+
+variable "k8s_registry" {
+  default     = ""
+  description = "The docker registry to use for Kubernetes images"
+}
+
+variable "k8s_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "k8s_registry_password" {
+  default     = ""
+  description = "The password to use."
 }
 
 variable "azure_subscription_id" {
@@ -79,14 +92,6 @@ variable "azure_image_version" {
   default = "latest"
 }
 
-variable "azure_ssh_user" {
-  default = "root"
-}
-
-variable "azure_public_key_path" {
-  default = "~/.ssh/id_rsa.pub"
-}
-
 variable "azure_virtual_network_name" {
   default = "k8s-network"
 }
@@ -105,46 +110,4 @@ variable "azure_subnet_address_prefix" {
 
 variable "azurerm_network_security_group_name" {
   default = "k8s-firewall"
-}
-
-variable "etcd_azure_size" {
-  default = "Standard_A0"
-}
-
-variable "orchestration_azure_size" {
-  default = "Standard_A0"
-}
-
-variable "compute_azure_size" {
-  default = "Standard_A0"
-}
-
-variable "rancher_registry" {
-  default     = ""
-  description = "The docker registry to use for rancher images"
-}
-
-variable "rancher_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "rancher_registry_password" {
-  default     = ""
-  description = "The password to use."
-}
-
-variable "k8s_registry" {
-  default     = ""
-  description = "The docker registry to use for k8s images"
-}
-
-variable "k8s_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "k8s_registry_password" {
-  default     = ""
-  description = "The password to use."
 }

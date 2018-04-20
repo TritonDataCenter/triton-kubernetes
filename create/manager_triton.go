@@ -7,19 +7,18 @@ import (
 	"io/ioutil"
 	"os"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/shell"
 	"github.com/joyent/triton-kubernetes/util"
-	homedir "github.com/mitchellh/go-homedir"
 
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"
 	"github.com/joyent/triton-go/compute"
 	"github.com/joyent/triton-go/network"
 	"github.com/manifoldco/promptui"
+	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"
 )
 
@@ -32,36 +31,25 @@ const (
 type tritonManagerTerraformConfig struct {
 	Source string `json:"source"`
 
-	Name            string `json:"name"`
-	HA              bool   `json:"ha"`
-	MasterNodeCount int    `json:"gcm_node_count"`
+	Name string `json:"name"`
 
 	TritonAccount string `json:"triton_account"`
 	TritonKeyPath string `json:"triton_key_path"`
 	TritonKeyID   string `json:"triton_key_id"`
 	TritonURL     string `json:"triton_url,omitempty"`
 
-	GCMPrivateNetworkName      string   `json:"gcm_private_network_name,omitempty"`
 	TritonNetworkNames         []string `json:"triton_network_names,omitempty"`
 	TritonImageName            string   `json:"triton_image_name,omitempty"`
 	TritonImageVersion         string   `json:"triton_image_version,omitempty"`
 	TritonSSHUser              string   `json:"triton_ssh_user,omitempty"`
 	MasterTritonMachinePackage string   `json:"master_triton_machine_package,omitempty"`
 
-	TritonMySQLImageName        string `json:"triton_mysql_image_name,omitempty"`
-	TritonMySQLImageVersion     string `json:"triton_mysql_image_version,omitempty"`
-	MySQLDBTritonMachinePackage string `json:"mysqldb_triton_machine_package,omitempty"`
-
-	RancherAdminUsername      string `json:"rancher_admin_username,omitempty"`
-	RancherAdminPassword      string `json:"rancher_admin_password,omitempty"`
-	RancherServerImage        string `json:"rancher_server_image,omitempty"`
-	RancherAgentImage         string `json:"rancher_agent_image,omitempty"`
-	RancherRegistry           string `json:"rancher_registry,omitempty"`
-	RancherRegistryUsername   string `json:"rancher_registry_username,omitempty"`
-	RancherRegistryPassword   string `json:"rancher_registry_password,omitempty"`
-	RancherTLSPrivateKeyPath  string `json:"rancher_tls_private_key_path"`
-	RancherTLSCertificatePath string `json:"rancher_tls_cert_path"`
-	RancherDomainName         string `json:"rancher_domain_name"`
+	RancherAdminPassword    string `json:"rancher_admin_password,omitempty"`
+	RancherServerImage      string `json:"rancher_server_image,omitempty"`
+	RancherAgentImage       string `json:"rancher_agent_image,omitempty"`
+	RancherRegistry         string `json:"rancher_registry,omitempty"`
+	RancherRegistryUsername string `json:"rancher_registry_username,omitempty"`
+	RancherRegistryPassword string `json:"rancher_registry_password,omitempty"`
 }
 
 func NewTritonManager(remoteBackend backend.Backend) error {
@@ -117,85 +105,6 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	}
 	if found {
 		return fmt.Errorf("A Cluster Manager with the name '%s' already exists.", cfg.Name)
-	}
-
-	// HA
-	if viper.IsSet("ha") {
-		cfg.HA = viper.GetBool("ha")
-	} else if nonInteractiveMode {
-		return errors.New("ha must be specified")
-	} else {
-		options := []struct {
-			Name  string
-			Value bool
-		}{
-			{
-				"Yes",
-				true,
-			},
-			{
-				"No",
-				false,
-			},
-		}
-
-		prompt := promptui.Select{
-			Label: "Make Cluster Manager Highly Available?",
-			Items: options,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-				Inactive: "  {{.Name}}",
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Highly Available:" | bold}} {{ .Name }}`, promptui.IconGood),
-			},
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.HA = options[i].Value
-	}
-
-	if !cfg.HA {
-		cfg.MasterNodeCount = 1
-	} else {
-		// HA enabled, ask user how many master nodes
-		if viper.IsSet("gcm_node_count") {
-			cfg.MasterNodeCount = viper.GetInt("gcm_node_count")
-		} else if nonInteractiveMode {
-			return errors.New("gcm_node_count must be specified")
-		} else {
-			prompt := promptui.Prompt{
-				Label: "How many master nodes",
-				Validate: func(input string) error {
-					masterNodeCount, err := strconv.Atoi(input)
-					if err != nil {
-						return err
-					}
-
-					if masterNodeCount < 2 {
-						return errors.New("Minimum nodes for HA is 2")
-					}
-
-					return nil
-				},
-				Default: "2",
-			}
-
-			result, err := prompt.Run()
-			if err != nil {
-				return err
-			}
-
-			masterNodeCount, err := strconv.Atoi(result)
-			if err != nil {
-				return err
-			}
-
-			cfg.MasterNodeCount = masterNodeCount
-		}
 	}
 
 	// Rancher Docker Registry
@@ -427,47 +336,8 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		validNetworksSlice = append(validNetworksSlice, validNetwork.Name)
 	}
 
-	// GCM Private Network Name
-	if cfg.HA {
-		if viper.IsSet("gcm_private_network_name") {
-			cfg.GCMPrivateNetworkName = viper.GetString("gcm_private_network_name")
-
-			isValidName := false
-			for _, validNetwork := range networks {
-				if cfg.GCMPrivateNetworkName == validNetwork.Name {
-					isValidName = true
-					break
-				}
-			}
-			if !isValidName {
-				return fmt.Errorf("Invalid GCM private network name '%s', must be one of the following: %s", cfg.GCMPrivateNetworkName, strings.Join(validNetworksSlice, ", "))
-			}
-		} else {
-			// GCM Private Network Prompt
-			gcmNetworkPrompt := promptui.Select{
-				Label: "GCM Private Network",
-				Items: networks,
-				Templates: &promptui.SelectTemplates{
-					Label:    "{{ . }}?",
-					Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-					Inactive: "  {{.Name}}",
-					Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "GCM Private Network:" | bold}} {{ .Name }}`, promptui.IconGood),
-				},
-			}
-			i, _, err := gcmNetworkPrompt.Run()
-			if err != nil {
-				return err
-			}
-			cfg.GCMPrivateNetworkName = networks[i].Name
-		}
-	}
-
 	// Triton Network Names
-	if cfg.HA {
-		// Since cluster manager nodes are in a private network,
-		// just set the network names to the private network.
-		cfg.TritonNetworkNames = []string{cfg.GCMPrivateNetworkName}
-	} else if viper.IsSet("triton_network_names") {
+	if viper.IsSet("triton_network_names") {
 		cfg.TritonNetworkNames = viper.GetStringSlice("triton_network_names")
 
 		// Verify triton network names
@@ -671,129 +541,22 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		cfg.MasterTritonMachinePackage = packages[i].Name
 	}
 
-	// Triton MySQL Image
-	if cfg.HA && viper.IsSet("triton_mysql_image_name") && viper.IsSet("triton_mysql_image_version") {
-		cfg.TritonMySQLImageName = viper.GetString("triton_mysql_image_name")
-		cfg.TritonMySQLImageVersion = viper.GetString("triton_mysql_image_version")
-		// Verify Triton MySQL image name and version
-		found := false
-		for _, image := range images {
-			if image.Name == cfg.TritonMySQLImageName && image.Version == cfg.TritonMySQLImageVersion {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("Invalid Triton MySQL Image Name and Version '%s@%s'", cfg.TritonMySQLImageName, cfg.TritonMySQLImageVersion)
-		}
-	} else if cfg.HA && nonInteractiveMode {
-		return errors.New("Both triton_mysql_image_name and triton_mysql_image_version must be specified when HA is selected")
-	} else if cfg.HA {
-		searcher := func(input string, index int) bool {
-			image := images[index]
-			name := strings.Replace(strings.ToLower(image.Name), " ", "", -1)
-			input = strings.Replace(strings.ToLower(input), " ", "", -1)
-
-			return strings.Contains(name, input)
-		}
-
-		prompt := promptui.Select{
-			Label: "Triton MySQL Image to use",
-			Items: images,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf(`%s {{ .Name | underline }}{{ "@" | underline }}{{ .Version | underline }}`, promptui.IconSelect),
-				Inactive: `  {{ .Name }}@{{ .Version }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Triton MySQL Image:" | bold}} {{ .Name }}{{ "@" }}{{ .Version }}`, promptui.IconGood),
-			},
-			Searcher: searcher,
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.TritonMySQLImageName = images[i].Name
-		cfg.TritonMySQLImageVersion = images[i].Version
-	}
-
-	// MySQL DB Triton Machine Package
-	if cfg.HA && viper.IsSet("mysqldb_triton_machine_package") {
-		cfg.MySQLDBTritonMachinePackage = viper.GetString("mysqldb_triton_machine_package")
-		// Verify MySQL DB triton machine package
-		found := false
-		for _, pkg := range packages {
-			if cfg.MySQLDBTritonMachinePackage == pkg.Name {
-				found = true
-				break
-			}
-		}
-		if !found {
-			return fmt.Errorf("Invalid MySQL DB Triton Machine Package '%s'", cfg.MySQLDBTritonMachinePackage)
-		}
-	} else if cfg.HA && nonInteractiveMode {
-		return errors.New("mysqldb_triton_machine_package must be specified when HA is selected")
-	} else if cfg.HA {
-		searcher := func(input string, index int) bool {
-			pkg := packages[index]
-			name := strings.Replace(strings.ToLower(pkg.Name), " ", "", -1)
-			input = strings.Replace(strings.ToLower(input), " ", "", -1)
-
-			return strings.Contains(name, input)
-		}
-
-		prompt := promptui.Select{
-			Label: "MySQL DB Triton Machine Package to use for Rancher Master",
-			Items: packages,
-			Templates: &promptui.SelectTemplates{
-				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
-				Inactive: `  {{ .Name }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "MySQL DB Triton Machine Package:" | bold}} {{ .Name }}`, promptui.IconGood),
-			},
-			Searcher: searcher,
-		}
-
-		i, _, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-
-		cfg.MySQLDBTritonMachinePackage = packages[i].Name
-	}
-
-	// Rancher Admin Username
-	if viper.IsSet("rancher_admin_username") {
-		cfg.RancherAdminUsername = viper.GetString("rancher_admin_username")
-	} else if nonInteractiveMode {
-		return errors.New("rancher_admin_username must be specified")
-	} else {
-		prompt := promptui.Prompt{
-			Label:   "Rancher Admin Username",
-			Default: "admin",
-		}
-
-		result, err := prompt.Run()
-		if err != nil {
-			return err
-		}
-		cfg.RancherAdminUsername = result
-	}
-
-	if cfg.RancherAdminUsername == "" {
-		return errors.New("Invalid Rancher Admin username")
-	}
-
 	// Rancher Admin Password
 	if viper.IsSet("rancher_admin_password") {
 		cfg.RancherAdminPassword = viper.GetString("rancher_admin_password")
 	} else if nonInteractiveMode {
-		return errors.New("rancher_admin_password must be specified")
+		return errors.New("UI Admin Password must be specified")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Rancher Admin Password",
+			Label: "Set UI Admin Password",
 			Mask:  '*',
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("password cannot be blank")
+				}
+
+				return nil
+			},
 		}
 
 		result, err := prompt.Run()
@@ -804,111 +567,7 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 	}
 
 	if cfg.RancherAdminPassword == "" {
-		return errors.New("Invalid Rancher Admin password")
-	}
-
-	// TLS Certificate Prompt
-	if nonInteractiveMode {
-		// In non-interactive mode, private key, cert, and HTTPS URL are required.
-		// If none are defined, then assume the user does not want to use HTTPS.
-		privateKeyIsSet := viper.IsSet("rancher_tls_private_key_path")
-		certIsSet := viper.IsSet("rancher_tls_cert_path")
-		httpsURLIsSet := viper.IsSet("rancher_domain_name")
-		if privateKeyIsSet && certIsSet && httpsURLIsSet {
-			cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
-			cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
-			cfg.RancherDomainName = viper.GetString("rancher_domain_name")
-		} else if !privateKeyIsSet || !certIsSet || !httpsURLIsSet {
-			return fmt.Errorf("rancher_tls_private_key_path, rancher_tls_cert_path, rancher_domain_name must all be set or none of them")
-		}
-	} else {
-		shouldGetTLSFiles, err := util.PromptForConfirmation("Would you like to provide your own TLS certificate and private key", "Providing TLS cert")
-		if err != nil {
-			return err
-		}
-
-		if shouldGetTLSFiles {
-			// TLS Private Key Path
-			if viper.IsSet("rancher_tls_private_key_path") {
-				cfg.RancherTLSPrivateKeyPath = viper.GetString("rancher_tls_private_key_path")
-			} else {
-				prompt := promptui.Prompt{
-					Label: "TLS Private Key Path",
-					Validate: func(input string) error {
-						expandedPath, err := homedir.Expand(input)
-						if err != nil {
-							return err
-						}
-
-						_, err = os.Stat(expandedPath)
-						if err != nil {
-							if os.IsNotExist(err) {
-								return errors.New("File not found")
-							}
-						}
-						return nil
-					},
-				}
-
-				result, err := prompt.Run()
-				if err != nil {
-					return err
-				}
-				expandedTLSPrivateKeyPath, err := homedir.Expand(result)
-				if err != nil {
-					return err
-				}
-				cfg.RancherTLSPrivateKeyPath = expandedTLSPrivateKeyPath
-			}
-
-			// TLS Certificate Key Path
-			if viper.IsSet("rancher_tls_cert_path") {
-				cfg.RancherTLSCertificatePath = viper.GetString("rancher_tls_cert_path")
-			} else {
-				prompt := promptui.Prompt{
-					Label: "TLS Certificate Path",
-					Validate: func(input string) error {
-						expandedPath, err := homedir.Expand(input)
-						if err != nil {
-							return err
-						}
-
-						_, err = os.Stat(expandedPath)
-						if err != nil {
-							if os.IsNotExist(err) {
-								return errors.New("File not found")
-							}
-						}
-						return nil
-					},
-				}
-
-				result, err := prompt.Run()
-				if err != nil {
-					return err
-				}
-				expandedTLSCertPath, err := homedir.Expand(result)
-				if err != nil {
-					return err
-				}
-				cfg.RancherTLSCertificatePath = expandedTLSCertPath
-			}
-
-			// Rancher Domain Name
-			if viper.IsSet("rancher_domain_name") {
-				cfg.RancherDomainName = viper.GetString("rancher_domain_name")
-			} else {
-				prompt := promptui.Prompt{
-					Label: "Your Domain Name",
-				}
-
-				result, err := prompt.Run()
-				if err != nil {
-					return err
-				}
-				cfg.RancherDomainName = result
-			}
-		}
+		return errors.New("Invalid UI Admin password")
 	}
 
 	state, err := remoteBackend.State(cfg.Name)
