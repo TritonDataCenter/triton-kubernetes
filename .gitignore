@@ -2,6 +2,7 @@ bin/terraform*
 */terraform.tfstate*
 terraform/.terraform*
 .terraform*
+build/
 
 triton-kubernetes
 main.tf.json
