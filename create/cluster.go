@@ -359,7 +359,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			return baseClusterTerraformConfig{}, err
 		}
 
-		cfg.KubernetesVersion = value
+		cfg.KubernetesVersion = fmt.Sprintf(`%s-rancher1-1`, value)
 	}
 
 	// Kubernetes Network Provider
