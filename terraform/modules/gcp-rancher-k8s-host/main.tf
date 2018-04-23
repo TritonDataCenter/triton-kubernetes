@@ -24,6 +24,8 @@ data "template_file" "install_rancher_agent" {
     rancher_registry          = "${var.rancher_registry}"
     rancher_registry_username = "${var.rancher_registry_username}"
     rancher_registry_password = "${var.rancher_registry_password}"
+
+    disk_mount_path = "${var.gcp_disk_mount_path}"
   }
 }
 
@@ -31,11 +33,16 @@ resource "google_compute_instance" "host" {
   name         = "${var.hostname}"
   machine_type = "${var.gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
+  project      = "${var.gcp_project_id}"
 
   boot_disk {
     initialize_params {
       image = "${var.gcp_image}"
     }
+  }
+
+  attached_disk {
+    source = "${var.gcp_disk_type == "" ? "" : google_compute_disk.host_volume.self_link}"
   }
 
   network_interface {
@@ -51,4 +58,13 @@ resource "google_compute_instance" "host" {
   }
 
   metadata_startup_script = "${data.template_file.install_rancher_agent.rendered}"
+}
+
+resource "google_compute_disk" "host_volume" {
+  count = "${var.gcp_disk_type == "" ? 0 : 1}"
+
+  type = "${var.gcp_disk_type}"
+  name = "${var.hostname}-volume"
+  zone = "${var.gcp_instance_zone}"
+  size = "${var.gcp_disk_size}"
 }

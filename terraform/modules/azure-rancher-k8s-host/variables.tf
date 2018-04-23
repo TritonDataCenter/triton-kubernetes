@@ -87,3 +87,11 @@ variable "azure_ssh_user" {
 variable "azure_public_key_path" {
   default = "~/.ssh/id_rsa.pub"
 }
+
+variable "azure_disk_mount_path" {
+  default = ""
+}
+
+variable "azure_disk_size" {
+  default = ""
+}
