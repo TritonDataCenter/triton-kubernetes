@@ -2,11 +2,10 @@
 
 Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds. It is a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud.
 
-To run the cli in interactive mode, run the following:
+To create cluster manager, run the following:
 ```
 $ triton-kubernetes create manager
 ✔ Backend Provider: Local
-create manager called
 ✔ Cluster Manager Name: dev-manager
 ✔ Private Registry: None
 ✔ Rancher Server Image: Default
@@ -22,5 +21,15 @@ create manager called
 ✔ Set UI Admin Password: ****
   Proceed? Yes
 ```
+
+To destroy cluster manager, run the following:
+
+```
+$ triton-kubernetes destroy manager
+✔ Backend Provider: Local
+✔ Cluster Manager: dev-manager
+  Destroy "dev-manager"? Yes
+```
+> Note: Destorying cluster manager will destroy all your clusters and nodes attached to the cluster manager.
 
 `triton-kubernetes` cli can takes a configuration file (yaml) with `--config` option to run in silent mode.To read about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
