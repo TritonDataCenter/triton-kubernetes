@@ -345,23 +345,32 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else if nonInteractiveMode {
 		return baseClusterTerraformConfig{}, errors.New("k8s_version must be specified")
 	} else {
+
+		var kubernetesVersions = []struct {
+			DisplayName string
+			Name        string
+		}{
+			{"v1.8.10", "v1.8.10-rancher1-1"},
+			{"v1.9.5", "v1.9.5-rancher1-1"},
+			{"v1.10.0", "v1.10.0-rancher1-1"},
+		}
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",
-			Items: []string{"v1.8.10-rancher1-1", "v1.9.5-rancher1-1", "v1.10.0-rancher1-1"},
+			Items: kubernetesVersions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
-				Inactive: `  {{ . }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ . }}`, promptui.IconGood),
+				Active:   fmt.Sprintf(`%s {{ .DisplayName | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .DisplayName }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ .DisplayName }}`, promptui.IconGood),
 			},
 		}
 
-		_, value, err := prompt.Run()
+		i, _, err := prompt.Run()
 		if err != nil {
 			return baseClusterTerraformConfig{}, err
 		}
 
-		cfg.KubernetesVersion = value
+		cfg.KubernetesVersion = kubernetesVersions[i].Name
 	}
 
 	// Kubernetes Network Provider
