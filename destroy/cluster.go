@@ -137,15 +137,6 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 		args = append(args, fmt.Sprintf("-target=module.%s", node))
 	}
 
-	// Delete the cluster backup
-	clusterBackupKey, err := state.ClusterBackup(selectedClusterKey)
-	if err != nil {
-		return err
-	}
-	if clusterBackupKey != "" {
-		args = append(args, fmt.Sprintf("-target=module.%s", clusterBackupKey))
-	}
-
 	// Run terraform destroy
 	err = shell.RunTerraformDestroyWithState(state, args)
 	if err != nil {
@@ -161,14 +152,6 @@ func DeleteCluster(remoteBackend backend.Backend) error {
 	// Remove all nodes associated to this cluster from terraform config
 	for _, node := range nodes {
 		err = state.Delete(fmt.Sprintf("module.%s", node))
-		if err != nil {
-			return err
-		}
-	}
-
-	// Remove cluster backup from terraform config
-	if clusterBackupKey != "" {
-		err = state.Delete(fmt.Sprintf("module.%s", clusterBackupKey))
 		if err != nil {
 			return err
 		}
