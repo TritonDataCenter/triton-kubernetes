@@ -45,6 +45,7 @@ $ make build
 ```
 
 ### Install and Run
+
 * Clone this repository into `$GOPATH/src/github.com/joyent/triton-kubernetes`
 * Run `go get` and `go install` from that directory
 
@@ -55,7 +56,6 @@ You can now run cli in your terminal like below
 ```
 $ triton-kubernetes --help
 ```
-
 
 Note: To build the project with an embedded git hash:
 ```
