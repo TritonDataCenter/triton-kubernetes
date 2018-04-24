@@ -32,4 +32,10 @@ $ triton-kubernetes destroy manager
 ```
 > Note: Destorying cluster manager will destroy all your clusters and nodes attached to the cluster manager.
 
+To get cluster manager, run the following:
+
+```
+$ triton-kubernetes get manager
+```
+
 `triton-kubernetes` cli can takes a configuration file (yaml) with `--config` option to run in silent mode.To read about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
