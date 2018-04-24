@@ -1,6 +1,6 @@
 ## Cluster Manager
 
-Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds.
+Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds. It is a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud.
 
 To run the cli in interactive mode, run the following:
 ```
