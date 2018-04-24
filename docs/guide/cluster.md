@@ -1,55 +1,78 @@
-## Clusters
+## Cluster
 
-Creating clusters require a cluster manager to be running already.
+A cluster is a group of physical (or virtual) computers that share resources to accomplish tasks as if they were a single system. 
+Create cluster command allows to create dedicated nodes for the etcd, worker and control. Creating clusters require a cluster manager to be running already.
 
-A cluster can be ran in HA or non-HA mode. In HA mode, etcd and kubernetes components will run in their own dedicated nodes. In a non-HA cluster, etcd and all other services will run on the compute nodes next to your Kubernetes deployments.
+To check if cluster manager is exist, run the following:
 
-Below is an example yaml file which can be passed to the `triton-kubernetes` cli to create an HA Kubernetes Cluster (with 3 etcd nodes, 3 nodes for Kubernetes services and 4 nodes for deployments) to the already running `ha-manager` cluster manager.
-
-```yaml
-backend_provider: local
-cluster_manager: ha-manager
-name: ha-cluster
-cluster_cloud_provider: triton
-k8s_plane_isolation: required
-private_registry: ""
-private_registry_username: ""
-private_registry_password: ""
-k8s_registry: ""
-k8s_registry_username: ""
-k8s_registry_password: ""
-triton_account: fayazg
-triton_key_path: ~/.ssh/id_rsa
-triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
-triton_url: https://us-east-1.api.joyent.com
-nodes:
-  - node_count: 3
-    rancher_host_label: etcd
-    hostname: test-etcd
-    triton_network_names:
-      - Joyent-SDC-Public
-    triton_image_name: ubuntu-certified-16.04
-    triton_image_version: 20180109
-    triton_ssh_user: ubuntu
-    triton_machine_package: k4-highcpu-kvm-1.75G
-  - node_count: 3
-    rancher_host_label: orchestration
-    hostname: test-orch
-    triton_network_names:
-      - Joyent-SDC-Public
-    triton_image_name: ubuntu-certified-16.04
-    triton_image_version: 20180109
-    triton_ssh_user: ubuntu
-    triton_machine_package: k4-highcpu-kvm-1.75G
-  - node_count: 1
-    rancher_host_label: compute
-    hostname: test-compute
-    triton_network_names:
-      - Joyent-SDC-Public
-    triton_image_name: ubuntu-certified-16.04
-    triton_image_version: 20180109
-    triton_ssh_user: ubuntu
-    triton_machine_package: k4-highcpu-kvm-1.75G
+```
+$ triton-kubernetes get manager
 ```
 
-To read about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
+To create cluster, run the following:
+
+```
+$ triton-kubernetes create cluster
+✔ Backend Provider: Local
+create cluster called
+✔ Cluster Manager: dev-manager
+✔ Cloud Provider: Triton
+✔ Cluster Name: dev-cluster
+✔ Kubernetes Version: v1.9.5
+✔ Kubernetes Network Provider: calico
+✔ Private Registry: None
+✔ k8s Registry: None
+✔ Triton Account Name: [changeme]
+✔ Triton Key Path: ~/.ssh/id_rsa
+✔ Triton URL: https://us-east-1.api.joyent.com
+  Create new node? Yes
+✔ Host Type: etcd
+  Number of nodes to create? 3
+✔ Hostname prefix: dev-etcd
+✔ Triton Network Attached: Joyent-SDC-Public
+  Attach another? No
+✔ Triton Image: ubuntu-certified-16.04@20180222
+✔ Triton SSH User: ubuntu
+✔ Triton Machine Package: k4-highcpu-kvm-1.75G
+3 nodes added: dev-etcd-1, dev-etcd-2, dev-etcd-3
+  Create new node? Yes
+✔ Host Type: worker
+✔ Number of nodes to create: 3
+✔ Hostname prefix: dev-worker
+✔ Triton Network Attached: Joyent-SDC-Public
+  Attach another? No
+✔ Triton Image: ubuntu-certified-16.04@20180222
+✔ Triton SSH User: ubuntu
+✔ Triton Machine Package: k4-highcpu-kvm-1.75G
+3 nodes added: dev-worker-1, dev-worker-2, dev-worker-3
+  Create new node? Yes
+✔ Host Type: control
+  Number of nodes to create? 3
+✔ Hostname prefix: dev-control
+✔ Triton Network Attached: Joyent-SDC-Public
+  Attach another? No
+✔ Triton Image: ubuntu-certified-16.04@20180222
+✔ Triton SSH User: ubuntu
+✔ Triton Machine Package: k4-highcpu-kvm-1.75G
+3 nodes added: dev-control-1, dev-control-2, dev-control-3
+  Create new node? No
+  Proceed? Yes
+```
+To destroy cluster , run the following:
+
+```
+$ triton-kubernetes destroy cluster
+✔ Backend Provider: Local
+✔ Cluster Manager: dev-manager
+✔ Cluster: dev-cluster
+  Destroy "dev-cluster"? Yes
+```
+
+To get cluster, run the following:
+
+```
+$ triton-kubernetes get cluster
+```
+
+
+`triton-kubernetes` cli can takes a configuration file (yaml) with `--config` option to run in silent mode.To read about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
