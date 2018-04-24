@@ -1,7 +1,8 @@
-# Building `triton-kubernetes` binary manually
+# Build and install `triton-kubernetes`
 
 ## Install Go
  * [Download and Install](https://github.com/golang/go#download-and-install)
+
 ## Setting `GOPATH` 
 
 `GOPATH` can be any directory on your system. In Unix examples, we will set it to `$HOME/go`. Another common setup is to set `GOPATH=$HOME`. 
@@ -35,12 +36,26 @@ Save and exit your editor. Then, source your `~/.zshrc`.
 $ source ~/.zshrc
 ```
 
-### Build binary
+### Build binary via MakeFie
+
+To build binaries for `osx`, `linux`, `linux-rpm` and `linux-debian` under `build` folder, run the following:
+
+```
+$ make build
+```
+
+### Install and Run
 
 * Clone this repository into `$GOPATH/src/github.com/joyent/triton-kubernetes`
 * Run `go get` and `go install` from that directory
 
 This will build the `triton-kubernetes` binary into `$GOBIN`.
+
+You can now run cli in your terminal like below
+
+```
+$ triton-kubernetes --help
+```
 
 Note: To build the project with an embedded git hash:
 ```
