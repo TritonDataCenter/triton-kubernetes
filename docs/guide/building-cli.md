@@ -1,4 +1,4 @@
-# Building and install `triton-kubernetes`
+# Build and install `triton-kubernetes`
 
 ## Install Go
  * [Download and Install](https://github.com/golang/go#download-and-install)
