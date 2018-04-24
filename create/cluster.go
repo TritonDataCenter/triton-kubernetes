@@ -104,7 +104,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
-			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal"},
+			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal", "vSphere"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -134,6 +134,8 @@ func NewCluster(remoteBackend backend.Backend) error {
 		clusterName, err = newAzureCluster(remoteBackend, currentState)
 	case "baremetal":
 		clusterName, err = newBareMetalCluster(remoteBackend, currentState)
+	case "vsphere":
+		clusterName, err = newVSphereCluster(remoteBackend, currentState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
@@ -345,7 +347,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else {
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",
-			Items: []string{"v1.8.10", "v1.9.5", "v1.10.0"},
+			Items: []string{"v1.8.10-rancher1-1", "v1.9.5-rancher1-1", "v1.10.0-rancher1-1"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
