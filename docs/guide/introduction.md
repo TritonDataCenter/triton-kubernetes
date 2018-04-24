@@ -17,6 +17,7 @@ This document describes the process of setting up Triton Multi-cloud Kubernetes.
 
 The cli `triton-kubernetes` allows for creating and managing a kubernetes deployment only. Application deployments will still need to be done using `kubectl`.
 
+> <sub>Note: Keep in mind that every cloud has a resource quota. If that quota has been reached, Triton-Kubernetes will not be able to provision new machines and throw errors.</sub>
 
 ## Working with the CLI
 
