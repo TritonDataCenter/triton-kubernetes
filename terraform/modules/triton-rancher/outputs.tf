@@ -13,3 +13,7 @@ output "rancher_access_key" {
 output "rancher_secret_key" {
   value = "${chomp(module.rancher_secret_key.stdout)}"
 }
+
+output "rancher_admin_username" {
+  value = "${var.rancher_admin_username}"
+}
