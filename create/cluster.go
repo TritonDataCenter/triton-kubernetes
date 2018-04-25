@@ -104,7 +104,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
-			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal"},
+			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal", "vSphere"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -134,6 +134,8 @@ func NewCluster(remoteBackend backend.Backend) error {
 		clusterName, err = newAzureCluster(remoteBackend, currentState)
 	case "baremetal":
 		clusterName, err = newBareMetalCluster(remoteBackend, currentState)
+	case "vsphere":
+		clusterName, err = newVSphereCluster(remoteBackend, currentState)
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create cluster", selectedCloudProvider)
 	}
@@ -343,23 +345,32 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else if nonInteractiveMode {
 		return baseClusterTerraformConfig{}, errors.New("k8s_version must be specified")
 	} else {
+
+		var kubernetesVersions = []struct {
+			DisplayName string
+			Name        string
+		}{
+			{"v1.8.10", "v1.8.10-rancher1-1"},
+			{"v1.9.5", "v1.9.5-rancher1-1"},
+			{"v1.10.0", "v1.10.0-rancher1-1"},
+		}
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",
-			Items: []string{"v1.8.10", "v1.9.5", "v1.10.0"},
+			Items: kubernetesVersions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
-				Inactive: `  {{ . }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ . }}`, promptui.IconGood),
+				Active:   fmt.Sprintf(`%s {{ .DisplayName | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .DisplayName }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ .DisplayName }}`, promptui.IconGood),
 			},
 		}
 
-		_, value, err := prompt.Run()
+		i, _, err := prompt.Run()
 		if err != nil {
 			return baseClusterTerraformConfig{}, err
 		}
 
-		cfg.KubernetesVersion = value
+		cfg.KubernetesVersion = kubernetesVersions[i].Name
 	}
 
 	// Kubernetes Network Provider

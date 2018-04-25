@@ -40,58 +40,44 @@ variable "docker_engine_install_url" {
   description = "The URL to the shell script to install the docker engine."
 }
 
-variable "azure_subscription_id" {}
-
-variable "azure_client_id" {}
-
-variable "azure_client_secret" {}
-
-variable "azure_tenant_id" {}
-
-variable "azure_environment" {
-  default = "public"
+variable "vsphere_user" {
+  description = "The username of the vCenter Server user."
 }
 
-variable "azure_location" {}
-
-variable "azure_resource_group_name" {}
-
-variable "azure_network_security_group_id" {}
-
-variable "azure_subnet_id" {}
-
-variable "azure_size" {
-  default = "Standard_A0"
+variable "vsphere_password" {
+  description = "The password of the vCenter Server user."
 }
 
-variable "azure_image_publisher" {
-  default = "Canonical"
+variable "vsphere_server" {
+  description = "The IP address or FQDN of the vCenter Server."
 }
 
-variable "azure_image_offer" {
-  default = "UbuntuServer"
+variable "vsphere_datacenter_name" {
+  description = "Name of the datacenter to use."
 }
 
-variable "azure_image_sku" {
-  default = "16.04-LTS"
+variable "vsphere_datastore_name" {
+  description = "Name of the datastore to use."
 }
 
-variable "azure_image_version" {
-  default = "latest"
+variable "vsphere_resource_pool_name" {
+  description = "Name of the resource pool to use."
 }
 
-variable "azure_ssh_user" {
-  default = "root"
+variable "vsphere_network_name" {
+  description = "Name of the network to use."
 }
 
-variable "azure_public_key_path" {
-  default = "~/.ssh/id_rsa.pub"
+variable "vsphere_template_name" {
+  description = "VM template to use."
 }
 
-variable "azure_disk_mount_path" {
-  default = ""
+variable "ssh_user" {
+  default     = "ubuntu"
+  description = ""
 }
 
-variable "azure_disk_size" {
-  default = ""
+variable "key_path" {
+  default     = "~/.ssh/id_rsa"
+  description = ""
 }
