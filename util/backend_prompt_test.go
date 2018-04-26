@@ -33,7 +33,7 @@ func TestBackendPromptWithNoTritonAccountNonInteractiveMode(t *testing.T) {
 	}
 }
 
-func TestBackendPromptWithNoritonSSHKeyPathNonInteractiveMode(t *testing.T) {
+func TestBackendPromptWithNoTritonSSHKeyPathNonInteractiveMode(t *testing.T) {
 	viper.Set("triton_account", "xyz")
 
 	_,err:=PromptForBackend()
@@ -60,7 +60,8 @@ func TestBackendPromptWithInvalidTritonSSHKeyPathInteractive(t *testing.T) {
 
 func TestNoTritonURLForNonInteractiveMode (t *testing.T) {
 	viper.Set("non-interactive", true)
-	viper.Set("triton_key_path", "~/.ssh/id_rsa")
+	viper.Set("triton_key_path", "")
+	viper.Set("triton_key_id", "")
 
 	_,err := PromptForBackend()
 
@@ -69,6 +70,9 @@ func TestNoTritonURLForNonInteractiveMode (t *testing.T) {
 	if err.Error() != expected {
 		t.Error(err)
 	}
+
+
+
 
 }
 
