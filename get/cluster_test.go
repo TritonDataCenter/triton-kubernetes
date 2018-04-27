@@ -17,12 +17,14 @@ func TestGetClusterNoClusterManager(t *testing.T) {
 	expected := "No cluster managers."
 
 	if expected != err.Error() {
-		t.Error(err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 }
 
 func TestMissingClusterManagerNonInteractiveMode(t *testing.T){
 	viper.Set("non-interactive", true)
+
+	defer viper.Reset()
 
 	localBackend := &mocks.Backend{}
 
@@ -33,7 +35,7 @@ func TestMissingClusterManagerNonInteractiveMode(t *testing.T){
 	expected := "cluster_manager must be specified"
 
 	if expected != err.Error() {
-		t.Error(err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 
 }
@@ -41,6 +43,8 @@ func TestMissingClusterManagerNonInteractiveMode(t *testing.T){
 func TestUnidentifiedClusterManagerNonInteractiveMode(t *testing.T){
 	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "xyz")
+
+	defer viper.Reset()
 
 	localBackend := &mocks.Backend{}
 
@@ -51,7 +55,7 @@ func TestUnidentifiedClusterManagerNonInteractiveMode(t *testing.T){
 	expected := "Selected cluster manager 'xyz' does not exist."
 
 	if expected != err.Error() {
-		t.Error(err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 
 }
@@ -59,6 +63,8 @@ func TestUnidentifiedClusterManagerNonInteractiveMode(t *testing.T){
 func TestNoCluster(t *testing.T){
 	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "dev-manager")
+
+	defer viper.Reset()
 
 	stateObj, _ := state.New("ClusterState", []byte(`{
 		"module":{}
@@ -75,12 +81,16 @@ func TestNoCluster(t *testing.T){
 	expected := "No clusters."
 
 	if expected != err.Error() {
-		t.Error(err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 
 }
 
 func TestNoClusterNameNonInterative(t *testing.T){
+	viper.Set("non-interactive", true)
+	viper.Set("cluster_manager", "dev-manager")
+
+	defer viper.Reset()
 
 	stateObj, _ := state.New("ClusterState", []byte(`{
 		"module":{
@@ -101,7 +111,7 @@ func TestNoClusterNameNonInterative(t *testing.T){
 	expected := "cluster_name must be specified"
 
 	if expected != err.Error() {
-		t.Error(err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 
 }
@@ -110,6 +120,8 @@ func TestUnidentifiedCluster(t *testing.T){
 	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "dev-manager")
 	viper.Set("cluster_name", "cluster_xyz")
+
+	defer viper.Reset()
 
 	stateObj, _ := state.New("ClusterState", []byte(`{
 		"module":{
@@ -130,7 +142,7 @@ func TestUnidentifiedCluster(t *testing.T){
 	expected := "A cluster named 'cluster_xyz', does not exist."
 
 	if expected != err.Error() {
-		t.Error(err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 
 }
