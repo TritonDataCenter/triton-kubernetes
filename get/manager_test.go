@@ -3,42 +3,47 @@ package get
 import (
 	"testing"
 
-	"github.com/joyent/triton-kubernetes/test_pkg"
+	"github.com/joyent/triton-kubernetes/backend/mocks"
 	"github.com/spf13/viper"
 )
 
 func TestNoClusterManager(t *testing.T) {
 
-	tCase := test_pkg.NewT(t)
-	localBackend := &test_pkg.MockEmptyBackend{}
-	err := GetManager(localBackend)
+	localBackend := &mocks.Backend{}
+	localBackend.On("States").Return([]string{}, nil)
 
 	expected := "No cluster managers."
+
+	err := GetManager(localBackend)
 	if expected != err.Error() {
-		tCase.Fatal("output", expected, err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 }
 
 func TestMissingClusterManager(t *testing.T) {
 	viper.Set("non-interactive", true)
-	tCase := test_pkg.NewT(t)
-	localBackend := &test_pkg.MockBackend{}
-	err := GetManager(localBackend)
 
-	expected := "Cluster manager must be specified"
+	localBackend := &mocks.Backend{}
+	localBackend.On("States").Return([]string{"dev-manager", "beta-manager"}, nil)
+
+	expected := "cluster_manager must be specified"
+
+	err := GetManager(localBackend)
 	if expected != err.Error() {
-		tCase.Fatal("output", expected, err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 }
 
 func TestClusterManagerNotExists(t *testing.T) {
 	viper.Set("cluster_manager", "prod-cluster")
-	tCase := test_pkg.NewT(t)
-	localBackend := &test_pkg.MockBackend{}
-	err := GetManager(localBackend)
+
+	localBackend := &mocks.Backend{}
+	localBackend.On("States").Return([]string{"dev-manager", "beta-manager"}, nil)
 
 	expected := "Selected cluster manager 'prod-cluster' does not exist."
+
+	err := GetManager(localBackend)
 	if expected != err.Error() {
-		tCase.Fatal("output", expected, err)
+		t.Errorf("Wrong output, expected %s, received %s", expected, err.Error())
 	}
 }
