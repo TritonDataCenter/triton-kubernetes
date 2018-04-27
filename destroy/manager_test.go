@@ -7,7 +7,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-func TestNoClusterManager(t *testing.T) {
+func TestDeleteManagerNoClusterManager(t *testing.T) {
 
 	localBackend := &mocks.Backend{}
 	localBackend.On("States").Return([]string{}, nil)
@@ -20,7 +20,8 @@ func TestNoClusterManager(t *testing.T) {
 	}
 }
 
-func TestMissingClusterManager(t *testing.T) {
+func TestDeleteManagerMissingClusterManager(t *testing.T) {
+	viper.Reset()
 	viper.Set("non-interactive", true)
 
 	localBackend := &mocks.Backend{}
@@ -34,7 +35,9 @@ func TestMissingClusterManager(t *testing.T) {
 	}
 }
 
-func TestClusterManagerNotExists(t *testing.T) {
+func TestDeleteManagerNotExists(t *testing.T) {
+	viper.Reset()
+	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "prod-cluster")
 
 	localBackend := &mocks.Backend{}
