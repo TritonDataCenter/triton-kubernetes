@@ -35,7 +35,7 @@ func TestDeleteManagerMissingClusterManager(t *testing.T) {
 	}
 }
 
-func TestDeleteManagerNotExists(t *testing.T) {
+func TestDeleteManagerNotExist(t *testing.T) {
 	viper.Reset()
 	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "prod-cluster")

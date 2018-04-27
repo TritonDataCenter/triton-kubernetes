@@ -44,7 +44,7 @@ func TestDeleteClusterMissingClusterManager(t *testing.T) {
 	}
 }
 
-func TestDeleteClusterManagerNotExists(t *testing.T) {
+func TestDeleteClusterManagerNotExist(t *testing.T) {
 	viper.Reset()
 	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "prod-manager")
@@ -79,7 +79,7 @@ func TestDeleteClusterMustSpecifyClusterName(t *testing.T) {
 	}
 }
 
-func TestDeleteClusterNotExists(t *testing.T) {
+func TestDeleteClusterNotExist(t *testing.T) {
 	viper.Reset()
 	viper.Set("non-interactive", true)
 	viper.Set("cluster_manager", "dev-manager")
