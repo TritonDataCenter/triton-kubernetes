@@ -78,4 +78,7 @@ build-deb: build-linux
 #	Cleaning up the tmp directory
 	@rm -rf $(DEB_TMP_DIR)
 
+test: 
+	@echo "Running unit-tests..."
+	go test ./...
 	
