@@ -41,9 +41,12 @@ resource "google_compute_instance" "host" {
     }
   }
 
-  attached_disk {
-    source = "${var.gcp_disk_type == "" ? "" : google_compute_disk.host_volume.self_link}"
-  }
+  # There's now way to specify for 0 attached_disk blocks
+  # We need to wait for Terraform for_each support https://github.com/hashicorp/terraform/issues/7034
+  # This way we'll only add an attached_disk block when there are disks to attach
+  # attached_disk {
+  #   source = "${element(concat(google_compute_disk.host_volume.*.self_link, list("")), 0)}"
+  # }
 
   network_interface {
     network = "${var.gcp_compute_network_name}"
