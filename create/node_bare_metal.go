@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	bareMetalNodeKeyFormat                            = "module.node_baremetal_%s"
 	bareMetalRancherKubernetesHostTerraformModulePath = "terraform/modules/bare-metal-rancher-k8s-host"
 )
 
@@ -172,7 +171,7 @@ func newBareMetalNode(selectedClusterManager, selectedCluster string, remoteBack
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
 		cfgCopy.Host = hosts[i]
-		err = currentState.Add(fmt.Sprintf(bareMetalNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

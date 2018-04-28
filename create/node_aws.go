@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	awsNodeKeyFormat                            = "module.node_aws_%s"
 	awsRancherKubernetesHostTerraformModulePath = "terraform/modules/aws-rancher-k8s-host"
 )
 
@@ -337,7 +336,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

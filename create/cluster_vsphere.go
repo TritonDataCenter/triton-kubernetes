@@ -2,7 +2,6 @@ package create
 
 import (
 	"errors"
-	"fmt"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
@@ -11,7 +10,6 @@ import (
 )
 
 const (
-	vSphereClusterKeyFormat                     = "module.cluster_vsphere_%s"
 	vSphereRancherKubernetesTerraformModulePath = "terraform/modules/vsphere-rancher-k8s"
 )
 
@@ -203,7 +201,7 @@ func newVSphereCluster(remoteBackend backend.Backend, currentState state.State) 
 	}
 
 	// Add new cluster to terraform config
-	err = currentState.Add(fmt.Sprintf(vSphereClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.AddCluster("vsphere", cfg.Name, &cfg)
 	if err != nil {
 		return "", err
 	}

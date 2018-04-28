@@ -19,7 +19,6 @@ import (
 )
 
 const (
-	gcpNodeKeyFormat                            = "module.node_gcp_%s"
 	gcpRancherKubernetesHostTerraformModulePath = "terraform/modules/gcp-rancher-k8s-host"
 )
 
@@ -353,7 +352,7 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(gcpNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

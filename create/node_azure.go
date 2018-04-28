@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	azureNodeKeyFormat                            = "module.node_azure_%s"
 	azureRancherKubernetesHostTerraformModulePath = "terraform/modules/azure-rancher-k8s-host"
 )
 
@@ -307,7 +306,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

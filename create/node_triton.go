@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	tritonNodeKeyFormat                            = "module.node_triton_%s"
 	tritonRancherKubernetesHostTerraformModulePath = "terraform/modules/triton-rancher-k8s-host"
 )
 
@@ -309,7 +308,7 @@ func newTritonNode(selectedClusterManager, selectedCluster string, remoteBackend
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(tritonNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

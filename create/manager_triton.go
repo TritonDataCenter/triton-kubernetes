@@ -575,8 +575,9 @@ func NewTritonManager(remoteBackend backend.Backend) error {
 		return err
 	}
 
-	state.Add("module.cluster-manager", &cfg)
-	state.Add(remoteBackend.StateTerraformConfig(cfg.Name))
+	terraformConfigPath, terraformConfigObj := remoteBackend.StateTerraformConfig(cfg.Name)
+
+	state.AddManager(terraformConfigPath, terraformConfigObj, &cfg)
 
 	if !nonInteractiveMode {
 		label := "Proceed with the manager creation"
