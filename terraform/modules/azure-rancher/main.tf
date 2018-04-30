@@ -41,9 +41,9 @@ resource "azurerm_network_security_rule" "rancher_ports" {
   protocol  = "Tcp"
 
   source_port_ranges = [
-    "22",          # SSH
-    "80",          # Rancher UI
-    "443",         # Rancher UI
+    "22",  # SSH
+    "80",  # Rancher UI
+    "443", # Rancher UI
   ]
 
   destination_port_range      = "*"
@@ -57,7 +57,7 @@ resource "azurerm_public_ip" "public_ip" {
   name                         = "${var.name}"
   location                     = "${var.azure_location}"
   resource_group_name          = "${azurerm_resource_group.resource_group.name}"
-  public_ip_address_allocation = "dynamic"
+  public_ip_address_allocation = "static"
 }
 
 resource "azurerm_network_interface" "nic" {
@@ -115,6 +115,8 @@ resource "azurerm_virtual_machine" "host" {
 }
 
 data "azurerm_public_ip" "public_ip" {
+  depends_on = ["azurerm_public_ip.public_ip"]
+
   name                = "${azurerm_public_ip.public_ip.name}"
   resource_group_name = "${azurerm_resource_group.resource_group.name}"
 }
