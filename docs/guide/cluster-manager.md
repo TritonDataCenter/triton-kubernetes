@@ -1,8 +1,8 @@
 ## Cluster Manager
 
-Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds. It is a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud.
+Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds. They can run anywhere (Triton/AWS/Azure/GCP/Baremetal) and manage Kubernetes environments running on any region of any supported cloud.
 
-To create cluster manager, run the following:
+To create a cluster manager, run the following:
 ```
 $ triton-kubernetes create manager
 ✔ Backend Provider: Local
