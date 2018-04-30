@@ -6,10 +6,12 @@ To create cluster manager, run the following:
 ```
 $ triton-kubernetes create manager
 ✔ Backend Provider: Local
+✔ Cloud Provider: Triton
 ✔ Cluster Manager Name: dev-manager
 ✔ Private Registry: None
 ✔ Rancher Server Image: Default
 ✔ Rancher Agent Image: Default
+✔ Set UI Admin Password: ****
 ✔ Triton Account Name: [changeme]
 ✔ Triton Key Path: ~/.ssh/id_rsa
 ✔ Triton URL: https://us-east-1.api.joyent.com
@@ -18,7 +20,6 @@ $ triton-kubernetes create manager
 ✔ Triton Image: ubuntu-certified-16.04@20180222
 ✔ Triton SSH User: ubuntu
 ✔ Rancher Master Triton Machine Package: k4-highcpu-kvm-1.75G
-✔ Set UI Admin Password: ****
   Proceed? Yes
 ```
 
