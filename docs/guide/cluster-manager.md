@@ -1,15 +1,17 @@
 ## Cluster Manager
 
-Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds. It is a global cluster manager which will run on Triton and manages Kubernetes environments. This cluster manager will manage environments running on any region of any supported cloud.
+Cluster Managers can manage multiple clusters across regions/data-centers and/or clouds. They can run anywhere (Triton/AWS/Azure/GCP/Baremetal) and manage Kubernetes environments running on any region of any supported cloud.
 
-To create cluster manager, run the following:
+To create a cluster manager, run the following:
 ```
 $ triton-kubernetes create manager
 ✔ Backend Provider: Local
+✔ Cloud Provider: Triton
 ✔ Cluster Manager Name: dev-manager
 ✔ Private Registry: None
 ✔ Rancher Server Image: Default
 ✔ Rancher Agent Image: Default
+✔ Set UI Admin Password: ****
 ✔ Triton Account Name: [changeme]
 ✔ Triton Key Path: ~/.ssh/id_rsa
 ✔ Triton URL: https://us-east-1.api.joyent.com
@@ -18,7 +20,6 @@ $ triton-kubernetes create manager
 ✔ Triton Image: ubuntu-certified-16.04@20180222
 ✔ Triton SSH User: ubuntu
 ✔ Rancher Master Triton Machine Package: k4-highcpu-kvm-1.75G
-✔ Set UI Admin Password: ****
   Proceed? Yes
 ```
 

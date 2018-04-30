@@ -147,7 +147,7 @@ Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton K
  * [Manager](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/cluster-manager.md)
  * [Cluster](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/cluster.md)
 
-## How-To cut the realse
+## How-To cut the release
 
 * [Release Process](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/release-process.md)
 
