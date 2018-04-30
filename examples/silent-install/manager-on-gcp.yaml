@@ -1,0 +1,18 @@
+# This sample config file will create a Cluster Manager which will be running on Google Cloud Platform
+backend_provider: local
+name: manager-on-gcp
+manager_cloud_provider: gcp
+private_registry: ""
+private_registry_username: ""
+private_registry_password: ""
+rancher_server_image: ""
+rancher_agent_image: ""
+gcp_path_to_credentials: ~/gcp.json
+gcp_compute_region: us-east1
+gcp_instance_zone: us-east1-c
+gcp_machine_type: n1-standard-1
+gcp_image: ubuntu-1604-xenial-v20180424
+gcp_public_key_path: ~/.ssh/id_rsa.pub
+gcp_private_key_path: ~/.ssh/id_rsa
+gcp_ssh_user: root
+rancher_admin_password: admin
