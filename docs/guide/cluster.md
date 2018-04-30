@@ -1,7 +1,7 @@
 ## Cluster
 
 A cluster is a group of physical (or virtual) computers that share resources to accomplish tasks as if they were a single system. 
-Create cluster command allows to create dedicated nodes for the etcd, worker and control. Creating clusters require a cluster manager to be running already.
+The 'create cluster' command allows you to create dedicated nodes for the etcd, worker and control. Creating clusters require a cluster manager to be running already.
 
 To check if cluster manager is exist, run the following:
 
@@ -75,4 +75,4 @@ $ triton-kubernetes get cluster
 ```
 
 
-`triton-kubernetes` cli can takes a configuration file (yaml) with `--config` option to run in silent mode.To read about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
+`triton-kubernetes` cli can take a configuration file (yaml) with `--config` option to run in silent mode.To read more about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).

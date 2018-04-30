@@ -22,12 +22,12 @@ The cli `triton-kubernetes` allows for creating and managing a kubernetes deploy
 
 ## Quick Start Guide
 
-### Pre-Reqs
+### Pre-Requisites
 In order to run **Triton Kubernetes**, you must create a [Triton](https://my.joyent.com/) account and install [`jq`](#install-jq) and [`terraform`](#install-terraform).
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster.
 
-[jq](https://stedolan.github.io/jq/) is a lightweight and flexible command-line JSON processor. It's leveraged by `triton-kubernetes`.
+[jq](https://stedolan.github.io/jq/) is a lightweight and flexible command-line JSON processor. It is leveraged by `triton-kubernetes`.
 
 [Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.
 
@@ -76,7 +76,7 @@ triton-kubernetes --help
 
 ## Working with the CLI
 
-Triton Kubernetes allows you to create/destroy global cluster managers, Kubernetes environments and individual cluster nodes. You can also get information on a cluster manager or Kubernetes environment. Triton Kubernetes provides these features through the `create`, `destroy` and `get` commands.
+Triton Kubernetes allows you to create/destroy global cluster managers, kubernetes environments and individual cluster nodes. You can also get information on a cluster manager or kubernetes environment. Triton Kubernetes provides these features through the `create`, `destroy` and `get` commands.
 
 
 To get help on a command, use the --help flag. For example:
@@ -141,7 +141,7 @@ Triton Kubernetes persists state by leveraging one of the supported backends. Th
 Will persist state in the `/triton-kubernetes/` folder for the provided user in Manta Cloud Storage.
 
 ### Local
-Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernets was run on.
+Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernetes was run on.
 
 ### Examples
  * [Manager](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/cluster-manager.md)

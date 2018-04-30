@@ -1,6 +1,6 @@
 # Introduction
 
-Triton Multi-cloud Kubernetes cli can be invoked in interactive or silent modes. In silent mode, the cli takes in a yaml configuration file which contains different parameters depending on what is being ran. Standing up a cluster manager in HA mode takes in different arguments than non-HA mode and the same goes for kubernetes cluster creation.
+Triton Multi-Cloud Kubernetes cli can be invoked in interactive or silent modes. In silent mode, the cli takes in a yaml configuration file which contains different parameters depending on what is being run. Standing up a cluster manager in HA mode takes in different arguments than non-HA mode and the same goes for kubernetes cluster creation.
 
 For sample YAML files, look under [examples/silent-install](https://github.com/joyent/triton-kubernetes/tree/master/examples/silent-install).
 
@@ -24,8 +24,8 @@ Before creating a Kubernetes cluster, we need to have a running cluster manager.
 | `triton_network_names` | List of Triton network names that are available to `triton_account` in `triton_url` data-center.
 | `triton_image_name` | Triton image to use for the cluster manager. Must be available in the selected data-center for the user. |
 | `triton_image_version` | Triton image version to use for the image `triton_image_name`. |
-| `triton_ssh_user` | Default SSH user available for the selected image. NOTE: Ubuntu images default SSH user is `ubuntu`. |
-| `master_triton_machine_package` | Triton KVM package to use for the cluster managers. |
+| `triton_ssh_user` | Default SSH user available for the selected image. NOTE: For Ubuntu images, default SSH user is `ubuntu`. |
+| `master_triton_machine_package` | Triton KVM package to use for the cluster manager. |
 | `rancher_admin_password` | UI password for admin user |
 
 ## Cluster YAML

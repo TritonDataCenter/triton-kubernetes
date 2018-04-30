@@ -1,6 +1,6 @@
 # Introduction
 
-This document describes the process of setting up Triton Multi-cloud Kubernetes.
+This document describes the process of setting up Triton Multi-Cloud Kubernetes.
 
 ![Triton-Kubernetes](https://github.com/joyent/triton-kubernetes/raw/master/docs/imgs/Triton-Kubernetes.png)
 
