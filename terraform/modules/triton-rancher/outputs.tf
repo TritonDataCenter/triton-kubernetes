@@ -1,7 +1,3 @@
-output "masters" {
-  value = "${triton_machine.rancher_master.primaryip}"
-}
-
 output "rancher_url" {
   value = "https://${triton_machine.rancher_master.primaryip}"
 }

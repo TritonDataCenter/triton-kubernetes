@@ -33,8 +33,42 @@ func (state *State) Get(path string) string {
 	return value
 }
 
-func (state *State) Add(path string, obj interface{}) error {
-	_, err := state.configJSON.SetP(obj, path)
+func (state *State) SetManager(obj interface{}) error {
+	_, err := state.configJSON.SetP(obj, "module.cluster-manager")
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func (state *State) SetTerraformBackendConfig(tfBackendPath string, tfBackendObj interface{}) error {
+	_, err := state.configJSON.SetP(tfBackendObj, tfBackendPath)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Clusters are stored at path `module.cluster_{provider}_{clusterName}`
+func (state *State) AddCluster(provider, name string, obj interface{}) error {
+	_, err := state.configJSON.SetP(obj, fmt.Sprintf("module.cluster_%s_%s", provider, name))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Nodes are stored at path `module.node_{provider}_{clusterName}_{nodeName}`
+func (state *State) AddNode(clusterKey, name string, obj interface{}) error {
+	provider, clusterName, err := getClusterKeyParts(clusterKey)
+	if err != nil {
+		return err
+	}
+
+	_, err = state.configJSON.SetP(obj, fmt.Sprintf("module.node_%s_%s_%s", provider, clusterName, name))
 	if err != nil {
 		return err
 	}
@@ -56,7 +90,7 @@ func (state *State) Bytes() []byte {
 }
 
 // Returns map of cluster name to cluster key
-// cluster keys are prefixed with 'cluster_'
+// Clusters are stored at path `module.cluster_{provider}_{clusterName}`
 func (state *State) Clusters() (map[string]string, error) {
 	result := map[string]string{}
 
@@ -79,22 +113,18 @@ func (state *State) Clusters() (map[string]string, error) {
 }
 
 // Returns map of node name to node key for all nodes in a cluster
-// node keys are prefixed with 'node_'
+// Nodes are stored at path `module.node_{provider}_{clusterName}_{nodeName}`
 func (state *State) Nodes(clusterKey string) (map[string]string, error) {
 	result := map[string]string{}
 
-	parts := strings.Split(clusterKey, "_")
-	if len(parts) < 3 {
-		// clusterKey is `cluster_{provider}_{clusterName}`
-		return result, fmt.Errorf("Could not determine cloud provider for cluster '%s'", clusterKey)
+	provider, name, err := getClusterKeyParts(clusterKey)
+	if err != nil {
+		return nil, err
 	}
 
-	cloudProvider := parts[1]
-	clusterName := parts[2]
-
-	// Nodes are named `node_{provider}_{clusterName}-{nodeName}-{nodeNumber}
-	// nodePrefix is `node_{provider}_{clusterName}`
-	nodePrefix := fmt.Sprintf("node_%s_%s", cloudProvider, clusterName)
+	// Nodes are named `node_{provider}_{clusterName}_{nodeName}`
+	// nodePrefix is `node_{provider}_{clusterName}_`
+	nodePrefix := fmt.Sprintf("node_%s_%s_", provider, name)
 
 	children, err := state.configJSON.S("module").ChildrenMap()
 	if err != nil {
@@ -114,4 +144,17 @@ func (state *State) Nodes(clusterKey string) (map[string]string, error) {
 	}
 
 	return result, nil
+}
+
+func getClusterKeyParts(clusterKey string) (provider, name string, err error) {
+	parts := strings.Split(clusterKey, "_")
+	if len(parts) < 3 {
+		err = fmt.Errorf("Could not get cluster key parts, cluster does not follow format `cluster_{provider}_{clusterName}` '%s'", clusterKey)
+		return
+	}
+
+	provider = parts[1]
+	name = parts[2]
+
+	return
 }

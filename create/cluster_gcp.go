@@ -20,7 +20,6 @@ import (
 )
 
 const (
-	gcpClusterKeyFormat                     = "module.cluster_gcp_%s"
 	gcpRancherKubernetesTerraformModulePath = "terraform/modules/gcp-rancher-k8s"
 )
 
@@ -160,7 +159,7 @@ func newGCPCluster(remoteBackend backend.Backend, currentState state.State) (str
 	}
 
 	// Add new cluster to terraform config
-	err = currentState.Add(fmt.Sprintf(gcpClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.AddCluster("gcp", cfg.Name, &cfg)
 	if err != nil {
 		return "", err
 	}

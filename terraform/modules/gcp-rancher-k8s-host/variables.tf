@@ -70,6 +70,10 @@ variable "gcp_compute_network_name" {
   description = "Network to deploy GCP machine in"
 }
 
+variable "gcp_compute_firewall_host_tag" {
+  description = "Tag that should be applied to nodes so the firewall source rules can be applied"
+}
+
 variable "gcp_disk_type" {
   default     = ""
   description = "The disk type which can be either 'pd-ssd' for SSD or 'pd-standard' for Standard"

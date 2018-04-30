@@ -67,36 +67,80 @@ resource "aws_key_pair" "deployer" {
   public_key = "${file("${var.aws_public_key_path}")}"
 }
 
-resource "aws_security_group" "rancher" {
+# Firewall requirements taken from:
+# https://rancher.com/docs/rancher/v2.0/en/quick-start-guide/
+resource "aws_security_group" "rke_ports" {
   name        = "${var.name}"
   description = "Security group for rancher hosts in ${var.name} cluster"
   vpc_id      = "${aws_vpc.default.id}"
 
   ingress {
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port = "22"  # SSH
+    to_port   = "22"
+    protocol  = "tcp"
+    self      = true
   }
 
   ingress {
-    from_port   = 500
-    to_port     = 500
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port = "80"  # Canal
+    to_port   = "80"
+    protocol  = "tcp"
+    self      = true
   }
 
   ingress {
-    from_port   = 4500
-    to_port     = 4500
-    protocol    = "udp"
-    cidr_blocks = ["0.0.0.0/0"]
+    from_port = "443" # Canal
+    to_port   = "443"
+    protocol  = "tcp"
+    self      = true
   }
 
   ingress {
-    from_port = "0"
-    to_port   = "0"
-    protocol  = "-1"
+    from_port = "6443" # Canal
+    to_port   = "6443"
+    protocol  = "tcp"
+    self      = true
+  }
+
+  ingress {
+    from_port = "2379" # etcd server client API
+    to_port   = "2380"
+    protocol  = "tcp"
+    self      = true
+  }
+
+  ingress {
+    from_port = "10250" # kubelet API
+    to_port   = "10250"
+    protocol  = "tcp"
+    self      = true
+  }
+
+  ingress {
+    from_port = "10251" # scheduler
+    to_port   = "10251"
+    protocol  = "tcp"
+    self      = true
+  }
+
+  ingress {
+    from_port = "10252" # controller
+    to_port   = "10252"
+    protocol  = "tcp"
+    self      = true
+  }
+
+  ingress {
+    from_port = "10256" # kubeproxy
+    to_port   = "10256"
+    protocol  = "tcp"
+    self      = true
+  }
+
+  ingress {
+    from_port = "30000" # NodePort Services
+    to_port   = "32767"
+    protocol  = "tcp"
     self      = true
   }
 

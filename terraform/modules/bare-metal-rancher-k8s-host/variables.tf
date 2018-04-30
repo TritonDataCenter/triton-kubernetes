@@ -41,7 +41,7 @@ variable "docker_engine_install_url" {
 }
 
 variable "ssh_user" {
-  default = "ubuntu"
+  default     = "ubuntu"
   description = ""
 }
 
@@ -50,11 +50,11 @@ variable "host" {
 }
 
 variable "bastion_host" {
-  default = ""
+  default     = ""
   description = ""
 }
 
 variable "key_path" {
-  default = "~/.ssh/id_rsa"
+  default     = "~/.ssh/id_rsa"
   description = ""
 }

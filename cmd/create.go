@@ -44,7 +44,7 @@ func createCmdFunc(cmd *cobra.Command, args []string) {
 	switch createType {
 	case "manager":
 		fmt.Println("create manager called")
-		err := create.NewTritonManager(remoteBackend)
+		err := create.NewManager(remoteBackend)
 		if err != nil {
 			fmt.Println(err)
 			os.Exit(1)

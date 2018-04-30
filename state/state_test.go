@@ -17,21 +17,72 @@ func TestGet(t *testing.T) {
 	}
 }
 
-// Add test
-func TestAdd(t *testing.T) {
+func TestSetManager(t *testing.T) {
 	stateObj, err := New("AddState", []byte(`{}`))
 	if err != nil {
 		t.Error(err)
 	}
 
-	err1 := stateObj.Add("config.triton.dns", "aws-provider")
+	err = stateObj.SetManager(map[string]interface{}{"field": "test"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	notEmptyPath := stateObj.Get("module.cluster-manager.field")
+	if notEmptyPath != "test" {
+		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test")
+	}
+}
+
+func TestSetTerraformBackendConfig(t *testing.T) {
+	stateObj, err := New("AddState", []byte(`{}`))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = stateObj.SetTerraformBackendConfig("module.path.to.backend", map[string]interface{}{"field": "test"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	notEmptyPath := stateObj.Get("module.path.to.backend.field")
+	if notEmptyPath != "test" {
+		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test")
+	}
+}
+
+// Add test
+func TestAddCluster(t *testing.T) {
+	stateObj, err := New("AddState", []byte(`{}`))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err1 := stateObj.AddCluster("aws", "name", map[string]interface{}{"field": "test"})
 	if err1 != nil {
 		t.Error(err1)
 	}
 
-	notEmptyPath := stateObj.Get("config.triton.dns")
-	if notEmptyPath != "aws-provider" {
-		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "aws-provider")
+	notEmptyPath := stateObj.Get("module.cluster_aws_name.field")
+	if notEmptyPath != "test" {
+		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test")
+	}
+}
+
+func TestAddNode(t *testing.T) {
+	stateObj, err := New("AddState", []byte(`{}`))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err1 := stateObj.AddNode("cluster_aws_cluster-name", "node-name", map[string]interface{}{"field": "test"})
+	if err1 != nil {
+		t.Error(err1)
+	}
+
+	notEmptyPath := stateObj.Get("module.node_aws_cluster-name_node-name.field")
+	if notEmptyPath != "test" {
+		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test")
 	}
 }
 
@@ -76,11 +127,9 @@ func TestGetClusters(t *testing.T) {
 	}
 }
 
-
 func TestGetNodes(t *testing.T) {
 
 	clusterStateObj, err := New("ClusterState", []byte(`{"config":{"triton":{"key":"cluster_triton_dev-cluster","url":"https://api.storage.com"}}}`))
-
 
 	clusterKeyString := clusterStateObj.Get("config.triton.key")
 
@@ -114,7 +163,6 @@ func TestGetNodesWithoutCloudProvider(t *testing.T) {
 
 	clusterStateObj, err := New("ClusterState", []byte(`{"config":{"triton":{"key":"cluster_dev-cluster","url":"https://api.storage.com"}}}`))
 
-
 	clusterKeyString := clusterStateObj.Get("config.triton.key")
 
 	stateObj, err := New("NodeState", []byte(`{
@@ -131,14 +179,12 @@ func TestGetNodesWithoutCloudProvider(t *testing.T) {
 		t.Error(err)
 	}
 
-	_,err1 := stateObj.Nodes(clusterKeyString)
+	_, err1 := stateObj.Nodes(clusterKeyString)
 
-
-	Expected:= "Could not determine cloud provider for cluster 'cluster_dev-cluster'"
+	Expected := "Could not get cluster key parts, cluster does not follow format `cluster_{provider}_{clusterName}` 'cluster_dev-cluster'"
 
 	if err1.Error() != Expected {
 		t.Error(err1)
 	}
-
 
 }

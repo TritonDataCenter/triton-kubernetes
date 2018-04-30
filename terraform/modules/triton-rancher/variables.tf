@@ -6,6 +6,36 @@ variable "rancher_admin_password" {
   description = "The Rancher admin password"
 }
 
+variable "docker_engine_install_url" {
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  description = "The URL to the shell script to install the docker engine."
+}
+
+variable "rancher_server_image" {
+  default     = "rancher/server:v2.0.0-beta2"
+  description = "The Rancher Server image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
+}
+
+variable "rancher_agent_image" {
+  default     = "rancher/agent:v2.0.0-beta2"
+  description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
+}
+
+variable "rancher_registry" {
+  default     = ""
+  description = "The docker registry to use for rancher server and agent images"
+}
+
+variable "rancher_registry_username" {
+  default     = ""
+  description = "The username to login as."
+}
+
+variable "rancher_registry_password" {
+  default     = ""
+  description = "The password to use."
+}
+
 variable "triton_account" {
   description = "The Triton account name, usually the username of your root user."
 }
@@ -42,34 +72,4 @@ variable "triton_ssh_user" {
 
 variable "master_triton_machine_package" {
   description = "The Triton machine package to use for Rancher master node(s). e.g. k4-highcpu-kvm-1.75G"
-}
-
-variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
-  description = "The URL to the shell script to install the docker engine."
-}
-
-variable "rancher_server_image" {
-  default     = "rancher/server:v2.0.0-beta2"
-  description = "The Rancher Server image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
-}
-
-variable "rancher_agent_image" {
-  default     = "rancher/agent:v2.0.0-beta2"
-  description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
-}
-
-variable "rancher_registry" {
-  default     = ""
-  description = "The docker registry to use for rancher server and agent images"
-}
-
-variable "rancher_registry_username" {
-  default     = ""
-  description = "The username to login as."
-}
-
-variable "rancher_registry_password" {
-  default     = ""
-  description = "The password to use."
 }

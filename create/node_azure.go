@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	azureNodeKeyFormat                            = "module.node_azure_%s"
 	azureRancherKubernetesHostTerraformModulePath = "terraform/modules/azure-rancher-k8s-host"
 )
 
@@ -152,24 +151,22 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		cfg.AzureSize = value
 	}
 
-	azureImagesClient := compute.NewImagesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
+	azureImagesClient := compute.NewVirtualMachineImagesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
 	azureImagesClient.Authorizer = autorest.NewBearerAuthorizer(azureSPT)
 
-	imageResults, err := azureImagesClient.List()
-	if err != nil {
-		return []string{}, err
-	}
+	// imageResults, err := azureImagesClient.List("westus", "Canonical", "UbuntuServer", "16.04-LTS", "", nil, "")
+	// if err != nil {
+	// 	return []string{}, err
+	// }
 
-	for _, x := range *imageResults.Value {
-		fmt.Println(*x.Name)
-		fmt.Print(*x.ID)
-	}
+	// for _, x := range *imageResults.Value {
+	// 	fmt.Println(*x.Name)
+	// }
 
-	// TODO
-	// Azure Image Publisher
-	// Azure Image Offer
-	// Azure Image SKU
-	// Azure Image Version
+	// cfg.AzureImagePublisher = "Canonical"
+	// cfg.AzureImageOffer = "UbuntuServer"
+	// cfg.AzureImageSKU = "16.04-LTS"
+	// cfg.AzureImageVersion = ""
 
 	// Azure SSH User
 	if viper.IsSet("azure_ssh_user") {
@@ -307,7 +304,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}
