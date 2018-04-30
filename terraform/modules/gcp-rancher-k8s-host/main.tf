@@ -35,6 +35,8 @@ resource "google_compute_instance" "host" {
   zone         = "${var.gcp_instance_zone}"
   project      = "${var.gcp_project_id}"
 
+  tags = ["${var.gcp_compute_firewall_host_tag}"]
+
   boot_disk {
     initialize_params {
       image = "${var.gcp_image}"
@@ -55,11 +57,9 @@ resource "google_compute_instance" "host" {
       // Ephemeral IP
     }
   }
-
   service_account {
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
-
   metadata_startup_script = "${data.template_file.install_rancher_agent.rendered}"
 }
 

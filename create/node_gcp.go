@@ -6,12 +6,10 @@ import (
 	"fmt"
 	"io/ioutil"
 	"sort"
-	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
-	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -30,7 +28,8 @@ type gcpNodeTerraformConfig struct {
 	GCPProjectID         string `json:"gcp_project_id"`
 	GCPComputeRegion     string `json:"gcp_compute_region"`
 
-	GCPComputeNetworkName string `json:"gcp_compute_network_name"`
+	GCPComputeNetworkName     string `json:"gcp_compute_network_name"`
+	GCPComputeFirewallHostTag string `json:"gcp_compute_firewall_host_tag"`
 
 	GCPMachineType  string `json:"gcp_machine_type"`
 	GCPInstanceZone string `json:"gcp_instance_zone"`
@@ -62,7 +61,8 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		GCPComputeRegion:     currentState.Get(fmt.Sprintf("module.%s.gcp_compute_region", selectedCluster)),
 
 		// Reference terraform output variables from cluster module
-		GCPComputeNetworkName: fmt.Sprintf("${module.%s.gcp_compute_network_name}", selectedCluster),
+		GCPComputeNetworkName:     fmt.Sprintf("${module.%s.gcp_compute_network_name}", selectedCluster),
+		GCPComputeFirewallHostTag: fmt.Sprintf("${module.%s.gcp_compute_firewall_host_tag}", selectedCluster),
 	}
 
 	gcpCredentials, err := ioutil.ReadFile(cfg.GCPPathToCredentials)
@@ -239,107 +239,107 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	}
 
 	// Get list of GCP permanent disk types
-	diskTypesResponse, err := service.DiskTypes.List(cfg.GCPProjectID, cfg.GCPInstanceZone).Do()
-	if err != nil {
-		return nil, err
-	}
-	permanentDiskTypes := []*compute.DiskType{}
-	for _, diskType := range diskTypesResponse.Items {
-		if strings.HasPrefix(diskType.Name, "pd-") {
-			permanentDiskTypes = append(permanentDiskTypes, diskType)
-		}
-	}
+	// diskTypesResponse, err := service.DiskTypes.List(cfg.GCPProjectID, cfg.GCPInstanceZone).Do()
+	// if err != nil {
+	// 	return nil, err
+	// }
+	// permanentDiskTypes := []*compute.DiskType{}
+	// for _, diskType := range diskTypesResponse.Items {
+	// 	if strings.HasPrefix(diskType.Name, "pd-") {
+	// 		permanentDiskTypes = append(permanentDiskTypes, diskType)
+	// 	}
+	// }
 
-	// GCP Disk
-	diskTypeIsSet := viper.IsSet("gcp_disk_type")
-	diskSizeIsSet := viper.IsSet("gcp_disk_size")
-	diskMountPathIsSet := viper.IsSet("gcp_disk_mount_path")
-	if nonInteractiveMode {
-		// If disk type is defined, assume the user's intent is to add
-		// a disk to the host and throw an error if neither size nor mount path is set.
-		if diskTypeIsSet && !(diskSizeIsSet || diskMountPathIsSet) {
-			return nil, errors.New("If gcp_disk_type is set, gcp_disk_size and gcp_disk_mount must also be set.")
-		} else if diskTypeIsSet {
-			cfg.GCPDiskType = viper.GetString("gcp_disk_type")
-			if !isValidDiskType(permanentDiskTypes, cfg.GCPDiskType) {
-				return nil, fmt.Errorf("gcp_disk_type must be valid. Found '%s'.", cfg.GCPDiskType)
-			}
-			cfg.GCPDiskSize = viper.GetString("gcp_disk_size")
-			cfg.GCPDiskMountPath = viper.GetString("gcp_disk_mount_path")
-		}
-	} else {
-		shouldCreateDisk, err := util.PromptForConfirmation("Create a disk for this node", "Disk created")
-		if err != nil {
-			return nil, err
-		}
+	// // GCP Disk
+	// diskTypeIsSet := viper.IsSet("gcp_disk_type")
+	// diskSizeIsSet := viper.IsSet("gcp_disk_size")
+	// diskMountPathIsSet := viper.IsSet("gcp_disk_mount_path")
+	// if nonInteractiveMode {
+	// 	// If disk type is defined, assume the user's intent is to add
+	// 	// a disk to the host and throw an error if neither size nor mount path is set.
+	// 	if diskTypeIsSet && !(diskSizeIsSet || diskMountPathIsSet) {
+	// 		return nil, errors.New("If gcp_disk_type is set, gcp_disk_size and gcp_disk_mount must also be set.")
+	// 	} else if diskTypeIsSet {
+	// 		cfg.GCPDiskType = viper.GetString("gcp_disk_type")
+	// 		if !isValidDiskType(permanentDiskTypes, cfg.GCPDiskType) {
+	// 			return nil, fmt.Errorf("gcp_disk_type must be valid. Found '%s'.", cfg.GCPDiskType)
+	// 		}
+	// 		cfg.GCPDiskSize = viper.GetString("gcp_disk_size")
+	// 		cfg.GCPDiskMountPath = viper.GetString("gcp_disk_mount_path")
+	// 	}
+	// } else {
+	// 	shouldCreateDisk, err := util.PromptForConfirmation("Create a disk for this node", "Disk created")
+	// 	if err != nil {
+	// 		return nil, err
+	// 	}
 
-		if shouldCreateDisk {
-			// GCP Disk Type
-			if diskTypeIsSet {
-				cfg.GCPDiskType = viper.GetString("gcp_disk_type")
-				if !isValidDiskType(permanentDiskTypes, cfg.GCPDiskType) {
-					return nil, fmt.Errorf("gcp_disk_type must be valid. Found '%s'.", cfg.GCPDiskType)
-				}
-			} else {
-				prompt := promptui.Select{
-					Label: "GCP Disk Type",
-					Items: permanentDiskTypes,
-					Templates: &promptui.SelectTemplates{
-						Label:    "{{ . }}?",
-						Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
-						Inactive: "  {{.Name}}",
-						Selected: "  GCP Disk Type? {{.Name}}",
-					},
-				}
+	// 	if shouldCreateDisk {
+	// 		// GCP Disk Type
+	// 		if diskTypeIsSet {
+	// 			cfg.GCPDiskType = viper.GetString("gcp_disk_type")
+	// 			if !isValidDiskType(permanentDiskTypes, cfg.GCPDiskType) {
+	// 				return nil, fmt.Errorf("gcp_disk_type must be valid. Found '%s'.", cfg.GCPDiskType)
+	// 			}
+	// 		} else {
+	// 			prompt := promptui.Select{
+	// 				Label: "GCP Disk Type",
+	// 				Items: permanentDiskTypes,
+	// 				Templates: &promptui.SelectTemplates{
+	// 					Label:    "{{ . }}?",
+	// 					Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+	// 					Inactive: "  {{.Name}}",
+	// 					Selected: "  GCP Disk Type? {{.Name}}",
+	// 				},
+	// 			}
 
-				i, _, err := prompt.Run()
-				if err != nil {
-					return nil, err
-				}
+	// 			i, _, err := prompt.Run()
+	// 			if err != nil {
+	// 				return nil, err
+	// 			}
 
-				cfg.GCPDiskType = permanentDiskTypes[i].Name
-			}
+	// 			cfg.GCPDiskType = permanentDiskTypes[i].Name
+	// 		}
 
-			// GCP Disk Size
-			if diskSizeIsSet {
-				cfg.GCPDiskSize = viper.GetString("gcp_disk_size")
-			} else {
-				prompt := promptui.Prompt{
-					Label: "GCP Disk Size in GB",
-					Validate: func(input string) error {
-						num, err := strconv.ParseInt(input, 10, 64)
-						if err != nil {
-							return errors.New("Invalid number")
-						}
-						if num <= 0 {
-							return errors.New("Number must be greater than 0")
-						}
-						return nil
-					},
-				}
-				result, err := prompt.Run()
-				if err != nil {
-					return nil, err
-				}
-				cfg.GCPDiskSize = result
-			}
+	// 		// GCP Disk Size
+	// 		if diskSizeIsSet {
+	// 			cfg.GCPDiskSize = viper.GetString("gcp_disk_size")
+	// 		} else {
+	// 			prompt := promptui.Prompt{
+	// 				Label: "GCP Disk Size in GB",
+	// 				Validate: func(input string) error {
+	// 					num, err := strconv.ParseInt(input, 10, 64)
+	// 					if err != nil {
+	// 						return errors.New("Invalid number")
+	// 					}
+	// 					if num <= 0 {
+	// 						return errors.New("Number must be greater than 0")
+	// 					}
+	// 					return nil
+	// 				},
+	// 			}
+	// 			result, err := prompt.Run()
+	// 			if err != nil {
+	// 				return nil, err
+	// 			}
+	// 			cfg.GCPDiskSize = result
+	// 		}
 
-			// GCP Disk Mount path
-			if diskMountPathIsSet {
-				cfg.GCPDiskMountPath = viper.GetString("gcp_disk_mount_path")
-			} else {
-				prompt := promptui.Prompt{
-					Label: "GCP Disk Mount Path",
-				}
+	// 		// GCP Disk Mount path
+	// 		if diskMountPathIsSet {
+	// 			cfg.GCPDiskMountPath = viper.GetString("gcp_disk_mount_path")
+	// 		} else {
+	// 			prompt := promptui.Prompt{
+	// 				Label: "GCP Disk Mount Path",
+	// 			}
 
-				result, err := prompt.Run()
-				if err != nil {
-					return nil, err
-				}
-				cfg.GCPDiskMountPath = result
-			}
-		}
-	}
+	// 			result, err := prompt.Run()
+	// 			if err != nil {
+	// 				return nil, err
+	// 			}
+	// 			cfg.GCPDiskMountPath = result
+	// 		}
+	// 	}
+	// }
 
 	// Get existing node names
 	nodes, err := currentState.Nodes(selectedCluster)
