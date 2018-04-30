@@ -17,29 +17,41 @@ func TestGet(t *testing.T) {
 	}
 }
 
-// Add test
-func TestAddManager(t *testing.T) {
+func TestSetManager(t *testing.T) {
 	stateObj, err := New("AddState", []byte(`{}`))
 	if err != nil {
 		t.Error(err)
 	}
 
-	err1 := stateObj.AddManager("module.path.to.backend", map[string]interface{}{"field": "test"}, map[string]interface{}{"field": "test2"})
-	if err1 != nil {
-		t.Error(err1)
+	err = stateObj.SetManager(map[string]interface{}{"field": "test"})
+	if err != nil {
+		t.Error(err)
+	}
+
+	notEmptyPath := stateObj.Get("module.cluster-manager.field")
+	if notEmptyPath != "test" {
+		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test")
+	}
+}
+
+func TestSetTerraformBackendConfig(t *testing.T) {
+	stateObj, err := New("AddState", []byte(`{}`))
+	if err != nil {
+		t.Error(err)
+	}
+
+	err = stateObj.SetTerraformBackendConfig("module.path.to.backend", map[string]interface{}{"field": "test"})
+	if err != nil {
+		t.Error(err)
 	}
 
 	notEmptyPath := stateObj.Get("module.path.to.backend.field")
 	if notEmptyPath != "test" {
 		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test")
 	}
-
-	notEmptyPath = stateObj.Get("module.cluster-manager.field")
-	if notEmptyPath != "test2" {
-		t.Errorf("value in state object, got: %s, want: %s", notEmptyPath, "test2")
-	}
 }
 
+// Add test
 func TestAddCluster(t *testing.T) {
 	stateObj, err := New("AddState", []byte(`{}`))
 	if err != nil {

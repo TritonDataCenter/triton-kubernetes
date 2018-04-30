@@ -33,13 +33,17 @@ func (state *State) Get(path string) string {
 	return value
 }
 
-func (state *State) AddManager(tfBackendPath string, tfBackendObj, obj interface{}) error {
+func (state *State) SetManager(obj interface{}) error {
 	_, err := state.configJSON.SetP(obj, "module.cluster-manager")
 	if err != nil {
 		return err
 	}
 
-	_, err = state.configJSON.SetP(tfBackendObj, tfBackendPath)
+	return nil
+}
+
+func (state *State) SetTerraformBackendConfig(tfBackendPath string, tfBackendObj interface{}) error {
+	_, err := state.configJSON.SetP(tfBackendObj, tfBackendPath)
 	if err != nil {
 		return err
 	}
