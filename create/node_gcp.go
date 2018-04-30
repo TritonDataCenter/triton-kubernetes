@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"io/ioutil"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -185,6 +186,11 @@ func newGCPNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	if err != nil {
 		return []string{}, err
 	}
+
+	// Sort images by created timestamp in reverse chronological order
+	sort.SliceStable(images.Items, func(i, j int) bool {
+		return images.Items[i].CreationTimestamp > images.Items[j].CreationTimestamp
+	})
 
 	// GCP Image
 	if viper.IsSet("gcp_image") {

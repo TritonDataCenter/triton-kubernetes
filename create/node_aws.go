@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -115,16 +116,23 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		}
 
 		type ami struct {
-			Name string
-			ID   string
+			Name         string
+			ID           string
+			CreationDate string
 		}
 		amis := []ami{}
 		for _, image := range describeImagesResponse.Images {
 			amis = append(amis, ami{
-				Name: *image.Name,
-				ID:   *image.ImageId,
+				Name:         *image.Name,
+				ID:           *image.ImageId,
+				CreationDate: *image.CreationDate,
 			})
 		}
+
+		// Sort images by creation date in reverse chronological order
+		sort.SliceStable(amis, func(i, j int) bool {
+			return amis[i].CreationDate > amis[j].CreationDate
+		})
 
 		searcher := func(input string, index int) bool {
 			ami := amis[index]
