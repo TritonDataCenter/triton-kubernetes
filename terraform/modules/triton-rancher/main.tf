@@ -17,19 +17,6 @@ data "triton_image" "image" {
   version = "${var.triton_image_version}"
 }
 
-data "template_file" "install_docker" {
-  template = "${file("${path.module}/files/install_docker_rancher.sh.tpl")}"
-
-  vars {
-    docker_engine_install_url = "${var.docker_engine_install_url}"
-
-    rancher_server_image      = "${var.rancher_server_image}"
-    rancher_registry          = "${var.rancher_registry}"
-    rancher_registry_username = "${var.rancher_registry_username}"
-    rancher_registry_password = "${var.rancher_registry_password}"
-  }
-}
-
 resource "triton_machine" "rancher_master" {
   package = "${var.master_triton_machine_package}"
   image   = "${data.triton_image.image.id}"
@@ -50,6 +37,26 @@ resource "triton_machine" "rancher_master" {
   }
 }
 
+locals {
+  rancher_master_id = "${triton_machine.rancher_master.id}"
+  rancher_master_ip = "${triton_machine.rancher_master.primaryip}"
+  ssh_user          = "${var.triton_ssh_user}"
+  key_path          = "${var.triton_key_path}"
+}
+
+data "template_file" "install_docker" {
+  template = "${file("${path.module}/files/install_docker_rancher.sh.tpl")}"
+
+  vars {
+    docker_engine_install_url = "${var.docker_engine_install_url}"
+
+    rancher_server_image      = "${var.rancher_server_image}"
+    rancher_registry          = "${var.rancher_registry}"
+    rancher_registry_username = "${var.rancher_registry_username}"
+    rancher_registry_password = "${var.rancher_registry_password}"
+  }
+}
+
 data "template_file" "install_rancher_master" {
   template = "${file("${path.module}/files/install_rancher_master.sh.tpl")}"
 
@@ -64,14 +71,14 @@ data "template_file" "install_rancher_master" {
 resource "null_resource" "install_rancher_master" {
   # Changes to any instance of the cluster requires re-provisioning
   triggers {
-    rancher_master_id = "${triton_machine.rancher_master.id}"
+    rancher_master_id = "${local.rancher_master_id}"
   }
 
   connection {
     type        = "ssh"
-    user        = "${var.triton_ssh_user}"
-    host        = "${triton_machine.rancher_master.primaryip}"
-    private_key = "${file(var.triton_key_path)}"
+    user        = "${local.ssh_user}"
+    host        = "${local.rancher_master_ip}"
+    private_key = "${file(local.key_path)}"
   }
 
   provisioner "remote-exec" {
@@ -87,7 +94,7 @@ data "template_file" "setup_rancher_k8s" {
   vars {
     name                  = "${var.name}"
     rancher_host          = "https://127.0.0.1"
-    host_registration_url = "https://${triton_machine.rancher_master.primaryip}"
+    host_registration_url = "https://${local.rancher_master_ip}"
 
     rancher_admin_password = "${var.rancher_admin_password}"
   }
@@ -98,16 +105,14 @@ resource "null_resource" "setup_rancher_k8s" {
 
   # Changes to any instance of the cluster requires re-provisioning
   triggers {
-    rancher_master_id = "${triton_machine.rancher_master.id}"
+    rancher_master_id = "${local.rancher_master_id}"
   }
 
-  # Setup script can run on any rancher master
-  # So we just choose the first in this case
   connection {
     type        = "ssh"
-    user        = "${var.triton_ssh_user}"
-    host        = "${triton_machine.rancher_master.primaryip}"
-    private_key = "${file(var.triton_key_path)}"
+    user        = "${local.ssh_user}"
+    host        = "${local.rancher_master_ip}"
+    private_key = "${file(local.key_path)}"
   }
 
   provisioner "remote-exec" {
@@ -126,7 +131,7 @@ module "rancher_access_key" {
 
   // We ssh into the remote box and cat the file.
   // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
-  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${var.triton_key_path} ${var.triton_ssh_user}@${triton_machine.rancher_master.primaryip} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .name'"
+  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${local.key_path} ${local.ssh_user}@${local.rancher_master_ip} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .name'"
 }
 
 module "rancher_secret_key" {
@@ -135,5 +140,5 @@ module "rancher_secret_key" {
 
   // We ssh into the remote box and cat the file.
   // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
-  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${var.triton_key_path} ${var.triton_ssh_user}@${triton_machine.rancher_master.primaryip} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .token | cut -d: -f2'"
+  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${local.key_path} ${local.ssh_user}@${local.rancher_master_ip} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .token | cut -d: -f2'"
 }

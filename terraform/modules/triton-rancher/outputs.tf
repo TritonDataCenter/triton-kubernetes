@@ -1,5 +1,5 @@
 output "rancher_url" {
-  value = "https://${triton_machine.rancher_master.primaryip}"
+  value = "https://${local.rancher_master_ip}"
 }
 
 output "rancher_access_key" {
