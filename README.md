@@ -84,8 +84,8 @@ To get help on a command, use the --help flag. For example:
 ```
 $ triton-kubernetes --help
 This is a multi-cloud Kubernetes solution. Triton Kubernetes has a global
-cluster manager which will run on Triton and manages Kubernetes environments. This
-cluster manager will manage environments running on any region of any supported cloud.
+cluster manager which can manage multiple clusters across regions/data-centers and/or clouds. 
+Cluster manager can run anywhere (Triton/AWS/Azure/GCP/Baremetal) and manage Kubernetes environments running on any region of any supported cloud.
 For an example set up, look at the How-To section.
 
 Usage:
@@ -115,7 +115,7 @@ triton-kubernetes create [manager or cluster or node]
 
 Creates a new cluster manager, kubernetes cluster or individual kubernetes cluster node.
 
-When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, Azure GCP).
+When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, Azure and GCP).
 
 ### Destroy
 
