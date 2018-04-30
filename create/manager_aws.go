@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"sort"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
 
 	"github.com/aws/aws-sdk-go/aws"
@@ -21,41 +21,46 @@ import (
 )
 
 const (
-	awsRancherKubernetesTerraformModulePath = "terraform/modules/aws-rancher-k8s"
+	awsRancherTerraformModulePath = "terraform/modules/aws-rancher"
 )
 
 // This struct represents the definition of a Terraform .tf file.
 // Marshalled into json this struct can be passed directly to Terraform.
-type awsClusterTerraformConfig struct {
-	baseClusterTerraformConfig
+type awsManagerTerraformConfig struct {
+	baseManagerTerraformConfig
 
 	AWSAccessKey string `json:"aws_access_key"`
 	AWSSecretKey string `json:"aws_secret_key"`
 
-	AWSRegion        string `json:"aws_region"`
-	AWSVPCCIDR       string `json:"aws_vpc_cidr"`
-	AWSSubnetCIDR    string `json:"aws_subnet_cidr"`
-	AWSPublicKeyPath string `json:"aws_public_key_path"`
-	AWSKeyName       string `json:"aws_key_name"`
+	AWSRegion         string `json:"aws_region"`
+	AWSVPCCIDR        string `json:"aws_vpc_cidr"`
+	AWSSubnetCIDR     string `json:"aws_subnet_cidr"`
+	AWSPublicKeyPath  string `json:"aws_public_key_path"`
+	AWSPrivateKeyPath string `json:"aws_private_key_path"`
+	AWSKeyName        string `json:"aws_key_name"`
+	AWSSSHUser        string `json:"aws_ssh_user"`
+
+	AWSAMIID        string `json:"aws_ami_id"`
+	AWSInstanceType string `json:"aws_instance_type"`
 }
 
-// Returns the name of the cluster that was created and the new state.
-func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (string, error) {
+func newAWSManager(currentState state.State, name string) error {
 	nonInteractiveMode := viper.GetBool("non-interactive")
-	baseConfig, err := getBaseClusterTerraformConfig(awsRancherKubernetesTerraformModulePath)
+
+	baseConfig, err := getBaseManagerTerraformConfig(awsRancherTerraformModulePath, name)
 	if err != nil {
-		return "", err
+		return err
 	}
 
-	cfg := awsClusterTerraformConfig{
-		baseClusterTerraformConfig: baseConfig,
+	cfg := awsManagerTerraformConfig{
+		baseManagerTerraformConfig: baseConfig,
 	}
 
 	// AWS Access Key
 	if viper.IsSet("aws_access_key") {
 		cfg.AWSAccessKey = viper.GetString("aws_access_key")
 	} else if nonInteractiveMode {
-		return "", errors.New("aws_access_key must be specified")
+		return errors.New("aws_access_key must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "AWS Access Key",
@@ -69,7 +74,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return err
 		}
 		cfg.AWSAccessKey = result
 	}
@@ -78,7 +83,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	if viper.IsSet("aws_secret_key") {
 		cfg.AWSSecretKey = viper.GetString("aws_secret_key")
 	} else if nonInteractiveMode {
-		return "", errors.New("aws_secret_key must be specified")
+		return errors.New("aws_secret_key must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "AWS Secret Key",
@@ -92,7 +97,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return err
 		}
 		cfg.AWSSecretKey = result
 	}
@@ -105,14 +110,14 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	awsConfig := aws.NewConfig().WithCredentials(creds).WithRegion(endpoints.UsWest1RegionID)
 	sess, err := session.NewSession(awsConfig)
 	if err != nil {
-		return "", err
+		return err
 	}
 	ec2Client := ec2.New(sess)
 
 	// Get the regions
 	regionsResult, err := ec2Client.DescribeRegions(&ec2.DescribeRegionsInput{})
 	if err != nil {
-		return "", err
+		return err
 	}
 	regions := regionsResult.Regions
 
@@ -129,10 +134,10 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 			}
 		}
 		if !found {
-			return "", fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
+			return fmt.Errorf("Selected AWS Region '%s' does not exist.", cfg.AWSRegion)
 		}
 	} else if nonInteractiveMode {
-		return "", errors.New("aws_region must be specified")
+		return errors.New("aws_region must be specified")
 	} else {
 		// Building an array of strings that will be given to the SelectPrompt.
 		// The SelectTemplate has problems displaying struct fields that are string pointers.
@@ -167,7 +172,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		cfg.AWSRegion = *regions[i].RegionName
@@ -177,7 +182,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	awsConfig = aws.NewConfig().WithCredentials(creds).WithRegion(cfg.AWSRegion)
 	sess, err = session.NewSession(awsConfig)
 	if err != nil {
-		return "", err
+		return err
 	}
 	ec2Client = ec2.New(sess)
 
@@ -189,18 +194,18 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 		if viper.IsSet("aws_public_key_path") {
 			expandedAWSPublicKeyPath, err := homedir.Expand(viper.GetString("aws_public_key_path"))
 			if err != nil {
-				return "", err
+				return err
 			}
 			cfg.AWSPublicKeyPath = expandedAWSPublicKeyPath
 		}
 	} else if nonInteractiveMode {
-		return "", errors.New("aws_key_name must be specified")
+		return errors.New("aws_key_name must be specified")
 	} else {
 		// List all available aws keys
 		input := ec2.DescribeKeyPairsInput{}
 		rawKeyPairs, err := ec2Client.DescribeKeyPairs(&input)
 		if err != nil {
-			return "", err
+			return err
 		}
 
 		keyPairs := []string{}
@@ -220,7 +225,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 			value, err := prompt.Run()
 			if err != nil {
-				return "", err
+				return err
 			}
 
 			cfg.AWSKeyName = value
@@ -234,7 +239,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 			i, value, err := prompt.Run()
 			if err != nil {
-				return "", err
+				return err
 			}
 
 			// i == -1 when user selects "Upload new key"
@@ -268,23 +273,78 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 			result, err := prompt.Run()
 			if err != nil {
-				return "", err
+				return err
 			}
 
 			expandedKeyPath, err := homedir.Expand(result)
 			if err != nil {
-				return "", err
+				return err
 			}
 
 			cfg.AWSPublicKeyPath = expandedKeyPath
 		}
 	}
 
+	rawAWSPrivateKeyPath := ""
+	if viper.IsSet("aws_private_key_path") {
+		rawAWSPrivateKeyPath = viper.GetString("aws_private_key_path")
+	} else if nonInteractiveMode {
+		return errors.New("aws_private_key_path must be specified")
+	} else {
+		prompt := promptui.Prompt{
+			Label: "AWS Private Key Path",
+			Validate: func(input string) error {
+				expandedPath, err := homedir.Expand(input)
+				if err != nil {
+					return err
+				}
+
+				_, err = os.Stat(expandedPath)
+				if err != nil {
+					if os.IsNotExist(err) {
+						return errors.New("File not found")
+					}
+				}
+				return nil
+			},
+			Default: "~/.ssh/id_rsa",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		rawAWSPrivateKeyPath = result
+	}
+
+	expandedAWSPrivateKeyPath, err := homedir.Expand(rawAWSPrivateKeyPath)
+	if err != nil {
+		return err
+	}
+	cfg.AWSPrivateKeyPath = expandedAWSPrivateKeyPath
+
+	if viper.IsSet("aws_ssh_user") {
+		cfg.AWSSSHUser = viper.GetString("aws_ssh_user")
+	} else if nonInteractiveMode {
+		return errors.New("aws_ssh_user must be specified")
+	} else {
+		prompt := promptui.Prompt{
+			Label:   "AWS SSH User",
+			Default: "ubuntu",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.AWSSSHUser = result
+	}
+
 	// AWS VPC CIDR
 	if viper.IsSet("aws_vpc_cidr") {
 		cfg.AWSVPCCIDR = viper.GetString("aws_vpc_cidr")
 	} else if nonInteractiveMode {
-		return "", errors.New("aws_vpc_cidr must be specified")
+		return errors.New("aws_vpc_cidr must be specified")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "AWS VPC CIDR",
@@ -307,7 +367,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return err
 		}
 		cfg.AWSVPCCIDR = result
 	}
@@ -316,12 +376,12 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	if viper.IsSet("aws_subnet_cidr") {
 		cfg.AWSSubnetCIDR = viper.GetString("aws_subnet_cidr")
 	} else if nonInteractiveMode {
-		return "", errors.New("aws_subnet_cidr must be specified")
+		return errors.New("aws_subnet_cidr must be specified")
 	} else {
 		// Parsing VPC CIDR to prepare for subnet validation
 		_, vpcIPNet, err := net.ParseCIDR(cfg.AWSVPCCIDR)
 		if err != nil {
-			return "", err
+			return err
 		}
 		vpcPrefix, _ := vpcIPNet.Mask.Size()
 
@@ -349,16 +409,107 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 
 		result, err := prompt.Run()
 		if err != nil {
-			return "", err
+			return err
 		}
 		cfg.AWSSubnetCIDR = result
 	}
 
-	// Add new cluster to terraform config
-	err = currentState.AddCluster("aws", cfg.Name, &cfg)
-	if err != nil {
-		return "", err
+	// AWS AMI ID
+	if viper.IsSet("aws_ami_id") {
+		cfg.AWSAMIID = viper.GetString("aws_ami_id")
+
+		// TODO: Verify aws_ami_id
+	} else if nonInteractiveMode {
+		return errors.New("aws_ami_id must be specified")
+	} else {
+		// TODO: Ask the user for a search term
+		describeImagesInput := ec2.DescribeImagesInput{
+			Filters: []*ec2.Filter{
+				{
+					Name:   aws.String("name"),
+					Values: []*string{aws.String("*hvm-ssd/ubuntu-xenial-16.04-amd64-server*")},
+				},
+			},
+		}
+		describeImagesResponse, err := ec2Client.DescribeImages(&describeImagesInput)
+		if err != nil {
+			return err
+		}
+
+		type ami struct {
+			Name         string
+			ID           string
+			CreationDate string
+		}
+		amis := []ami{}
+		for _, image := range describeImagesResponse.Images {
+			amis = append(amis, ami{
+				Name:         *image.Name,
+				ID:           *image.ImageId,
+				CreationDate: *image.CreationDate,
+			})
+		}
+
+		// Sort images by creation date in reverse chronological order
+		sort.SliceStable(amis, func(i, j int) bool {
+			return amis[i].CreationDate > amis[j].CreationDate
+		})
+
+		searcher := func(input string, index int) bool {
+			ami := amis[index]
+			name := strings.Replace(strings.ToLower(ami.Name), " ", "", -1)
+			input = strings.Replace(strings.ToLower(input), " ", "", -1)
+
+			return strings.Contains(name, input)
+		}
+
+		prompt := promptui.Select{
+			Label: "AWS AMI to use",
+			Items: amis,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ .Name }}?",
+				Active:   fmt.Sprintf(`%s {{ .Name | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ .Name }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "AWS AMI:" | bold}} {{ .Name }}`, promptui.IconGood),
+			},
+			Searcher: searcher,
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		cfg.AWSAMIID = amis[i].ID
 	}
 
-	return cfg.Name, nil
+	// AWS Instance Type
+	if viper.IsSet("aws_instance_type") {
+		cfg.AWSInstanceType = viper.GetString("aws_instance_type")
+	} else if nonInteractiveMode {
+		return errors.New("aws_instance_type must be specified")
+	} else {
+		// AWS doesn't have an API to get a list of available instance types
+		// Ask the user to free form input it
+		prompt := promptui.Prompt{
+			Label: "AWS Instance Type",
+			Validate: func(input string) error {
+				if len(input) == 0 {
+					return errors.New("Invalid Instance Type")
+				}
+				return nil
+			},
+			Default: "t2.micro",
+		}
+
+		result, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+		cfg.AWSInstanceType = result
+	}
+
+	currentState.SetManager(&cfg)
+
+	return nil
 }

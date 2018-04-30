@@ -1,14 +1,11 @@
 package create
 
 import (
-	"fmt"
-
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
 )
 
 const (
-	bareMetalClusterKeyFormat                     = "module.cluster_baremetal_%s"
 	bareMetalRancherKubernetesTerraformModulePath = "terraform/modules/bare-metal-rancher-k8s"
 )
 
@@ -30,7 +27,7 @@ func newBareMetalCluster(remoteBackend backend.Backend, currentState state.State
 	}
 
 	// Add new cluster to terraform config
-	err = currentState.Add(fmt.Sprintf(bareMetalClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.AddCluster("baremetal", cfg.Name, &cfg)
 	if err != nil {
 		return "", err
 	}

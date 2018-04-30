@@ -1,47 +1,8 @@
-provider "triton" {
-  version = "~> 0.4.2"
-
-  account      = "${var.triton_account}"
-  key_material = "${file(var.triton_key_path)}"
-  key_id       = "${var.triton_key_id}"
-  url          = "${var.triton_url}"
-}
-
-data "triton_network" "networks" {
-  count = "${length(var.triton_network_names)}"
-  name  = "${element(var.triton_network_names, count.index)}"
-}
-
-data "triton_image" "image" {
-  name    = "${var.triton_image_name}"
-  version = "${var.triton_image_version}"
-}
-
-resource "triton_machine" "rancher_master" {
-  package = "${var.master_triton_machine_package}"
-  image   = "${data.triton_image.image.id}"
-  name    = "${var.name}"
-
-  user_script = "${data.template_file.install_docker.rendered}"
-
-  networks = ["${data.triton_network.networks.*.id}"]
-
-  cns = {
-    services = ["${var.name}"]
-  }
-
-  affinity = ["role!=~gcm"]
-
-  tags = {
-    role = "gcm"
-  }
-}
-
 locals {
-  rancher_master_id = "${triton_machine.rancher_master.id}"
-  rancher_master_ip = "${triton_machine.rancher_master.primaryip}"
-  ssh_user          = "${var.triton_ssh_user}"
-  key_path          = "${var.triton_key_path}"
+  rancher_master_id = "${var.host}"
+  rancher_master_ip = "${var.host}"
+  ssh_user          = "${var.ssh_user}"
+  key_path          = "${var.key_path}"
 }
 
 data "template_file" "install_docker" {
@@ -57,6 +18,26 @@ data "template_file" "install_docker" {
   }
 }
 
+resource "null_resource" "install_docker" {
+  # Changes to any instance of the cluster requires re-provisioning
+  triggers {
+    rancher_master_id = "${local.rancher_master_id}"
+  }
+
+  connection {
+    type        = "ssh"
+    user        = "${local.ssh_user}"
+    host        = "${local.rancher_master_ip}"
+    private_key = "${file(local.key_path)}"
+  }
+
+  provisioner "remote-exec" {
+    inline = <<EOF
+      ${data.template_file.install_docker.rendered}
+      EOF
+  }
+}
+
 data "template_file" "install_rancher_master" {
   template = "${file("${path.module}/files/install_rancher_master.sh.tpl")}"
 
@@ -69,6 +50,8 @@ data "template_file" "install_rancher_master" {
 }
 
 resource "null_resource" "install_rancher_master" {
+  depends_on = ["null_resource.install_docker"]
+
   # Changes to any instance of the cluster requires re-provisioning
   triggers {
     rancher_master_id = "${local.rancher_master_id}"

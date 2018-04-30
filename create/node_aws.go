@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"sort"
 	"strconv"
 	"strings"
 
@@ -20,7 +21,6 @@ import (
 )
 
 const (
-	awsNodeKeyFormat                            = "module.node_aws_%s"
 	awsRancherKubernetesHostTerraformModulePath = "terraform/modules/aws-rancher-k8s-host"
 )
 
@@ -116,16 +116,23 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		}
 
 		type ami struct {
-			Name string
-			ID   string
+			Name         string
+			ID           string
+			CreationDate string
 		}
 		amis := []ami{}
 		for _, image := range describeImagesResponse.Images {
 			amis = append(amis, ami{
-				Name: *image.Name,
-				ID:   *image.ImageId,
+				Name:         *image.Name,
+				ID:           *image.ImageId,
+				CreationDate: *image.CreationDate,
 			})
 		}
+
+		// Sort images by creation date in reverse chronological order
+		sort.SliceStable(amis, func(i, j int) bool {
+			return amis[i].CreationDate > amis[j].CreationDate
+		})
 
 		searcher := func(input string, index int) bool {
 			ami := amis[index]
@@ -337,7 +344,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

@@ -36,40 +36,80 @@ variable "rancher_registry_password" {
   description = "The password to use."
 }
 
-variable "triton_account" {
-  description = "The Triton account name, usually the username of your root user."
+variable "azure_subscription_id" {
+  default = ""
 }
 
-variable "triton_key_path" {
-  description = "The path to a private key that is authorized to communicate with the Triton API."
+variable "azure_client_id" {
+  default = ""
 }
 
-variable "triton_key_id" {
-  description = "The md5 fingerprint of the key at triton_key_path. Obtained by running `ssh-keygen -E md5 -lf ~/path/to.key`"
+variable "azure_client_secret" {
+  default = ""
 }
 
-variable "triton_url" {
-  description = "The CloudAPI endpoint URL. e.g. https://us-west-1.api.joyent.com"
+variable "azure_tenant_id" {
+  default = ""
 }
 
-variable "triton_network_names" {
-  type        = "list"
-  description = "List of Triton network names that the node(s) should be attached to."
+variable "azure_environment" {
+  default = "public"
 }
 
-variable "triton_image_name" {
-  description = "The name of the Triton image to use."
+variable "azure_location" {
+  default = "West US 2"
 }
 
-variable "triton_image_version" {
-  description = "The version/tag of the Triton image to use."
+variable "azure_image_publisher" {
+  default = "Canonical"
 }
 
-variable "triton_ssh_user" {
-  default     = "root"
-  description = "The ssh user to use."
+variable "azure_image_offer" {
+  default = "UbuntuServer"
 }
 
-variable "master_triton_machine_package" {
-  description = "The Triton machine package to use for Rancher master node(s). e.g. k4-highcpu-kvm-1.75G"
+variable "azure_image_sku" {
+  default = "16.04-LTS"
+}
+
+variable "azure_image_version" {
+  default = "latest"
+}
+
+variable "azure_virtual_network_name" {
+  default = "rancher-network"
+}
+
+variable "azure_virtual_network_address_space" {
+  default = "10.0.0.0/16"
+}
+
+variable "azure_subnet_name" {
+  default = "rancher-subnet"
+}
+
+variable "azure_subnet_address_prefix" {
+  default = "10.0.2.0/24"
+}
+
+variable "azurerm_network_security_group_name" {
+  default = "rancher-firewall"
+}
+
+variable "azure_resource_group_name" {}
+
+variable "azure_size" {
+  default = "Standard_A0"
+}
+
+variable "azure_ssh_user" {
+  default = "ubuntu"
+}
+
+variable "azure_public_key_path" {
+  default = "~/.ssh/id_rsa.pub"
+}
+
+variable "azure_private_key_path" {
+  default = "~/.ssh/id_rsa"
 }

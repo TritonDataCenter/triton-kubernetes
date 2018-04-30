@@ -15,7 +15,7 @@ output "aws_subnet_id" {
 }
 
 output "aws_security_group_id" {
-  value = "${aws_security_group.rancher.id}"
+  value = "${aws_security_group.rke_ports.id}"
 }
 
 output "aws_key_name" {

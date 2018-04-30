@@ -14,7 +14,6 @@ import (
 )
 
 const (
-	vSphereNodeKeyFormat                            = "module.node_vsphere_%s"
 	vSphereRancherKubernetesHostTerraformModulePath = "terraform/modules/vsphere-rancher-k8s-host"
 )
 
@@ -161,7 +160,7 @@ func newVSphereNode(selectedClusterManager, selectedCluster string, remoteBacken
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(vSphereNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

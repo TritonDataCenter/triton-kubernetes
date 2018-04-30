@@ -1,47 +1,68 @@
-provider "triton" {
-  version = "~> 0.4.2"
-
-  account      = "${var.triton_account}"
-  key_material = "${file(var.triton_key_path)}"
-  key_id       = "${var.triton_key_id}"
-  url          = "${var.triton_url}"
+provider "google" {
+  credentials = "${file("${var.gcp_path_to_credentials}")}"
+  project     = "${var.gcp_project_id}"
+  region      = "${var.gcp_compute_region}"
 }
 
-data "triton_network" "networks" {
-  count = "${length(var.triton_network_names)}"
-  name  = "${element(var.triton_network_names, count.index)}"
+resource "google_compute_network" "default" {
+  name                    = "${var.name}"
+  auto_create_subnetworks = "true"
 }
 
-data "triton_image" "image" {
-  name    = "${var.triton_image_name}"
-  version = "${var.triton_image_version}"
+# Firewall requirements taken from:
+# https://rancher.com/docs/rancher/v2.0/en/quick-start-guide/
+resource "google_compute_firewall" "rancher_master_ports" {
+  name          = "${var.name}-rancher-master-ports"
+  network       = "${google_compute_network.default.name}"
+  source_ranges = ["0.0.0.0/0"]
+
+  allow {
+    protocol = "tcp"
+
+    ports = [
+      "22",  # SSH
+      "80",  # Rancher UI
+      "443", # Rancher UI
+    ]
+  }
 }
 
-resource "triton_machine" "rancher_master" {
-  package = "${var.master_triton_machine_package}"
-  image   = "${data.triton_image.image.id}"
-  name    = "${var.name}"
+resource "google_compute_instance" "rancher_master" {
+  name         = "${var.name}"
+  machine_type = "${var.gcp_machine_type}"
+  zone         = "${var.gcp_instance_zone}"
+  project      = "${var.gcp_project_id}"
 
-  user_script = "${data.template_file.install_docker.rendered}"
-
-  networks = ["${data.triton_network.networks.*.id}"]
-
-  cns = {
-    services = ["${var.name}"]
+  boot_disk {
+    initialize_params {
+      image = "${var.gcp_image}"
+    }
   }
 
-  affinity = ["role!=~gcm"]
+  network_interface {
+    network = "${google_compute_network.default.name}"
 
-  tags = {
-    role = "gcm"
+    access_config {
+      // Ephemeral IP
+    }
   }
+
+  metadata {
+    sshKeys = "${var.gcp_ssh_user}:${file(var.gcp_public_key_path)}"
+  }
+
+  service_account {
+    scopes = ["https://www.googleapis.com/auth/cloud-platform"]
+  }
+
+  metadata_startup_script = "${data.template_file.install_docker.rendered}"
 }
 
 locals {
-  rancher_master_id = "${triton_machine.rancher_master.id}"
-  rancher_master_ip = "${triton_machine.rancher_master.primaryip}"
-  ssh_user          = "${var.triton_ssh_user}"
-  key_path          = "${var.triton_key_path}"
+  rancher_master_id = "${google_compute_instance.rancher_master.instance_id}"
+  rancher_master_ip = "${google_compute_instance.rancher_master.network_interface.0.access_config.0.assigned_nat_ip}"
+  ssh_user          = "${var.gcp_ssh_user}"
+  key_path          = "${var.gcp_private_key_path}"
 }
 
 data "template_file" "install_docker" {

@@ -1,47 +1,109 @@
-provider "triton" {
-  version = "~> 0.4.2"
-
-  account      = "${var.triton_account}"
-  key_material = "${file(var.triton_key_path)}"
-  key_id       = "${var.triton_key_id}"
-  url          = "${var.triton_url}"
+provider "aws" {
+  access_key = "${var.aws_access_key}"
+  secret_key = "${var.aws_secret_key}"
+  region     = "${var.aws_region}"
 }
 
-data "triton_network" "networks" {
-  count = "${length(var.triton_network_names)}"
-  name  = "${element(var.triton_network_names, count.index)}"
+resource "aws_vpc" "default" {
+  cidr_block = "${var.aws_vpc_cidr}"
+
+  tags {
+    Name = "${var.name}"
+  }
 }
 
-data "triton_image" "image" {
-  name    = "${var.triton_image_name}"
-  version = "${var.triton_image_version}"
+resource "aws_internet_gateway" "default" {
+  vpc_id = "${aws_vpc.default.id}"
 }
 
-resource "triton_machine" "rancher_master" {
-  package = "${var.master_triton_machine_package}"
-  image   = "${data.triton_image.image.id}"
-  name    = "${var.name}"
+resource "aws_subnet" "public" {
+  vpc_id                  = "${aws_vpc.default.id}"
+  cidr_block              = "${var.aws_subnet_cidr}"
+  map_public_ip_on_launch = true
+  depends_on              = ["aws_internet_gateway.default"]
 
-  user_script = "${data.template_file.install_docker.rendered}"
+  tags {
+    Name = "public"
+  }
+}
 
-  networks = ["${data.triton_network.networks.*.id}"]
+resource "aws_route_table" "public" {
+  vpc_id = "${aws_vpc.default.id}"
 
-  cns = {
-    services = ["${var.name}"]
+  route {
+    cidr_block = "0.0.0.0/0"
+    gateway_id = "${aws_internet_gateway.default.id}"
+  }
+}
+
+resource "aws_route_table_association" "public" {
+  subnet_id      = "${aws_subnet.public.id}"
+  route_table_id = "${aws_route_table.public.id}"
+}
+
+resource "aws_key_pair" "deployer" {
+  // Only attempt to create the key pair if the public key was provided
+  count = "${var.aws_public_key_path != "" ? 1 : 0}"
+
+  key_name   = "${var.aws_key_name}"
+  public_key = "${file("${var.aws_public_key_path}")}"
+}
+
+# Firewall requirements taken from:
+# https://rancher.com/docs/rancher/v2.0/en/quick-start-guide/
+resource "aws_security_group" "rke_ports" {
+  name        = "${var.name}"
+  description = "Security group for rancher hosts in ${var.name} cluster"
+  vpc_id      = "${aws_vpc.default.id}"
+
+  ingress {
+    from_port   = "22"          # SSH
+    to_port     = "22"
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
-  affinity = ["role!=~gcm"]
+  ingress {
+    from_port   = "80"          # Rancher UI
+    to_port     = "80"
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
+    from_port   = "443"         # Rancher UI
+    to_port     = "443"
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_instance" "host" {
+  ami                    = "${var.aws_ami_id}"
+  instance_type          = "${var.aws_instance_type}"
+  subnet_id              = "${aws_subnet.public.id}"
+  vpc_security_group_ids = ["${aws_security_group.rke_ports.id}"]
+  key_name               = "${var.aws_key_name}"
 
   tags = {
-    role = "gcm"
+    Name = "${var.name}"
   }
+
+  user_data = "${data.template_file.install_docker.rendered}"
 }
 
 locals {
-  rancher_master_id = "${triton_machine.rancher_master.id}"
-  rancher_master_ip = "${triton_machine.rancher_master.primaryip}"
-  ssh_user          = "${var.triton_ssh_user}"
-  key_path          = "${var.triton_key_path}"
+  rancher_master_id = "${aws_instance.host.id}"
+  rancher_master_ip = "${aws_instance.host.public_ip}"
+  ssh_user          = "${var.aws_ssh_user}"
+  key_path          = "${var.aws_private_key_path}"
 }
 
 data "template_file" "install_docker" {

@@ -36,40 +36,52 @@ variable "rancher_registry_password" {
   description = "The password to use."
 }
 
-variable "triton_account" {
-  description = "The Triton account name, usually the username of your root user."
+variable "aws_access_key" {
+  description = "AWS access key"
 }
 
-variable "triton_key_path" {
-  description = "The path to a private key that is authorized to communicate with the Triton API."
+variable "aws_secret_key" {
+  description = "AWS secret access key"
 }
 
-variable "triton_key_id" {
-  description = "The md5 fingerprint of the key at triton_key_path. Obtained by running `ssh-keygen -E md5 -lf ~/path/to.key`"
+variable "aws_region" {
+  description = "AWS region to host your network"
 }
 
-variable "triton_url" {
-  description = "The CloudAPI endpoint URL. e.g. https://us-west-1.api.joyent.com"
+variable "aws_vpc_cidr" {
+  description = "CIDR for VPC"
+  default     = "10.0.0.0/16"
 }
 
-variable "triton_network_names" {
-  type        = "list"
-  description = "List of Triton network names that the node(s) should be attached to."
+variable "aws_subnet_cidr" {
+  description = "CIDR for subnet"
+  default     = "10.0.2.0/24"
 }
 
-variable "triton_image_name" {
-  description = "The name of the Triton image to use."
+variable "aws_ami_id" {
+  description = "Base AMI to launch the instances with"
 }
 
-variable "triton_image_version" {
-  description = "The version/tag of the Triton image to use."
+variable "aws_instance_type" {
+  default     = "t2.micro"
+  description = "The AWS instance type to use for Kubernetes compute node(s). Defaults to t2.micro."
 }
 
-variable "triton_ssh_user" {
-  default     = "root"
+variable "aws_key_name" {
+  description = "The AWS key name to use to deploy the instance."
+}
+
+variable "aws_public_key_path" {
+  description = "Path to a public key. If set, a key_pair will be made in AWS named aws_key_name"
+  default     = "~/.ssh/id_rsa.pub"
+}
+
+variable "aws_private_key_path" {
+  description = "Path to a private key."
+  default     = "~/.ssh/id_rsa"
+}
+
+variable "aws_ssh_user" {
+  default     = "ubuntu"
   description = "The ssh user to use."
-}
-
-variable "master_triton_machine_package" {
-  description = "The Triton machine package to use for Rancher master node(s). e.g. k4-highcpu-kvm-1.75G"
 }
