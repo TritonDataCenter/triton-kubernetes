@@ -1,0 +1,43 @@
+# This example config file will create an HA cluster on Joyent Cloud (Triton) attached to triton-ha Cluster Manager
+cluster_manager: manager-on-triton
+backend_provider: local
+name: gcp-ha
+cluster_cloud_provider: gcp
+k8s_version: v1.10.0-rancher1-1
+k8s_network_provider: calico
+private_registry: ""
+private_registry_username: ""
+private_registry_password: ""
+k8s_registry: ""
+k8s_registry_username: ""
+k8s_registry_password: ""
+gcp_path_to_credentials: ~/gcp.json
+gcp_compute_region: us-east1
+nodes:
+  - node_count: 3
+    rancher_host_label: etcd
+    hostname: gcp-ha-e
+    gcp_instance_zone: us-east1-c
+    gcp_machine_type: n1-standard-1
+    gcp_image: ubuntu-1604-xenial-v20180424
+    gcp_public_key_path: ~/.ssh/id_rsa.pub
+    gcp_private_key_path: ~/.ssh/id_rsa
+    gcp_ssh_user: root
+  - node_count: 3
+    rancher_host_label: control
+    hostname: gcp-ha-c
+    gcp_instance_zone: us-east1-c
+    gcp_machine_type: n1-standard-1
+    gcp_image: ubuntu-1604-xenial-v20180424
+    gcp_public_key_path: ~/.ssh/id_rsa.pub
+    gcp_private_key_path: ~/.ssh/id_rsa
+    gcp_ssh_user: root
+  - node_count: 4
+    rancher_host_label: worker
+    hostname: gcp-ha-w
+    gcp_instance_zone: us-east1-c
+    gcp_machine_type: n1-standard-1
+    gcp_image: ubuntu-1604-xenial-v20180424
+    gcp_public_key_path: ~/.ssh/id_rsa.pub
+    gcp_private_key_path: ~/.ssh/id_rsa
+    gcp_ssh_user: root
