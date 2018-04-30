@@ -37,8 +37,7 @@ func NewManager(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Manager in which Cloud Provider",
-			Items: []string{"Triton"},
-			// Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal", "vSphere"},
+			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -64,6 +63,13 @@ func NewManager(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Cluster Manager Name",
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("manager name cannot be blank")
+				}
+
+				return nil
+			},
 		}
 
 		result, err := prompt.Run()
@@ -102,10 +108,14 @@ func NewManager(remoteBackend backend.Backend) error {
 	switch selectedCloudProvider {
 	case "triton":
 		err = newTritonManager(currentState, name)
-	// case "aws":
-	// case "gcp":
-	// case "azure":
-	// case "baremetal":
+	case "aws":
+		err = newAWSManager(currentState, name)
+	case "gcp":
+		err = newGCPManager(currentState, name)
+	case "azure":
+		err = newAzureManager(currentState, name)
+	case "baremetal":
+		err = newBareMetalManager(currentState, name)
 	// case "vsphere":
 	default:
 		return fmt.Errorf("Unsupported cloud provider '%s', cannot create manager", selectedCloudProvider)
@@ -158,7 +168,7 @@ func getBaseManagerTerraformConfig(terraformModulePath, name string) (baseManage
 	}
 
 	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
-	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, tritonRancherTerraformModulePath, baseSourceRef)
+	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	cfg.Name = name
 

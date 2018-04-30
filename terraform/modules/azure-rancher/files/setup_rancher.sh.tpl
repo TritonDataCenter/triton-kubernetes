@@ -1,0 +1,1 @@
+../../files/setup_rancher.sh.tpl

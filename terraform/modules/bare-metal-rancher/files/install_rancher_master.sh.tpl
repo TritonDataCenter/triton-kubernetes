@@ -1,0 +1,1 @@
+../../files/install_rancher_master.sh.tpl
