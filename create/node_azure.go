@@ -4,10 +4,12 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/Azure/azure-sdk-for-go/arm/compute"
 	"github.com/Azure/go-autorest/autorest"
@@ -19,7 +21,6 @@ import (
 )
 
 const (
-	azureNodeKeyFormat                            = "module.node_azure_%s"
 	azureRancherKubernetesHostTerraformModulePath = "terraform/modules/azure-rancher-k8s-host"
 )
 
@@ -44,6 +45,9 @@ type azureNodeTerraformConfig struct {
 	AzureImageVersion   string `json:"azure_image_version,omitempty"`
 	AzureSSHUser        string `json:"azure_ssh_user"`
 	AzurePublicKeyPath  string `json:"azure_public_key_path"`
+
+	AzureDiskMountPath string `json:"azure_disk_mount_path"`
+	AzureDiskSize      string `json:"azure_disk_size"`
 }
 
 // Adds new Azure nodes to the given cluster and manager.
@@ -147,24 +151,22 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		cfg.AzureSize = value
 	}
 
-	azureImagesClient := compute.NewImagesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
+	azureImagesClient := compute.NewVirtualMachineImagesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
 	azureImagesClient.Authorizer = autorest.NewBearerAuthorizer(azureSPT)
 
-	imageResults, err := azureImagesClient.List()
-	if err != nil {
-		return []string{}, err
-	}
+	// imageResults, err := azureImagesClient.List("westus", "Canonical", "UbuntuServer", "16.04-LTS", "", nil, "")
+	// if err != nil {
+	// 	return []string{}, err
+	// }
 
-	for _, x := range *imageResults.Value {
-		fmt.Println(*x.Name)
-		fmt.Print(*x.ID)
-	}
+	// for _, x := range *imageResults.Value {
+	// 	fmt.Println(*x.Name)
+	// }
 
-	// TODO
-	// Azure Image Publisher
-	// Azure Image Offer
-	// Azure Image SKU
-	// Azure Image Version
+	// cfg.AzureImagePublisher = "Canonical"
+	// cfg.AzureImageOffer = "UbuntuServer"
+	// cfg.AzureImageSKU = "16.04-LTS"
+	// cfg.AzureImageVersion = ""
 
 	// Azure SSH User
 	if viper.IsSet("azure_ssh_user") {
@@ -228,6 +230,63 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		cfg.AzurePublicKeyPath = expandedPublicKeyPath
 	}
 
+	// Azure Disk
+	diskMountPathIsSet := viper.IsSet("azure_disk_mount_path")
+	diskSizeIsSet := viper.IsSet("azure_disk_size")
+	if nonInteractiveMode {
+		if diskMountPathIsSet && !diskSizeIsSet {
+			return nil, errors.New("If azure_disk_mount_path is set, then azure_disk_size must also be set.")
+		} else if diskMountPathIsSet {
+			cfg.AzureDiskMountPath = viper.GetString("azure_disk_mount_path")
+			cfg.AzureDiskSize = viper.GetString("azure_disk_size")
+		}
+	} else {
+		shouldCreateDisk, err := util.PromptForConfirmation("Create a disk for this node", "Disk created")
+		if err != nil {
+			return nil, err
+		}
+
+		if shouldCreateDisk {
+			// GCP Disk Mount path
+			if diskMountPathIsSet {
+				cfg.AzureDiskMountPath = viper.GetString("azure_disk_mount_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "Azure Disk Mount Path",
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.AzureDiskMountPath = result
+			}
+
+			if diskSizeIsSet {
+				cfg.AzureDiskSize = viper.GetString("azure_disk_size")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "Azure Disk Size in GB",
+					Validate: func(input string) error {
+						num, err := strconv.ParseInt(input, 10, 64)
+						if err != nil {
+							return errors.New("Invalid number")
+						}
+						if num <= 0 {
+							return errors.New("Number must be greater than 0")
+						}
+						return nil
+					},
+				}
+				result, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.AzureDiskSize = result
+			}
+		}
+	}
+
 	// Get existing node names
 	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
@@ -245,7 +304,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(azureNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

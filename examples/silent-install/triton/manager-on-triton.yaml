@@ -1,7 +1,7 @@
+# This sample config file will create a Cluster Manager on Joyent's Public Cloud (triton)
 backend_provider: local
-name: ha-manager
-ha: true
-gcm_node_count: 3
+name: manager-on-triton
+manager_cloud_provider: triton
 private_registry: ""
 private_registry_username: ""
 private_registry_password: ""
@@ -9,7 +9,7 @@ rancher_server_image: ""
 rancher_agent_image: ""
 triton_account: fayazg
 triton_key_path: ~/.ssh/id_rsa
-triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
+# triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
 triton_url: https://us-east-1.api.joyent.com
 triton_network_names:
   - Joyent-SDC-Public
@@ -17,7 +17,4 @@ triton_image_name: ubuntu-certified-16.04
 triton_image_version: 20180109
 triton_ssh_user: ubuntu
 master_triton_machine_package: k4-highcpu-kvm-1.75G
-
-triton_mysql_image_name: ubuntu-certified-16.04
-triton_mysql_image_version: 20170619.1
-mysqldb_triton_machine_package: k4-highcpu-kvm-1.75G
+rancher_admin_password: admin

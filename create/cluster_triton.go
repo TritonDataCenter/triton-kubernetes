@@ -2,7 +2,6 @@ package create
 
 import (
 	"errors"
-	"fmt"
 	"os"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -14,7 +13,6 @@ import (
 )
 
 const (
-	tritonClusterKeyFormat                     = "module.cluster_triton_%s"
 	tritonRancherKubernetesTerraformModulePath = "terraform/modules/triton-rancher-k8s"
 )
 
@@ -133,7 +131,7 @@ func newTritonCluster(remoteBackend backend.Backend, currentState state.State) (
 	}
 
 	// Add new cluster to terraform config
-	err = currentState.Add(fmt.Sprintf(tritonClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.AddCluster("triton", cfg.Name, &cfg)
 	if err != nil {
 		return "", err
 	}

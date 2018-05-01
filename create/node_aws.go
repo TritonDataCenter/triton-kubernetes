@@ -3,10 +3,14 @@ package create
 import (
 	"errors"
 	"fmt"
+	"regexp"
+	"sort"
+	"strconv"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/joyent/triton-kubernetes/util"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"
@@ -17,9 +21,21 @@ import (
 )
 
 const (
-	awsNodeKeyFormat                            = "module.node_aws_%s"
 	awsRancherKubernetesHostTerraformModulePath = "terraform/modules/aws-rancher-k8s-host"
 )
+
+// List of valid EBS Volume types
+var ebsVolumeTypes = []struct {
+	Key         string
+	Name        string
+	DefaultSize string
+}{
+	{"standard", "Magnetic", "100"},
+	{"gp2", "General Purpose SSD", "100"},
+	{"io1", "Provisioned IOPS SSD", "100"},
+	{"st1", "Throughput Optimised HDD", "500"},
+	{"sc1", "Cold HDD", "500"},
+}
 
 type awsNodeTerraformConfig struct {
 	baseNodeTerraformConfig
@@ -34,6 +50,12 @@ type awsNodeTerraformConfig struct {
 
 	AWSAMIID        string `json:"aws_ami_id"`
 	AWSInstanceType string `json:"aws_instance_type"`
+
+	EBSVolumeDeviceName string `json:"ebs_volume_device_name,omitempty"`
+	EBSVolumeMountPath  string `json:"ebs_volume_mount_path,omitempty"`
+	EBSVolumeType       string `json:"ebs_volume_type,omitempty"`
+	EBSVolumeIOPS       string `json:"ebs_volume_iops,omitempty"`
+	EBSVolumeSize       string `json:"ebs_volume_size,omitempty"`
 }
 
 // Adds new AWS nodes to the given cluster and manager.
@@ -94,16 +116,23 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		}
 
 		type ami struct {
-			Name string
-			ID   string
+			Name         string
+			ID           string
+			CreationDate string
 		}
 		amis := []ami{}
 		for _, image := range describeImagesResponse.Images {
 			amis = append(amis, ami{
-				Name: *image.Name,
-				ID:   *image.ImageId,
+				Name:         *image.Name,
+				ID:           *image.ImageId,
+				CreationDate: *image.CreationDate,
 			})
 		}
+
+		// Sort images by creation date in reverse chronological order
+		sort.SliceStable(amis, func(i, j int) bool {
+			return amis[i].CreationDate > amis[j].CreationDate
+		})
 
 		searcher := func(input string, index int) bool {
 			ami := amis[index]
@@ -159,6 +188,145 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		cfg.AWSInstanceType = result
 	}
 
+	// EBS Volume
+	deviceNameIsSet := viper.IsSet("ebs_volume_device_name")
+	mountPathIsSet := viper.IsSet("ebs_volume_mount_path")
+	volumeSizeIsSet := viper.IsSet("ebs_volume_size")
+	volumeTypeIsSet := viper.IsSet("ebs_volume_type")
+	if nonInteractiveMode && deviceNameIsSet {
+		cfg.EBSVolumeDeviceName = viper.GetString("ebs_volume_device_name")
+		// Volume Type
+		if volumeTypeIsSet {
+			cfg.EBSVolumeType = viper.GetString("ebs_volume_type")
+		}
+
+		// Validating Volume Type
+		typeIsValid := false
+		for _, volumeType := range ebsVolumeTypes {
+			if volumeType.Key == cfg.EBSVolumeType {
+				typeIsValid = true
+				break
+			}
+		}
+		if !typeIsValid {
+			return nil, fmt.Errorf("ebs_volume_type must be a valid volume type. Found '%s'.", cfg.EBSVolumeType)
+		}
+
+		if volumeSizeIsSet {
+			cfg.EBSVolumeSize = viper.GetString("ebs_volume_size")
+		} else {
+			// If volume size is not defined, use the default value
+			for _, volumeType := range ebsVolumeTypes {
+				if volumeType.Key == cfg.EBSVolumeType {
+					cfg.EBSVolumeSize = volumeType.DefaultSize
+					break
+				}
+			}
+		}
+
+	} else {
+		shouldCreateVolume, err := util.PromptForConfirmation("Create a volume for this node", "Volume Created")
+		if err != nil {
+			return nil, err
+		}
+
+		if shouldCreateVolume {
+			// EBS device name
+			if deviceNameIsSet {
+				cfg.EBSVolumeDeviceName = viper.GetString("ebs_volume_device_name")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "EBS Volume Device Name",
+					Validate: func(input string) error {
+						r, err := regexp.Compile("^/dev/sd[f-p]$")
+						if err != nil {
+							return err
+						}
+						if r.FindString(input) == "" {
+							return errors.New("Device name must follow the format: /dev/sd[f-p] (e.g. /dev/sdf, /dev/sdp")
+						}
+						return nil
+					},
+					Default: "/dev/sdf",
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.EBSVolumeDeviceName = result
+			}
+
+			// Mount Path
+			if mountPathIsSet {
+				cfg.EBSVolumeMountPath = viper.GetString("ebs_volume_mount_path")
+			} else {
+				prompt := promptui.Prompt{
+					Label: "EBS Volume Mount Path",
+				}
+
+				result, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.EBSVolumeMountPath = result
+			}
+
+			if volumeTypeIsSet {
+				cfg.EBSVolumeType = viper.GetString("ebs_volume_type")
+			} else {
+				prompt := promptui.Select{
+					Label: "EBS Volume Type",
+					Items: ebsVolumeTypes,
+					Templates: &promptui.SelectTemplates{
+						Label:    "{{ . }}?",
+						Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+						Inactive: "  {{.Name}}",
+						Selected: "  EBS Volume Type? {{.Name}}",
+					},
+				}
+
+				i, _, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.EBSVolumeType = ebsVolumeTypes[i].Key
+			}
+
+			// EBS Volume Size
+			if volumeSizeIsSet {
+				cfg.EBSVolumeSize = viper.GetString("ebs_volume_size")
+			} else {
+				defaultSize := ""
+				for _, volumeType := range ebsVolumeTypes {
+					if cfg.EBSVolumeType == volumeType.Key {
+						defaultSize = volumeType.DefaultSize
+						break
+					}
+				}
+				prompt := promptui.Prompt{
+					Label: "EBS Volume Size in GiB",
+					Validate: func(input string) error {
+						num, err := strconv.ParseInt(input, 10, 64)
+						if err != nil {
+							return errors.New("Invalid number")
+						}
+						if num <= 0 {
+							return errors.New("Number must be greater than 0")
+						}
+						return nil
+					},
+					Default: defaultSize,
+				}
+				result, err := prompt.Run()
+				if err != nil {
+					return nil, err
+				}
+				cfg.EBSVolumeSize = result
+			}
+		}
+	}
+
 	// Get existing node names
 	nodes, err := currentState.Nodes(selectedCluster)
 	if err != nil {
@@ -176,7 +344,7 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 	for _, newHostname := range newHostnames {
 		cfgCopy := cfg
 		cfgCopy.Hostname = newHostname
-		err = currentState.Add(fmt.Sprintf(awsNodeKeyFormat, newHostname), cfgCopy)
+		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}

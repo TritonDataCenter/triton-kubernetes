@@ -25,13 +25,27 @@ resource "google_compute_network" "default" {
   auto_create_subnetworks = "true"
 }
 
-resource "google_compute_firewall" "default" {
-  name          = "${var.name}"
-  network       = "${google_compute_network.default.name}"
-  source_ranges = ["0.0.0.0/0"]
+# Firewall requirements taken from:
+# https://rancher.com/docs/rancher/v2.0/en/quick-start-guide/
+resource "google_compute_firewall" "rke_ports" {
+  name        = "${var.name}-rke-ports"
+  network     = "${google_compute_network.default.name}"
+  source_tags = ["${var.name}-nodes"]
 
   allow {
-    protocol = "udp"
-    ports    = ["500", "4500"]
+    protocol = "tcp"
+
+    ports = [
+      "22",          # SSH
+      "80",          # Canal
+      "443",         # Canal
+      "6443",        # Kubernetes API server
+      "2379-2380",   # etcd server client API
+      "10250",       # kubelet API
+      "10251",       # scheduler
+      "10252",       # controller
+      "10256",       # kubeproxy
+      "30000-32767", # NodePort Services
+    ]
   }
 }

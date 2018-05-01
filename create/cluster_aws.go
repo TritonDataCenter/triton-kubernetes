@@ -21,7 +21,6 @@ import (
 )
 
 const (
-	awsClusterKeyFormat                     = "module.cluster_aws_%s"
 	awsRancherKubernetesTerraformModulePath = "terraform/modules/aws-rancher-k8s"
 )
 
@@ -356,7 +355,7 @@ func newAWSCluster(remoteBackend backend.Backend, currentState state.State) (str
 	}
 
 	// Add new cluster to terraform config
-	err = currentState.Add(fmt.Sprintf(awsClusterKeyFormat, cfg.Name), &cfg)
+	err = currentState.AddCluster("aws", cfg.Name, &cfg)
 	if err != nil {
 		return "", err
 	}

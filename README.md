@@ -2,22 +2,32 @@
   <img src="https://www.joyent.com/assets/img/external/triton-kubernetes.svg" width="100%" height="144">
 </a>
 
-Triton Kubernetes is a multi-cloud Kubernetes solution. It has a global cluster manager which can run on any cloud - Public, Private or Bare Metal and manages Kubernetes environments. The current release uses Triton (Joyent public cloud). You can update the APIs to switch to another cloud or log an enhancement request. 
+Triton Kubernetes is a multi-cloud Kubernetes solution. It has a global cluster manager (control plane) which can run on any cloud - Public, Private or Bare Metal and manages Kubernetes environments. The current release uses Triton (Joyent public cloud). With our forthcoming release, you will be able to run the global control plane on any cloud, bare metal or VMware.
 
-The cluster manager will manage environments running on any region of any supported cloud. Out of box, Amazon, Azure, Google and Triton (public and private) are supported. If not using a cloud, environments on bare metal servers are also planned to be supported.For an example set up, look at the [How-To](#how-to) section.
+The cluster manager will manage environments running on any region of any supported cloud. Out of box, AWS, Azure, Google and Triton (public and private) are supported. If not using a cloud, environments on bare metal servers are also going to be supported in our forthcoming release. For an example set up, look at the [Working with the CLI](#Working-with-the-CLI) section.
 
 ![Triton-Kubernetes](docs/imgs/Triton-Kubernetes.png)
 
-> NOTE: This package has been tested on Linux/OSX.
+`triton-kubernetes` interactive cli is one of two ways you can interact with Triton Multi-Cloud Kubernetes. Using `triton-kubernetes` cli, you can:
+
+- create a cluster manager
+- destroy a cluster manager and all clusters it is managing
+- add/remove a cluster to/from an existing cluster manager
+- backup/restore a kubernetes namespace from any of your clusters to manta/S3
+- query your existing cluster managers and clusters
+
+The cli `triton-kubernetes` allows for creating and managing a kubernetes deployment only. Application deployments will still need to be done using `kubectl`.
+
+> <sub>Note: Keep in mind that every cloud has a resource quota. If that quota has been reached, Triton-Kubernetes will not be able to provision new machines and throw errors.</sub>
 
 ## Quick Start Guide
 
-### Pre-Reqs
+### Pre-Requisites
 In order to run **Triton Kubernetes**, you must create a [Triton](https://my.joyent.com/) account and install [`jq`](#install-jq) and [`terraform`](#install-terraform).
 
 [Triton](https://www.joyent.com/why) is our container-native and open source cloud, which we will use to provide the infrastructure required for your Kubernetes cluster.
 
-[jq](https://stedolan.github.io/jq/) is a lightweight and flexible command-line JSON processor. It's leveraged by `triton-kubernetes`.
+[jq](https://stedolan.github.io/jq/) is a lightweight and flexible command-line JSON processor. It is leveraged by `triton-kubernetes`.
 
 [Terraform](https://www.terraform.io/) enables you to safely and predictably create, change, and improve production infrastructure. It is an open source tool that codifies APIs into declarative configuration files that can be shared amongst team members, treated as code, edited, reviewed, and versioned.
 
@@ -60,9 +70,42 @@ go install github.com/joyent/triton-kubernetes
 triton-kubernetes --help
 ```
 
-## How-To
+#### Build `triton-kubernetes` CLI
 
-Triton Kubernetes allows you to create/destroy global cluster managers, Kubernetes environments and individual cluster nodes. You can also get information on a cluster manager or Kubernetes environment. Triton Kubernetes provides these features through the `create`, `destroy` and `get` commands.
+ * [Build and Install](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/building-cli.md)
+
+## Working with the CLI
+
+Triton Kubernetes allows you to create/destroy global cluster managers, kubernetes environments and individual cluster nodes. You can also get information on a cluster manager or kubernetes environment. Triton Kubernetes provides these features through the `create`, `destroy` and `get` commands.
+
+
+To get help on a command, use the --help flag. For example:
+
+```
+$ triton-kubernetes --help
+This is a multi-cloud Kubernetes solution. Triton Kubernetes has a global
+cluster manager which can manage multiple clusters across regions/data-centers and/or clouds. 
+Cluster manager can run anywhere (Triton/AWS/Azure/GCP/Baremetal) and manage Kubernetes environments running on any region of any supported cloud.
+For an example set up, look at the How-To section.
+
+Usage:
+  triton-kubernetes [command]
+
+Available Commands:
+  create      Create cluster managers, kubernetes clusters or individual kubernetes cluster nodes.
+  destroy     Destroy cluster managers, kubernetes clusters or individual kubernetes cluster nodes.
+  get         Display resource information
+  help        Help about any command
+  version     Print the version number of triton-kubernetes
+
+Flags:
+      --config string     config file (default is $HOME/.triton-kubernetes.yaml)
+  -h, --help              help for triton-kubernetes
+      --non-interactive   Prevent interactive prompts
+  -t, --toggle            Help message for toggle
+
+Use "triton-kubernetes [command] --help" for more information about a command.
+```
 
 ### Create
 
@@ -72,7 +115,7 @@ triton-kubernetes create [manager or cluster or node]
 
 Creates a new cluster manager, kubernetes cluster or individual kubernetes cluster node.
 
-When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, Azure GCP).
+When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, Azure and GCP).
 
 ### Destroy
 
@@ -98,7 +141,16 @@ Triton Kubernetes persists state by leveraging one of the supported backends. Th
 Will persist state in the `/triton-kubernetes/` folder for the provided user in Manta Cloud Storage.
 
 ### Local
-Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernets was run on.
+Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernetes was run on.
+
+### Examples
+ * [AWS](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/aws)
+ * [GCP](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/gcp)
+ * [Triton](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton)
+
+## How-To cut the release
+
+* [Release Process](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/release-process.md)
 
 ## Developing Locally
 

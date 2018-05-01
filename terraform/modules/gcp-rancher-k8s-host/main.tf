@@ -24,6 +24,8 @@ data "template_file" "install_rancher_agent" {
     rancher_registry          = "${var.rancher_registry}"
     rancher_registry_username = "${var.rancher_registry_username}"
     rancher_registry_password = "${var.rancher_registry_password}"
+
+    disk_mount_path = "${var.gcp_disk_mount_path}"
   }
 }
 
@@ -31,12 +33,22 @@ resource "google_compute_instance" "host" {
   name         = "${var.hostname}"
   machine_type = "${var.gcp_machine_type}"
   zone         = "${var.gcp_instance_zone}"
+  project      = "${var.gcp_project_id}"
+
+  tags = ["${var.gcp_compute_firewall_host_tag}"]
 
   boot_disk {
     initialize_params {
       image = "${var.gcp_image}"
     }
   }
+
+  # There's now way to specify for 0 attached_disk blocks
+  # We need to wait for Terraform for_each support https://github.com/hashicorp/terraform/issues/7034
+  # This way we'll only add an attached_disk block when there are disks to attach
+  # attached_disk {
+  #   source = "${element(concat(google_compute_disk.host_volume.*.self_link, list("")), 0)}"
+  # }
 
   network_interface {
     network = "${var.gcp_compute_network_name}"
@@ -45,10 +57,17 @@ resource "google_compute_instance" "host" {
       // Ephemeral IP
     }
   }
-
   service_account {
     scopes = ["https://www.googleapis.com/auth/cloud-platform"]
   }
-
   metadata_startup_script = "${data.template_file.install_rancher_agent.rendered}"
+}
+
+resource "google_compute_disk" "host_volume" {
+  count = "${var.gcp_disk_type == "" ? 0 : 1}"
+
+  type = "${var.gcp_disk_type}"
+  name = "${var.hostname}-volume"
+  zone = "${var.gcp_instance_zone}"
+  size = "${var.gcp_disk_size}"
 }
