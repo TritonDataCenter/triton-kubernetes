@@ -145,6 +145,7 @@ Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton K
 
 ### Examples
  * [AWS](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/aws)
+ * [AZURE](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/azure)
  * [GCP](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/gcp)
  * [Triton](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton)
 
