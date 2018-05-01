@@ -1,5 +1,5 @@
-# This example config file will create an HA cluster on Joyent Cloud (Triton) attached to test-manager Cluster Manager
-cluster_manager: test-manager
+# This example config file will create an HA Kubernetes cluster on Joyent Cloud (Triton) attached to manager-on-triton Cluster Manager
+cluster_manager: manager-on-triton
 backend_provider: local
 name: triton-ha
 cluster_cloud_provider: triton
@@ -13,7 +13,7 @@ k8s_registry_username: ""
 k8s_registry_password: ""
 triton_account: fayazg
 triton_key_path: ~/.ssh/id_rsa
-triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
+# triton_key_id: 2c:53:bc:63:97:9e:79:3f:91:35:5e:f4:c8:23:88:37
 triton_url: https://us-east-1.api.joyent.com
 nodes:
   - node_count: 3
