@@ -3,7 +3,7 @@
 A cluster is a group of physical (or virtual) computers that share resources to accomplish tasks as if they were a single system. 
 Create cluster command allows to create dedicated nodes for the etcd, worker and control. Creating clusters require a cluster manager to be running already.
 
-To check if cluster manager is exists, run the following:
+To check if cluster manager exists, run the following:
 
 ```
 $ triton-kubernetes get manager
