@@ -144,10 +144,12 @@ Will persist state in the `/triton-kubernetes/` folder for the provided user in 
 Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernets was run on.
 
 ### Examples
- * [Manager](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton/cluster-manager.md)
- * [Cluster](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton/cluster.md)
 
-## How-To cut the realse
+ * [AWS](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/aws)
+ * [GCP](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/gcp)
+ * [Triton](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton)
+
+## How-To cut the release
 
 * [Release Process](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/release-process.md)
 
