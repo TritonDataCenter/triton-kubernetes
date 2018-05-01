@@ -146,8 +146,10 @@ Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton K
 ### Examples
  * [AWS](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/aws)
  * [AZURE](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/azure)
+ * [BareMetal](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/bare-metal)
  * [GCP](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/gcp)
  * [Triton](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton)
+ * [vSphere](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/vSphere) 
 
 ## How-To cut the release
 
