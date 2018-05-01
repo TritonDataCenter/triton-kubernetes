@@ -45,3 +45,13 @@ curl -X PUT \
 	-H 'Content-Type: application/json' \
 	-d '{"baseType": "setting", "id": "server-url", "name": "server-url", "type": "setting", "value": "${host_registration_url}" }' \
 	'${rancher_host}/v3/settings/server-url'
+
+# Update graphics
+printf 'Updating graphics'
+curl -LO https://github.com/joyent/triton-kubernetes/raw/master/static/modified-graphics.tar.gz
+tar -xf modified-graphics.tar.gz
+for l in `ls modified-graphics/`
+do
+	sudo docker cp modified-graphics/${l} $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+done
+rm -rf modified-graphics*
