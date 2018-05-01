@@ -50,8 +50,21 @@ curl -X PUT \
 printf 'Updating graphics'
 curl -LO https://github.com/joyent/triton-kubernetes/raw/master/static/modified-graphics.tar.gz
 tar -xf modified-graphics.tar.gz
-for l in `ls modified-graphics/`
-do
-	sudo docker cp modified-graphics/${l} $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-done
+sudo docker cp modified-graphics/dark.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/fail-cowparachute.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/favicon.ico $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/graphic.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/main-caas.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/main-loading.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/main.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/provider-custom.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/provider-local.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/provider-orchestration.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/rancher-logo-cow-white.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/text.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/welcome-back-hill.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/welcome-cow.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/welcome-front-hill.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/welcome-scene.png $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
+sudo docker cp modified-graphics/welcome-sun.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
 rm -rf modified-graphics*
