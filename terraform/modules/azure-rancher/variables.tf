@@ -12,12 +12,12 @@ variable "docker_engine_install_url" {
 }
 
 variable "rancher_server_image" {
-  default     = "rancher/server:v2.0.0-beta2"
+  default     = "rancher/rancher:v2.0.0"
   description = "The Rancher Server image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/agent:v2.0.0-beta2"
+  default     = "rancher/rancher-agent:v2.0.0"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
