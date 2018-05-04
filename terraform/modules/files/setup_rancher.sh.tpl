@@ -46,6 +46,15 @@ curl -X PUT \
 	-d '{"baseType": "setting", "id": "server-url", "name": "server-url", "type": "setting", "value": "${host_registration_url}" }' \
 	'${rancher_host}/v3/settings/server-url'
 
+# Setup helm
+curl -X POST \
+	--insecure \
+	-u $access_key:$secret_key \
+	-H 'Accept: application/json' \
+	-H 'Content-Type: application/json' \
+	-d '{"branch":"master", "kind":"helm", "name":"helm-charts", "url":"https://github.com/kubernetes/helm.git"}' \
+	'${rancher_host}/v3/catalogs'
+
 # Update graphics
 printf 'Updating graphics'
 curl -LO https://github.com/joyent/triton-kubernetes/raw/master/static/modified-graphics.tar.gz
