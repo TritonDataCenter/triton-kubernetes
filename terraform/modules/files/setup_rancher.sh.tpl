@@ -45,26 +45,26 @@ curl -X PUT \
 	-H 'Content-Type: application/json' \
 	-d '{"baseType": "setting", "id": "server-url", "name": "server-url", "type": "setting", "value": "${host_registration_url}" }' \
 	'${rancher_host}/v3/settings/server-url'
+	
+# Setup helm
+curl -X POST \
+	--insecure \
+	-u $access_key:$secret_key \
+	-H 'Accept: application/json' \
+	-H 'Content-Type: application/json' \
+	-d '{"branch":"master", "kind":"helm", "name":"helm-charts", "url":"https://github.com/kubernetes/helm.git"}' \
+	'${rancher_host}/v3/catalogs'
 
 # Update graphics
-printf 'Updating graphics'
-curl -LO https://github.com/joyent/triton-kubernetes/raw/master/static/modified-graphics.tar.gz
-tar -xf modified-graphics.tar.gz
-sudo docker cp modified-graphics/dark.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/fail-cowparachute.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/favicon.ico $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/graphic.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/main-caas.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/main-loading.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/main.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/provider-custom.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/provider-local.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/provider-orchestration.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/rancher-logo-cow-white.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/text.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/welcome-back-hill.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/welcome-cow.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/welcome-front-hill.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/welcome-scene.png $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-sudo docker cp modified-graphics/welcome-sun.svg $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/logos/
-rm -rf modified-graphics*
+printf 'Updating UI ...\n'
+# logos
+curl -sLO https://github.com/joyent/triton-kubernetes/raw/master/static/logos.tar.gz -o ~/logos.tar.gz
+tar -zxf ~/logos.tar.gz
+sudo docker cp ~/logos/ $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/
+sudo docker exec -i $(sudo docker ps -q) bash <<EOF
+sed -i 's/appName:"Rancher"/appName:"Triton Kubernetes"/g' /usr/share/rancher/ui/assets/ui-*.js
+sed -i 's/appName\\":\\"Rancher\\"/appName\\":\\"Triton Kubernetes\\"/g' /usr/share/rancher/ui/assets/ui-*.map
+echo 'footer.ember-view{visibility:hidden;display:none;}' >> /usr/share/rancher/ui/assets/vendor.css
+echo 'footer.ember-view{visibility:hidden;display:none;}' >> /usr/share/rancher/ui/assets/vendor.rtl.css
+EOF
+rm -rf logos*
