@@ -21,6 +21,6 @@ var versionCmd = &cobra.Command{
 			fmt.Print("no version set for this build... ")
 			cliVersion = "local"
 		}
-		fmt.Printf("triton-kubernetes v0.9.0-pre (%s)\n", cliVersion)
+		fmt.Printf("triton-kubernetes v0.9.0-pre2 (%s)\n", cliVersion)
 	},
 }
