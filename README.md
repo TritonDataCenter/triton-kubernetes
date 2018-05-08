@@ -60,8 +60,6 @@ mv terraform /usr/local/bin/
 ```
 
 #### Install `triton-kubernetes`
-Download Binary:
-TODO
 
 From Source:
 ```bash
@@ -70,9 +68,8 @@ go install github.com/joyent/triton-kubernetes
 triton-kubernetes --help
 ```
 
-#### Build `triton-kubernetes` CLI
-
- * [Build and Install](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/building-cli.md)
+ * [Build and Install from source](/docs/guide/building-cli.md)
+ * [Install from pre-built packages](/docs/guide/installing-cli.md)
 
 ## Working with the CLI
 
