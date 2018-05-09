@@ -152,6 +152,24 @@ Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton K
 
 * [Release Process](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/release-process.md)
 
+## Helm
+
+Helm is already installed on the Kubernetes cluster but you will be required to create Service account with cluster-admin role.
+
+You can add a service account to Tiller using the `--service-account <NAME>` flag while you're configuring Helm. As a prerequisite, you'll have to create a role binding which specifies a [role](https://kubernetes.io/docs/admin/authorization/rbac/#role-and-clusterrole) and a [service account](https://kubernetes.io/docs/tasks/configure-pod-container/configure-service-account/) name that have been set up in advance.
+
+```
+  # create service account'tiller'
+$ kubectl create serviceaccount --namespace kube-system tiller
+  # create cluster role binding
+$ kubectl create clusterrolebinding tiller-cluster-rule --clusterrole=cluster-admin --serviceaccount=kube-system:tiller
+  # deploy changes
+$ kubectl patch deploy --namespace kube-system tiller-deploy -p '{"spec":{"template":{"spec":{"serviceAccount":"tiller"}}}}'      
+  # upgrade
+$ helm init --service-account tiller --upgrade
+```
+_Note: The cluster-admin role is created by default in a Kubernetes cluster, so you don't have to define it explicitly._
+
 ## Developing Locally
 
 ### Testing terraform module changes
