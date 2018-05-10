@@ -32,3 +32,10 @@ Move the binary to `/usr/local/bin/` or somewhere in your `$PATH`.
 Triton Multi-Cloud Kubernetes CLI has a standalone OSX binary available.
 Download the `triton-kubernetes` [OSX binary](https://github.com/joyent/triton-kubernetes/releases).
 Move the binary to `/usr/local/bin/` or somewhere in your `$PATH`.
+
+`triton-kubernetes` CLI can also be installed using _Homebrew_.
+To install the latest version:
+```
+brew tap joyent/tap
+brew install triton-kubernetes
+```
