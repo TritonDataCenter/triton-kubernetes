@@ -1,20 +1,21 @@
-VERSION=v0.9.0-pre2
+VERSION=0.9.0-pre2
 LDFLAGS=-X github.com/joyent/triton-kubernetes/cmd.cliVersion=$(shell git rev-list -1 HEAD)
 BUILD_PATH=build
-FILE_COMMAND=triton-kubernetes
 
-OSX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_osx-amd64.zip
+OSX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_v$(VERSION)_osx-amd64.zip
 OSX_BINARY_PATH=$(BUILD_PATH)/triton-kubernetes_osx-amd64
+OSX_TMP_DIR=$(BUILD_PATH)/build-osx-tmp
 
-LINUX_BINARY_FILE_NAME=triton-kubernetes_linux-amd64
-LINUX_BINARY_PATH=$(BUILD_PATH)/$(LINUX_BINARY_FILE_NAME)
+LINUX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_v$(VERSION)_linux-amd64.zip
+LINUX_BINARY_PATH=$(BUILD_PATH)/triton-kubernetes_linux-amd64
+LINUX_TMP_DIR=$(BUILD_PATH)/build-linux-tmp
 
-RPM_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.rpm
+RPM_FILE_NAME=triton-kubernetes_v$(VERSION)_linux-amd64.rpm
 RPM_PATH=$(BUILD_PATH)/$(RPM_FILE_NAME)
 RPM_INSTALL_DIR=/usr/bin
 RPM_TMP_DIR=$(BUILD_PATH)/build-rpm-tmp
 
-DEB_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.deb
+DEB_FILE_NAME=triton-kubernetes_v$(VERSION)_linux-amd64.deb
 DEB_PATH=$(BUILD_PATH)/$(DEB_FILE_NAME)
 DEB_INSTALL_DIR=/usr/bin
 DEB_TMP_DIR=$(BUILD_PATH)/build-deb-tmp
@@ -30,15 +31,22 @@ build-local: clean build-osx
 
 build-osx: clean
 	@echo "Building OSX..."
+#	Copying and renaming the linux binary to just 'triton-kubernetes'. Making a temp directory to avoid potential naming conflicts.
+	@mkdir -p $(OSX_TMP_DIR)
 	@mkdir -p $(BUILD_PATH)
-	@GOOS=darwin GOARCH=amd64 go build -o $(OSX_BINARY_PATH)
-	go build -v -ldflags="$(LDFLAGS)" -o $(BUILD_PATH)/$(FILE_COMMAND)
-	@zip --junk-paths $(OSX_ARCHIVE_PATH) $(OSX_BINARY_PATH)
+	@GOOS=darwin GOARCH=amd64 go build -v -ldflags="$(LDFLAGS)" -o $(OSX_BINARY_PATH)
+	@cp $(OSX_BINARY_PATH) $(OSX_TMP_DIR)/triton-kubernetes
+	@zip --junk-paths $(OSX_ARCHIVE_PATH) $(OSX_TMP_DIR)/triton-kubernetes
+	@rm -rf $(OSX_TMP_DIR)
 
 build-linux: clean
 	@echo "Building Linux..."
+	@mkdir -p $(LINUX_TMP_DIR)
 	@mkdir -p $(BUILD_PATH)
-	@GOOS=linux GOARCH=amd64 go build -o $(LINUX_BINARY_PATH)
+	@GOOS=linux GOARCH=amd64 go build -v -ldflags="$(LDFLAGS)" -o $(LINUX_BINARY_PATH)
+	@cp $(LINUX_BINARY_PATH) $(LINUX_TMP_DIR)/triton-kubernetes
+	@zip --junk-paths $(LINUX_ARCHIVE_PATH) $(LINUX_TMP_DIR)/triton-kubernetes
+	@rm -rf $(LINUX_TMP_DIR)
 
 build-rpm: build-linux
 	@echo "Building RPM..."
@@ -78,7 +86,6 @@ build-deb: build-linux
 #	Cleaning up the tmp directory
 	@rm -rf $(DEB_TMP_DIR)
 
-test: 
+test:
 	@echo "Running unit-tests..."
 	go test ./...
-	
