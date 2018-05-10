@@ -19,6 +19,7 @@ Download the `triton-kubernetes` [deb package](https://github.com/joyent/triton-
 From the same directory as where deb package was downloaded, run the following command:
 ```bash
 dpkg -i triton-kubernetes_v0.9.0_linux-amd64.deb
+apt-get install -f
 ```
 <sub>Replace `triton-kubernetes_v0.9.0_linux-amd64.deb` with the package name that was downloaded.</sub>
 
