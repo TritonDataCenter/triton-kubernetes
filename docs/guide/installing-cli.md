@@ -19,6 +19,7 @@ Download the `triton-kubernetes` [deb package](https://github.com/joyent/triton-
 From the same directory as where deb package was downloaded, run the following command:
 ```bash
 dpkg -i triton-kubernetes_v0.9.0_linux-amd64.deb
+apt-get install -f
 ```
 <sub>Replace `triton-kubernetes_v0.9.0_linux-amd64.deb` with the package name that was downloaded.</sub>
 
@@ -31,3 +32,10 @@ Move the binary to `/usr/local/bin/` or somewhere in your `$PATH`.
 Triton Multi-Cloud Kubernetes CLI has a standalone OSX binary available.
 Download the `triton-kubernetes` [OSX binary](https://github.com/joyent/triton-kubernetes/releases).
 Move the binary to `/usr/local/bin/` or somewhere in your `$PATH`.
+
+`triton-kubernetes` CLI can also be installed using _Homebrew_.
+To install the latest version:
+```
+brew tap joyent/tap
+brew install triton-kubernetes
+```
