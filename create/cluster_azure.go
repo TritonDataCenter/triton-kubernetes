@@ -1,6 +1,7 @@
 package create
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"strings"
@@ -8,7 +9,7 @@ import (
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
 
-	"github.com/Azure/azure-sdk-for-go/arm/resources/subscriptions"
+	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-06-01/subscriptions"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -185,10 +186,10 @@ func newAzureCluster(remoteBackend backend.Backend, currentState state.State) (s
 		return "", err
 	}
 
-	azureGroupClient := subscriptions.NewGroupClientWithBaseURI(azureEnv.ResourceManagerEndpoint)
+	azureGroupClient := subscriptions.NewClientWithBaseURI(azureEnv.ResourceManagerEndpoint)
 	azureGroupClient.Authorizer = autorest.NewBearerAuthorizer(azureSPT)
 
-	azureRawLocations, err := azureGroupClient.ListLocations(cfg.AzureSubscriptionID)
+	azureRawLocations, err := azureGroupClient.ListLocations(context.Background(), cfg.AzureSubscriptionID)
 	if err != nil {
 		return "", err
 	}
