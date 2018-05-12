@@ -56,7 +56,7 @@ resource "azurerm_network_security_rule" "rke_ports" {
   access    = "Allow"
   protocol  = "Tcp"
 
-  source_port_ranges = [
+  destination_port_ranges = [
     "22",          # SSH
     "80",          # Canal
     "443",         # Canal
@@ -69,7 +69,7 @@ resource "azurerm_network_security_rule" "rke_ports" {
     "30000-32767", # NodePort Services
   ]
 
-  destination_port_range      = "*"
+  source_port_range           = "*"
   source_address_prefix       = "VirtualNetwork"
   destination_address_prefix  = "*"
   resource_group_name         = "${azurerm_resource_group.resource_group.name}"
