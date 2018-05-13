@@ -76,6 +76,16 @@ func (state *State) AddNode(clusterKey, name string, obj interface{}) error {
 	return nil
 }
 
+// Backups are stored at path `module.backup_{clusterName}`
+func (state *State) AddBackup(name string, obj interface{}) error {
+	_, err := state.configJSON.SetP(obj, fmt.Sprintf("module.backup_%s", name))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (state *State) Delete(path string) error {
 	err := state.configJSON.DeleteP(path)
 	if err != nil {
@@ -144,6 +154,22 @@ func (state *State) Nodes(clusterKey string) (map[string]string, error) {
 	}
 
 	return result, nil
+}
+
+// Backups are stored at path `module.backup_{clusterKey}`
+func (state *State) Backup(clusterKey string) string {
+	children, err := state.configJSON.S("module").ChildrenMap()
+	if err != nil {
+		return ""
+	}
+
+	for key := range children {
+		if key == fmt.Sprintf("backup_%s", clusterKey) {
+			return key
+		}
+	}
+
+	return ""
 }
 
 func getClusterKeyParts(clusterKey string) (provider, name string, err error) {
