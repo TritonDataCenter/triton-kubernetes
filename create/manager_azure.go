@@ -1,6 +1,7 @@
 package create
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -9,8 +10,8 @@ import (
 	"github.com/joyent/triton-kubernetes/state"
 	homedir "github.com/mitchellh/go-homedir"
 
-	"github.com/Azure/azure-sdk-for-go/arm/compute"
-	"github.com/Azure/azure-sdk-for-go/arm/resources/subscriptions"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
+	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-06-01/subscriptions"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -198,10 +199,10 @@ func newAzureManager(currentState state.State, name string) error {
 		return err
 	}
 
-	azureGroupClient := subscriptions.NewGroupClientWithBaseURI(azureEnv.ResourceManagerEndpoint)
+	azureGroupClient := subscriptions.NewClientWithBaseURI(azureEnv.ResourceManagerEndpoint)
 	azureGroupClient.Authorizer = autorest.NewBearerAuthorizer(azureSPT)
 
-	azureRawLocations, err := azureGroupClient.ListLocations(cfg.AzureSubscriptionID)
+	azureRawLocations, err := azureGroupClient.ListLocations(context.Background(), cfg.AzureSubscriptionID)
 	if err != nil {
 		return err
 	}
@@ -256,7 +257,7 @@ func newAzureManager(currentState state.State, name string) error {
 	azureVMSizesClient := compute.NewVirtualMachineSizesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
 	azureVMSizesClient.Authorizer = autorest.NewBearerAuthorizer(azureSPT)
 
-	azureRawVMSizes, err := azureVMSizesClient.List(strings.Replace(strings.ToLower(cfg.AzureLocation), " ", "", -1))
+	azureRawVMSizes, err := azureVMSizesClient.List(context.Background(), strings.Replace(strings.ToLower(cfg.AzureLocation), " ", "", -1))
 	if err != nil {
 		return err
 	}

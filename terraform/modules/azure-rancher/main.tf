@@ -40,13 +40,13 @@ resource "azurerm_network_security_rule" "rancher_ports" {
   access    = "Allow"
   protocol  = "Tcp"
 
-  source_port_ranges = [
+  destination_port_ranges = [
     "22",  # SSH
     "80",  # Rancher UI
     "443", # Rancher UI
   ]
 
-  destination_port_range      = "*"
+  source_port_range           = "*"
   source_address_prefix       = "*"
   destination_address_prefix  = "*"
   resource_group_name         = "${azurerm_resource_group.resource_group.name}"

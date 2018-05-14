@@ -104,7 +104,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 	} else {
 		prompt := promptui.Select{
 			Label: "Create Cluster in which Cloud Provider",
-			Items: []string{"Triton", "AWS", "GCP", "Azure", "BareMetal", "vSphere"},
+			Items: []string{"Triton", "AWS", "GCP", "GKE", "Azure", "AKS", "BareMetal", "vSphere"},
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
 				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
@@ -130,8 +130,12 @@ func NewCluster(remoteBackend backend.Backend) error {
 		clusterName, err = newAWSCluster(remoteBackend, currentState)
 	case "gcp":
 		clusterName, err = newGCPCluster(remoteBackend, currentState)
+	case "gke":
+		clusterName, err = newGKECluster(remoteBackend, currentState)
 	case "azure":
 		clusterName, err = newAzureCluster(remoteBackend, currentState)
+	case "aks":
+		clusterName, err = newAKSCluster(remoteBackend, currentState)
 	case "baremetal":
 		clusterName, err = newBareMetalCluster(remoteBackend, currentState)
 	case "vsphere":
@@ -215,7 +219,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 			printNodesAddedMessage(newHostnames)
 		}
 	}
-	if !nonInteractiveMode {
+	if !nonInteractiveMode && selectedCloudProvider != "gke" && selectedCloudProvider != "aks" {
 		// Ask user if they'd like to create a node for this cluster
 		createNodeOptions := []struct {
 			Name  string

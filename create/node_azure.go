@@ -1,6 +1,7 @@
 package create
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"os"
@@ -11,7 +12,7 @@ import (
 	"github.com/joyent/triton-kubernetes/state"
 	"github.com/joyent/triton-kubernetes/util"
 
-	"github.com/Azure/azure-sdk-for-go/arm/compute"
+	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
 	"github.com/Azure/go-autorest/autorest"
 	"github.com/Azure/go-autorest/autorest/adal"
 	"github.com/Azure/go-autorest/autorest/azure"
@@ -99,7 +100,7 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 	azureVMSizesClient := compute.NewVirtualMachineSizesClientWithBaseURI(azureEnv.ResourceManagerEndpoint, cfg.AzureSubscriptionID)
 	azureVMSizesClient.Authorizer = autorest.NewBearerAuthorizer(azureSPT)
 
-	azureRawVMSizes, err := azureVMSizesClient.List(strings.Replace(strings.ToLower(cfg.AzureLocation), " ", "", -1))
+	azureRawVMSizes, err := azureVMSizesClient.List(context.Background(), strings.Replace(strings.ToLower(cfg.AzureLocation), " ", "", -1))
 	if err != nil {
 		return []string{}, err
 	}

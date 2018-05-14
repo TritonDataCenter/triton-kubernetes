@@ -23,11 +23,11 @@
 
 [[constraint]]
   name = "github.com/Azure/azure-sdk-for-go"
-  version = "12.2.0-beta"
+  version = "16.2.0"
 
 [[constraint]]
   name = "github.com/Azure/go-autorest"
-  version = "9.7.1"
+  version = "10.8.1"
 
 [[constraint]]
   name = "github.com/Jeffail/gabs"
