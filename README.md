@@ -81,7 +81,7 @@ To get help on a command, use the --help flag. For example:
 ```
 $ triton-kubernetes --help
 This is a multi-cloud Kubernetes solution. Triton Kubernetes has a global
-cluster manager which can manage multiple clusters across regions/data-centers and/or clouds. 
+cluster manager which can manage multiple clusters across regions/data-centers and/or clouds.
 Cluster manager can run anywhere (Triton/AWS/Azure/GCP/Baremetal) and manage Kubernetes environments running on any region of any supported cloud.
 For an example set up, look at the How-To section.
 
@@ -89,7 +89,7 @@ Usage:
   triton-kubernetes [command]
 
 Available Commands:
-  create      Create cluster managers, kubernetes clusters or individual kubernetes cluster nodes.
+  create      Create resources
   destroy     Destroy cluster managers, kubernetes clusters or individual kubernetes cluster nodes.
   get         Display resource information
   help        Help about any command
@@ -112,7 +112,7 @@ triton-kubernetes create [manager or cluster or node]
 
 Creates a new cluster manager, kubernetes cluster or individual kubernetes cluster node.
 
-When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, Azure and GCP).
+When creating a new kubernetes cluster, you must specify the cloud provider for that cluster (Triton, AWS, GCP, GKE, Azure, AKS, BareMetal, and vSphere).
 
 ### Destroy
 
@@ -141,12 +141,13 @@ Will persist state in the `/triton-kubernetes/` folder for the provided user in 
 Will persist state in the `~/.triton-kubernetes/` folder on the machine Triton Kubernetes was run on.
 
 ### Examples
- * [AWS](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/aws)
- * [AZURE](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/azure)
- * [BareMetal](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/bare-metal)
- * [GCP](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/gcp)
- * [Triton](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/triton)
- * [vSphere](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/vSphere) 
+ * [AWS](/docs/guide/aws)
+ * [AZURE](/docs/guide/azure)
+ * [BareMetal](/docs/guide/bare-metal)
+ * [GCP](/docs/guide/gcp)
+ * [GKE](/docs/guide/gke)
+ * [Triton](/docs/guide/triton)
+ * [vSphere](/docs/guide/vSphere)
 
 ## How-To cut the release
 
