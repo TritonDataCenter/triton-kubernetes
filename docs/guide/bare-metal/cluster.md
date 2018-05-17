@@ -58,7 +58,7 @@ create cluster called
   Create new node? No
   Proceed? Yes
 ```
-To destroy cluster , run the following:
+To destroy cluster, run the following:
 
 ```
 $ triton-kubernetes destroy cluster
@@ -75,4 +75,4 @@ $ triton-kubernetes get cluster
 ```
 
 
-`triton-kubernetes` cli can take a configuration file (yaml) with `--config` option to run in silent mode.To read more about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
+`triton-kubernetes` cli can take a configuration file (yaml) with `--config` option to run in silent mode. To read more about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
