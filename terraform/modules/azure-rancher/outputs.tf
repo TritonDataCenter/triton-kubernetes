@@ -3,9 +3,9 @@ output "rancher_url" {
 }
 
 output "rancher_access_key" {
-  value = "${chomp(module.rancher_access_key.stdout)}"
+  value = "${lookup(data.external.rancher_server.result, "name")}"
 }
 
 output "rancher_secret_key" {
-  value = "${chomp(module.rancher_secret_key.stdout)}"
+  value = "${lookup(data.external.rancher_server.result, "token")}"
 }
