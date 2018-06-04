@@ -20,5 +20,6 @@ variable "triton_key_id" {
 }
 
 variable "manta_subuser" {
+  default     = ""
   description = "The Manta subuser"
 }

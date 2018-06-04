@@ -2,10 +2,10 @@ data "template_file" "minio_manta_deployment" {
   template = "${file("${path.module}/files/minio-manta-deployment.yaml")}"
 
   vars {
-    triton_account  = "${var.triton_account}"
-    triton_key_id   = "${var.triton_key_id}"
-    triton_key_path = "${var.triton_key_path}"
-    manta_subuser   = "${var.manta_subuser}"
+    triton_account      = "${var.triton_account}"
+    triton_key_id       = "${var.triton_key_id}"
+    triton_key_material = "${indent(12, file("${var.triton_key_path}"))}" // indent to keep yaml multi line compliance
+    manta_subuser       = "${var.manta_subuser}"
   }
 }
 

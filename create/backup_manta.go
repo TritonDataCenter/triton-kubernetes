@@ -112,17 +112,9 @@ func newMantaBackup(selectedClusterKey string, currentState state.State) error {
 	// Manta Subuser
 	if viper.IsSet("manta_subuser") {
 		cfg.MantaSubuser = viper.GetString("manta_subuser")
-	} else if nonInteractiveMode {
-		return errors.New("manta_subuser must be specified")
 	} else {
 		prompt := promptui.Prompt{
-			Label: "Manta Subuser",
-			Validate: func(input string) error {
-				if len(input) == 0 {
-					return errors.New("Invalid Manta Subuser")
-				}
-				return nil
-			},
+			Label: "Manta Subuser (optional)",
 		}
 
 		result, err := prompt.Run()
