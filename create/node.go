@@ -19,7 +19,7 @@ import (
 type baseNodeTerraformConfig struct {
 	Source string `json:"source"`
 
-	Hostname  string `json:"hostname"`
+	Hostname  string `json:"hostname,omitempty"`
 	NodeCount int    `json:"-"`
 
 	RancherAPIURL                   string                  `json:"rancher_api_url"`
@@ -260,6 +260,10 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 		return baseNodeTerraformConfig{}, fmt.Errorf("Invalid rancher_host_label '%s', must be 'worker', 'etcd' or 'control'", selectedHostLabel)
 	}
 
+	return cfg, nil
+}
+
+func getNodeCount(cfg baseNodeTerraformConfig) (int, error) {
 	// Allow user to specify number of nodes to be created.
 	var countInput string
 	if viper.IsSet("node_count") {
@@ -281,7 +285,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 		}
 		result, err := prompt.Run()
 		if err != nil {
-			return baseNodeTerraformConfig{}, err
+			return 0, err
 		}
 		countInput = result
 	} else {
@@ -300,7 +304,7 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 
 		i, _, err := prompt.Run()
 		if err != nil {
-			return baseNodeTerraformConfig{}, err
+			return 0, err
 		}
 
 		countInput = nodeCountOptions[i]
@@ -309,17 +313,20 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 	// Verifying node count
 	nodeCount, err := strconv.Atoi(countInput)
 	if err != nil {
-		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be a valid number. Found '%s'.", countInput)
+		return 0, fmt.Errorf("node_count must be a valid number. Found '%s'.", countInput)
 	}
 	if nodeCount <= 0 {
-		return baseNodeTerraformConfig{}, fmt.Errorf("node_count must be greater than 0. Found '%d'.", nodeCount)
+		return 0, fmt.Errorf("node_count must be greater than 0. Found '%d'.", nodeCount)
 	}
 
-	cfg.NodeCount = nodeCount
+	return nodeCount, nil
+}
 
-	// hostname
+func getNodeHostnamePrefix() (string, error) {
+	hostnamePrefix := ""
+
 	if viper.IsSet("hostname") {
-		cfg.Hostname = viper.GetString("hostname")
+		hostnamePrefix = viper.GetString("hostname")
 	} else {
 		prompt := promptui.Prompt{
 			Label: "Hostname prefix",
@@ -334,16 +341,16 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 
 		result, err := prompt.Run()
 		if err != nil {
-			return baseNodeTerraformConfig{}, err
+			return "", err
 		}
-		cfg.Hostname = result
+		hostnamePrefix = result
 	}
 
-	if cfg.Hostname == "" {
-		return baseNodeTerraformConfig{}, errors.New("Invalid Hostname")
+	if hostnamePrefix == "" {
+		return "", errors.New("Invalid Hostname")
 	}
 
-	return cfg, nil
+	return hostnamePrefix, nil
 }
 
 // Returns the hostnames that should be used when adding new nodes. Prevents naming collisions.

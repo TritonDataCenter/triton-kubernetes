@@ -63,6 +63,16 @@ func newAzureNode(selectedClusterManager, selectedCluster string, remoteBackend 
 		return []string{}, err
 	}
 
+	baseConfig.NodeCount, err = getNodeCount(baseConfig)
+	if err != nil {
+		return []string{}, err
+	}
+
+	baseConfig.Hostname, err = getNodeHostnamePrefix()
+	if err != nil {
+		return []string{}, err
+	}
+
 	cfg := azureNodeTerraformConfig{
 		baseNodeTerraformConfig: baseConfig,
 
