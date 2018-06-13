@@ -35,7 +35,11 @@ create cluster called
 ✔ Hostname prefix: dev-worker
 ✔ AWS AMI: ubuntu/images/hvm-ssd/ubuntu-xenial-16.04-amd64-server-20180405
 ✔ AWS Instance Type: t2.micro
-  Volume Created? No
+  Volume Created? Yes
+✔ EBS Volume Device Name: /dev/sdf
+✔ EBS Volume Mount Path: /mnt/triton-kubernetes
+  EBS Volume Type? General Purpose SSD
+✔ EBS Volume Size in GiB: 100
 3 nodes added: dev-worker-1, dev-worker-2, dev-worker-3
   Create new node? Yes
 ✔ Host Type: etcd
