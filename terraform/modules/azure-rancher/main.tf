@@ -209,20 +209,14 @@ resource "null_resource" "setup_rancher_k8s" {
 // The setup_rancher_k8s script will have stored a file with an api key
 // We need to retrieve the contents of that file and output it.
 // This is a hack to get around the Terraform Rancher provider not having resources for api keys.
-module "rancher_access_key" {
-  source  = "matti/outputs/shell"
-  version = "0.0.1"
+data "external" "rancher_server" {
+  program = ["bash", "${path.module}/files/rancher_server.sh"]
 
-  // We ssh into the remote box and cat the file.
-  // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
-  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${local.key_path} ${local.ssh_user}@${local.rancher_master_ip} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .name'"
-}
-
-module "rancher_secret_key" {
-  source  = "matti/outputs/shell"
-  version = "0.0.1"
-
-  // We ssh into the remote box and cat the file.
-  // We echo the output from null_resource.setup_rancher_k8s to setup an implicit dependency.
-  command = "ssh -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i ${local.key_path} ${local.ssh_user}@${local.rancher_master_ip} 'echo ${null_resource.setup_rancher_k8s.id} > /dev/null; cat ~/rancher_api_key | jq -r .token | cut -d: -f2'"
+  query = {
+    id        = "${null_resource.setup_rancher_k8s.id}" // used to create an implicit dependency
+    ssh_host  = "${local.rancher_master_ip}"
+    ssh_user  = "${local.ssh_user}"
+    key_path  = "${local.key_path}"
+    file_path = "~/rancher_api_key"
+  }
 }

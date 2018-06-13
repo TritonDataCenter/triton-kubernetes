@@ -6,7 +6,6 @@ data "template_file" "install_rancher_agent" {
   template = "${file("${path.module}/files/install_rancher_agent.sh.tpl")}"
 
   vars {
-    hostname                  = "${var.hostname}"
     docker_engine_install_url = "${var.docker_engine_install_url}"
 
     rancher_api_url                    = "${var.rancher_api_url}"

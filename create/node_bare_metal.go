@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
 	"github.com/joyent/triton-kubernetes/state"
@@ -124,19 +125,6 @@ func newBareMetalNode(selectedClusterManager, selectedCluster string, remoteBack
 	}
 	cfg.KeyPath = key_path
 
-	// Get existing node names
-	nodes, err := currentState.Nodes(selectedCluster)
-	if err != nil {
-		return []string{}, err
-	}
-	existingNames := []string{}
-	for nodeName := range nodes {
-		existingNames = append(existingNames, nodeName)
-	}
-
-	// Determine what the hostnames should be for the new node(s)
-	newHostnames := getNewHostnames(existingNames, cfg.Hostname, cfg.NodeCount)
-
 	// Bare metal node creation requires 1 host/ip address per node.
 	hosts := []string{}
 	if viper.IsSet("hosts") {
@@ -144,38 +132,67 @@ func newBareMetalNode(selectedClusterManager, selectedCluster string, remoteBack
 	} else if nonInteractiveMode {
 		return []string{}, errors.New("hosts must be specified")
 	} else {
-		for i := 0; i < cfg.NodeCount; i++ {
-			prompt := promptui.Prompt{
-				Label: fmt.Sprintf("Host/IP for %s", newHostnames[i]),
-				Validate: func(input string) error {
-					if input == "" {
-						return errors.New("Invalid host/ip")
-					}
-					return nil
-				},
-			}
+		shouldPrompt := true
+		prompt := promptui.Prompt{
+			Label: "Host/IP",
+			Validate: func(input string) error {
+				if input == "" {
+					return errors.New("Invalid host/ip")
+				}
+				return nil
+			},
+		}
+
+		continueOptions := []struct {
+			Name  string
+			Value bool
+		}{
+			{"Yes", true},
+			{"No", false},
+		}
+
+		continuePrompt := promptui.Select{
+			Label: "Add another Host/IP?",
+			Items: continueOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: "  {{.Name}}",
+				Selected: "  Add another Host/IP? {{.Name}}",
+			},
+		}
+
+		for shouldPrompt {
 			result, err := prompt.Run()
 			if err != nil {
 				return []string{}, err
 			}
 			hosts = append(hosts, result)
+
+			// Continue Prompt
+			i, _, err := continuePrompt.Run()
+			if err != nil {
+				return []string{}, err
+			}
+			shouldPrompt = continueOptions[i].Value
 		}
 	}
 
-	if len(hosts) != cfg.NodeCount {
-		return []string{}, errors.New("not enough hosts")
-	}
-
-	// Add new node to terraform config with the new hostnames
-	for i, newHostname := range newHostnames {
+	// Add new node to terraform config with the host address as the unique name
+	for _, host := range hosts {
 		cfgCopy := cfg
-		cfgCopy.Hostname = newHostname
-		cfgCopy.Host = hosts[i]
-		err = currentState.AddNode(selectedCluster, newHostname, cfgCopy)
+		cfgCopy.Host = host
+		cfgCopy.Hostname = host
+
+		// Lets use the Host/IP as the unique name
+		// State names can't contain . so replace with _
+		hostname := strings.Replace(host, ".", "_", -1)
+
+		err = currentState.AddNode(selectedCluster, hostname, cfgCopy)
 		if err != nil {
 			return []string{}, err
 		}
 	}
 
-	return newHostnames, nil
+	return hosts, nil
 }

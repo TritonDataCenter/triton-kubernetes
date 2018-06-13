@@ -70,6 +70,16 @@ func newAWSNode(selectedClusterManager, selectedCluster string, remoteBackend ba
 		return []string{}, err
 	}
 
+	baseConfig.NodeCount, err = getNodeCount(baseConfig)
+	if err != nil {
+		return []string{}, err
+	}
+
+	baseConfig.Hostname, err = getNodeHostnamePrefix()
+	if err != nil {
+		return []string{}, err
+	}
+
 	cfg := awsNodeTerraformConfig{
 		baseNodeTerraformConfig: baseConfig,
 

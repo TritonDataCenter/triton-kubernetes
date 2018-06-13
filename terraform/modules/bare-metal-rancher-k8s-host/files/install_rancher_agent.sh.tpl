@@ -15,8 +15,6 @@ sudo bash -c 'echo "{
 }" > /etc/docker/daemon.json'
 sudo service docker restart
 
-sudo hostnamectl set-hostname ${hostname}
-
 # Run docker login if requested
 if [ "${rancher_registry_username}" != "" ]; then
 	sudo docker login -u ${rancher_registry_username} -p ${rancher_registry_password} ${rancher_registry}
