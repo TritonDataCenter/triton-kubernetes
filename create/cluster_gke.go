@@ -19,6 +19,7 @@ import (
 	"github.com/spf13/viper"
 	"golang.org/x/oauth2/google"
 	compute "google.golang.org/api/compute/v1"
+	container "google.golang.org/api/container/v1beta1"
 )
 
 const (
@@ -141,7 +142,7 @@ func newGKECluster(remoteBackend backend.Backend, currentState state.State) (str
 		return "", err
 	}
 
-	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly")
+	jwtCfg, err := google.JWTConfigFromJSON(gcpCredentials, "https://www.googleapis.com/auth/compute.readonly", "https://www.googleapis.com/auth/cloud-platform")
 	if err != nil {
 		return "", err
 	}
@@ -410,6 +411,17 @@ func newGKECluster(remoteBackend backend.Backend, currentState state.State) (str
 		cfg.GCPMachineType = machineTypes.Items[i].Name
 	}
 
+	containerService, err := container.New(jwtCfg.Client(context.Background()))
+	if err != nil {
+		return "", err
+	}
+
+	projectsZonesService := container.NewProjectsZonesService(containerService)
+	serverConfig, err := projectsZonesService.GetServerconfig(cfg.GCPProjectID, cfg.GCPZone).Do()
+	if err != nil {
+		return "", err
+	}
+
 	// Kubernetes Version
 	if viper.IsSet("k8s_version") {
 		cfg.KubernetesVersion = viper.GetString("k8s_version")
@@ -417,24 +429,14 @@ func newGKECluster(remoteBackend backend.Backend, currentState state.State) (str
 		return "", errors.New("k8s_version must be specified")
 	} else {
 
-		var kubernetesVersions = []struct {
-			DisplayName string
-			Name        string
-		}{
-			{"v1.9.7", "1.9.7-gke.0"},
-			{"v1.9.6", "1.9.6-gke.1"},
-			{"v1.8.12", "1.8.12-gke.0"},
-			{"v1.8.10", "1.8.10-gke.0"},
-			{"v1.8.8", "1.8.8-gke.0"},
-		}
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",
-			Items: kubernetesVersions,
+			Items: serverConfig.ValidMasterVersions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
-				Active:   fmt.Sprintf(`%s {{ .DisplayName | underline }}`, promptui.IconSelect),
-				Inactive: `  {{ .DisplayName }}`,
-				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ .DisplayName }}`, promptui.IconGood),
+				Active:   fmt.Sprintf(`%s {{ . | underline }}`, promptui.IconSelect),
+				Inactive: `  {{ . }}`,
+				Selected: fmt.Sprintf(`{{ "%s" | green }} {{ "Kubernetes Version:" | bold}} {{ . }}`, promptui.IconGood),
 			},
 		}
 
@@ -443,7 +445,7 @@ func newGKECluster(remoteBackend backend.Backend, currentState state.State) (str
 			return "", err
 		}
 
-		cfg.KubernetesVersion = kubernetesVersions[i].Name
+		cfg.KubernetesVersion = serverConfig.ValidMasterVersions[i]
 	}
 
 	// Allow user to specify number of nodes to be created.
