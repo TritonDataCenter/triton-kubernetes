@@ -87,13 +87,13 @@ func RunTerraformApplyWithState(state state.State) error {
 	}
 
 	// Run terraform init
-	err = RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = runShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform apply
-	err = RunShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
+	err = runShellCommand(&shellOptions, "terraform", "apply", "-auto-approve")
 	if err != nil {
 		return err
 	}
@@ -128,14 +128,55 @@ func RunTerraformDestroyWithState(currentState state.State, args []string) error
 	}
 
 	// Run terraform init
-	err = RunShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	err = runShellCommand(&shellOptions, "terraform", "init", "-force-copy")
 	if err != nil {
 		return err
 	}
 
 	// Run terraform destroy
 	allArgs := append([]string{"destroy", "-force"}, args...)
-	err = RunShellCommand(&shellOptions, "terraform", allArgs...)
+	err = runShellCommand(&shellOptions, "terraform", allArgs...)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+func RunTerraformOutputWithState(state state.State, moduleName string) error {
+	// Create a temporary directory
+	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
+	if err != nil {
+		return err
+	}
+	defer os.RemoveAll(tempDir)
+
+	// Save the terraform config to the temporary directory
+	jsonPath := fmt.Sprintf("%s/%s", tempDir, "main.tf.json")
+	err = ioutil.WriteFile(jsonPath, state.Bytes(), 0644)
+	if err != nil {
+		return err
+	}
+
+	// Use temporary directory as working directory
+	shellOptions := ShellOptions{
+		WorkingDir: tempDir,
+	}
+
+	// Install third party providers
+	err = installThirdPartyProviders(tempDir)
+	if err != nil {
+		return err
+	}
+
+	// Run terraform init
+	err = runShellCommand(&shellOptions, "terraform", "init", "-force-copy")
+	if err != nil {
+		return err
+	}
+
+	// Run terraform output
+	err = runShellCommand(&shellOptions, "terraform", "output", "-module", moduleName)
 	if err != nil {
 		return err
 	}

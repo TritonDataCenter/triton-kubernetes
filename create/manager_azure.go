@@ -69,7 +69,7 @@ func newAzureManager(currentState state.State, name string) error {
 		}
 
 		prompt := promptui.Select{
-			Label: "Would you like to make this deployemnt highly available",
+			Label: "Would you like to make this deployment highly available",
 			Items: haOptions,
 			Templates: &promptui.SelectTemplates{
 				Label:    "{{ . }}?",
@@ -89,7 +89,7 @@ func newAzureManager(currentState state.State, name string) error {
 
 	cfg := azureManagerTerraformConfig{}
 
-	// HA sepcific configuration
+	// HA specific configuration
 	if highlyAvailable {
 		if viper.IsSet("fqdn") {
 			cfg.FQDN = viper.GetString("fqdn")
