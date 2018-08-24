@@ -20,7 +20,8 @@ import (
 )
 
 const (
-	azureRancherTerraformModulePath = "terraform/modules/azure-rancher"
+	azureRancherTerraformModulePath   = "terraform/modules/azure-rancher"
+	azureRancherHATerraformModulePath = "terraform/modules/azure-rke"
 )
 
 // This struct represents the definition of a Terraform .tf file.
@@ -45,19 +46,158 @@ type azureManagerTerraformConfig struct {
 	AzureSSHUser        string `json:"azure_ssh_user"`
 	AzurePublicKeyPath  string `json:"azure_public_key_path"`
 	AzurePrivateKeyPath string `json:"azure_private_key_path"`
+
+	// Used for HA deployments
+	FQDN              string `json:"fqdn,omitempty"`
+	TLSPrivateKeyPath string `json:"tls_private_key_path,omitempty"`
+	TLSCertPath       string `json:"tls_cert_path,omitempty"`
 }
 
 func newAzureManager(currentState state.State, name string) error {
 	nonInteractiveMode := viper.GetBool("non-interactive")
 
-	baseConfig, err := getBaseManagerTerraformConfig(azureRancherTerraformModulePath, name)
+	highlyAvailable := false
+	if viper.IsSet("ha") {
+		highlyAvailable = viper.GetBool("ha")
+	} else if !nonInteractiveMode {
+		haOptions := []struct {
+			Name  string
+			Value bool
+		}{
+			{"No", false},
+			{"Yes", true},
+		}
+
+		prompt := promptui.Select{
+			Label: "Would you like to make this deployment highly available",
+			Items: haOptions,
+			Templates: &promptui.SelectTemplates{
+				Label:    "{{ . }}?",
+				Active:   fmt.Sprintf("%s {{ .Name | underline }}", promptui.IconSelect),
+				Inactive: "  {{.Name}}",
+				Selected: "  Highly Available? {{.Name}}",
+			},
+		}
+
+		i, _, err := prompt.Run()
+		if err != nil {
+			return err
+		}
+
+		highlyAvailable = haOptions[i].Value
+	}
+
+	cfg := azureManagerTerraformConfig{}
+
+	// HA specific configuration
+	if highlyAvailable {
+		if viper.IsSet("fqdn") {
+			cfg.FQDN = viper.GetString("fqdn")
+		} else if nonInteractiveMode {
+			return errors.New("fqdn must be specified")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "Fully Qualified Domain Name",
+				Validate: func(input string) error {
+					if len(input) == 0 {
+						return errors.New("Invalid Fully Qualified Domain Name")
+					}
+					return nil
+				},
+				Default: "rancher.example.com",
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			cfg.FQDN = result
+		}
+
+		if viper.IsSet("tls_private_key_path") {
+			cfg.TLSPrivateKeyPath = viper.GetString("tls_private_key_path")
+		} else if nonInteractiveMode {
+			return errors.New("tls_private_key_path must be specified")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "TLS Private Key Path",
+				Validate: func(input string) error {
+					expandedPath, err := homedir.Expand(input)
+					if err != nil {
+						return err
+					}
+
+					_, err = os.Stat(expandedPath)
+					if err != nil {
+						if os.IsNotExist(err) {
+							return errors.New("File not found")
+						}
+					}
+					return nil
+				},
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			expandedTLSPrivateKeyPath, err := homedir.Expand(result)
+			if err != nil {
+				return err
+			}
+
+			cfg.TLSPrivateKeyPath = expandedTLSPrivateKeyPath
+		}
+
+		if viper.IsSet("tls_cert_path") {
+			cfg.TLSPrivateKeyPath = viper.GetString("tls_cert_path")
+		} else if nonInteractiveMode {
+			return errors.New("tls_cert_path must be specified")
+		} else {
+			prompt := promptui.Prompt{
+				Label: "TLS Certificate Path",
+				Validate: func(input string) error {
+					expandedPath, err := homedir.Expand(input)
+					if err != nil {
+						return err
+					}
+
+					_, err = os.Stat(expandedPath)
+					if err != nil {
+						if os.IsNotExist(err) {
+							return errors.New("File not found")
+						}
+					}
+					return nil
+				},
+			}
+
+			result, err := prompt.Run()
+			if err != nil {
+				return err
+			}
+
+			expandedTLSCertPath, err := homedir.Expand(result)
+			if err != nil {
+				return err
+			}
+
+			cfg.TLSCertPath = expandedTLSCertPath
+		}
+	}
+
+	terraformModulePath := azureRancherTerraformModulePath
+	if highlyAvailable {
+		terraformModulePath = azureRancherHATerraformModulePath
+	}
+
+	baseConfig, err := getBaseManagerTerraformConfig(terraformModulePath, name)
 	if err != nil {
 		return err
 	}
-
-	cfg := azureManagerTerraformConfig{
-		baseManagerTerraformConfig: baseConfig,
-	}
+	cfg.baseManagerTerraformConfig = baseConfig
 
 	// Azure Subscription ID
 	if viper.IsSet("azure_subscription_id") {

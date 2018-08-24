@@ -5,7 +5,7 @@ import (
 	"os/exec"
 )
 
-func RunShellCommand(options *ShellOptions, command string, args ...string) error {
+func runShellCommand(options *ShellOptions, command string, args ...string) error {
 	cmd := exec.Command(command, args...)
 	cmd.Stdin = os.Stdin
 	cmd.Stdout = os.Stdout

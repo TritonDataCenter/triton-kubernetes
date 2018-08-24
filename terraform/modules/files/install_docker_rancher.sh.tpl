@@ -18,6 +18,8 @@ sudo bash -c 'echo "{
 sudo systemctl daemon-reload
 sudo systemctl restart docker
 
+sudo adduser ubuntu docker
+
 # Run docker login if requested
 if [ "${rancher_registry_username}" != "" ]; then
 	sudo docker login -u ${rancher_registry_username} -p ${rancher_registry_password} ${rancher_registry}
