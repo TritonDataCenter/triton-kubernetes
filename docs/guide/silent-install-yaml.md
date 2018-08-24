@@ -50,4 +50,4 @@ YAML parameters for cluster are:
 
 For examples, look in [examples/silent-install](https://github.com/joyent/triton-kubernetes/tree/master/examples/silent-install).
 
-> <sub>Note: Spreading a cluster across multiple clouds could cause performance issues.</sub>
+> Note: Spreading a cluster across multiple clouds could cause performance issues.
