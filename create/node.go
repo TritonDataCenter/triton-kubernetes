@@ -359,28 +359,15 @@ func getNewHostnames(existingNames []string, nodeName string, nodesToAdd int) []
 		return []string{}
 	}
 
-	// Find the number at which the series of hostnames should start.
-	startNum := 1
-	targetPrefix := nodeName + "-"
-	for _, existingName := range existingNames {
-		if !strings.HasPrefix(existingName, targetPrefix) {
-			continue
-		}
-
-		suffix := existingName[len(targetPrefix):]
-		numSuffix, err := strconv.Atoi(suffix)
-		if err != nil {
-			continue
-		}
-		if numSuffix >= startNum {
-			startNum = numSuffix + 1
-		}
-	}
-
 	// Build the list of hostnames
 	result := []string{}
-	for i := 0; i < nodesToAdd; i++ {
-		result = append(result, fmt.Sprintf("%s-%d", nodeName, startNum+i))
+	allNodeNames := existingNames
+	for len(result) < nodesToAdd {
+		newNodeName := fmt.Sprintf("%s-%s", nodeName, util.GetAlphaNum(6))
+		if util.IsUnique(allNodeNames, newNodeName) {
+			allNodeNames = append(allNodeNames, newNodeName)
+			result = append(result, newNodeName)
+		}
 	}
 
 	return result
