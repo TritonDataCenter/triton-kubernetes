@@ -9,6 +9,7 @@ import (
 	"runtime"
 
 	"github.com/joyent/triton-kubernetes/state"
+	"github.com/spf13/viper"
 
 	getter "github.com/hashicorp/go-getter"
 )
@@ -61,6 +62,11 @@ func installThirdPartyProviders(workingDirectory string) error {
 }
 
 func RunTerraformApplyWithState(state state.State) error {
+	if viper.GetBool("terraform-configuration") {
+		fmt.Println("Updating terraform configuration")
+		return nil
+	}
+
 	// Create a temporary directory
 	tempDir, err := ioutil.TempDir("", "triton-kubernetes-")
 	if err != nil {
