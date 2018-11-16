@@ -3,11 +3,20 @@
 # Wait for Rancher UI to boot
 printf 'Waiting for Rancher to start'
 until $(curl --output /dev/null --silent --head --insecure --fail ${rancher_host}); do
-    printf '.'
-    sleep 5
+	printf '.'
+	sleep 5
 done
 
-sudo apt-get install jq -y || sudo yum install jq -y
+# Wait for apt-get to be unlocked
+printf 'Waiting for apt-get to unlock'
+sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1;
+while [ $? -ne 1 ]; do
+	printf '.';
+	sleep 5;
+	sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1;
+done
+
+sudo apt-get install jq -y
 
 # Login as default admin user
 login_response=$(curl -X POST \
