@@ -15,7 +15,7 @@ func TestVersion(t *testing.T) {
 		versionCmd.Run(versionCmd, []string{})
 	})
 
-	expected := "triton-kubernetes v0.9.0-pre2 (beta)\n"
+	expected := "triton-kubernetes 0.9.1-pre2 (beta)\n"
 
 	select {
 	case err := <-errch:

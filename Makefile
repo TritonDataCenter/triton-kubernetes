@@ -1,21 +1,21 @@
-VERSION=0.9.0-pre2
+VERSION=0.9.1-pre2
 LDFLAGS=-X github.com/joyent/triton-kubernetes/cmd.cliVersion=$(shell git rev-list -1 HEAD)
 BUILD_PATH=build
 
-OSX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_v$(VERSION)_osx-amd64.zip
+OSX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_$(VERSION)_osx-amd64.zip
 OSX_BINARY_PATH=$(BUILD_PATH)/triton-kubernetes_osx-amd64
 OSX_TMP_DIR=$(BUILD_PATH)/build-osx-tmp
 
-LINUX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_v$(VERSION)_linux-amd64.zip
+LINUX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_$(VERSION)_linux-amd64.zip
 LINUX_BINARY_PATH=$(BUILD_PATH)/triton-kubernetes_linux-amd64
 LINUX_TMP_DIR=$(BUILD_PATH)/build-linux-tmp
 
-RPM_FILE_NAME=triton-kubernetes_v$(VERSION)_linux-amd64.rpm
+RPM_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.rpm
 RPM_PATH=$(BUILD_PATH)/$(RPM_FILE_NAME)
 RPM_INSTALL_DIR=/usr/bin
 RPM_TMP_DIR=$(BUILD_PATH)/build-rpm-tmp
 
-DEB_FILE_NAME=triton-kubernetes_v$(VERSION)_linux-amd64.deb
+DEB_FILE_NAME=triton-kubernetes_$(VERSION)_linux-amd64.deb
 DEB_PATH=$(BUILD_PATH)/$(DEB_FILE_NAME)
 DEB_INSTALL_DIR=/usr/bin
 DEB_TMP_DIR=$(BUILD_PATH)/build-deb-tmp
