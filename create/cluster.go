@@ -354,9 +354,12 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			DisplayName string
 			Name        string
 		}{
-			{"v1.8.10", "v1.8.10-rancher1-1"},
-			{"v1.9.5", "v1.9.5-rancher1-1"},
-			{"v1.10.0", "v1.10.0-rancher1-1"},
+			{"v1.8.11", "v1.8.11-rancher2-1"},
+			{"v1.9.7", "v1.9.7-rancher2-2"},
+			{"v1.10.3", "v1.10.3-rancher2-1"},
+			{"v1.11.8", "v1.11.8-rancher1-1"},
+			{"v1.12.6", "v1.12.6-rancher1-1"},
+			{"v1.13.4", "v1.13.4-rancher1-1"},
 		}
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",

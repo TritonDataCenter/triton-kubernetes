@@ -38,7 +38,7 @@ YAML parameters for cluster are:
 | `cluster_manager` | Which cluster manager should manage this new cluster that is going to be created. |
 | `cluster_cloud_provider` | Which cloud should the cluster run on. Options are `triton`, `aws`, `gcp`, or `azure`. |
 | `name` | Cluster name |
-| `k8s_version` | Version of Kubernetes to deploy for this cluster. Available versions are: `v1.8.10-rancher1-1`, `v1.9.5-rancher1-1`, and `v1.10.0-rancher1-1`. |
+| `k8s_version` | Version of Kubernetes to deploy for this cluster. Available versions are: `v1.8.11-rancher2-1`, `v1.9.7-rancher2-2`, `v1.10.3-rancher2-1`, `v1.11.8-rancher1-1`, `v1.12.6-rancher1-1`, and `v1.13.4-rancher1-1``. |
 | `k8s_network_provider` | Network stack to use for this Kubernetes cluster. Available options are: `calico` and `flannel`. |
 | `private_registry` | URL of the private registry that includes rancher containers |
 | `private_registry_username` | Username for the private registry |
