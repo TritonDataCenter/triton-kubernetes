@@ -18,7 +18,7 @@ create cluster called
 ✔ Cluster Manager: dev-manager
 ✔ Cloud Provider: AWS
 ✔ Cluster Name: dev-cluster
-✔ Kubernetes Version: v1.8.10
+✔ Kubernetes Version: v1.13.4
 ✔ Kubernetes Network Provider: calico
 ✔ Private Registry: None
 ✔ k8s Registry: None
