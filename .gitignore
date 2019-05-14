@@ -6,7 +6,7 @@ build/
 
 triton-kubernetes
 main.tf.json
-
+.idea/
 
 # Created by https://www.gitignore.io/api/macos
 
