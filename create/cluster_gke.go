@@ -11,8 +11,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
@@ -67,7 +67,7 @@ func newGKECluster(remoteBackend backend.Backend, currentState state.State) (str
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
+	// Module Source location e.g. github.com/mesoform/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
 	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, gkeRancherKubernetesTerraformModulePath, baseSourceRef)
 
 	// Name

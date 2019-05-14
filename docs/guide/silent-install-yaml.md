@@ -2,7 +2,7 @@
 
 Triton Multi-Cloud Kubernetes cli can be invoked in interactive or silent modes. In silent mode, the cli takes in a yaml configuration file which contains different parameters depending on what is being run. Standing up a cluster manager in HA mode takes in different arguments than non-HA mode and the same goes for kubernetes cluster creation.
 
-For sample YAML files, look under [examples/silent-install](https://github.com/joyent/triton-kubernetes/tree/master/examples/silent-install).
+For sample YAML files, look under [examples/silent-install](https://github.com/mesoform/triton-kubernetes/tree/master/examples/silent-install).
 
 ## Cluster Manager YAML
 
@@ -48,6 +48,6 @@ YAML parameters for cluster are:
 | `k8s_registry_password` | Password for the private registry |
 | `nodes` | Parameters needed for the different type of nodes that should be created for this cluster. |
 
-For examples, look in [examples/silent-install](https://github.com/joyent/triton-kubernetes/tree/master/examples/silent-install).
+For examples, look in [examples/silent-install](https://github.com/mesoform/triton-kubernetes/tree/master/examples/silent-install).
 
 > Note: Spreading a cluster across multiple clouds could cause performance issues.

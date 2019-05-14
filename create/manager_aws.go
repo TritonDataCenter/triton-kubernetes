@@ -8,7 +8,7 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/aws/credentials"

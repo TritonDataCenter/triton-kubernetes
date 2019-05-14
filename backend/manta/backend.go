@@ -7,8 +7,8 @@ import (
 	"io/ioutil"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"

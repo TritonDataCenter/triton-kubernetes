@@ -6,8 +6,8 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/Azure/azure-sdk-for-go/services/resources/mgmt/2016-06-01/subscriptions"
 	"github.com/Azure/go-autorest/autorest"

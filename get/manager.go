@@ -4,8 +4,8 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/shell"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"

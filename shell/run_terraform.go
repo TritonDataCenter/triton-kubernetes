@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	getter "github.com/hashicorp/go-getter"
 )

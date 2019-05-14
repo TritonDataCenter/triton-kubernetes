@@ -4,7 +4,7 @@ import (
 	"errors"
 	"os"
 
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"

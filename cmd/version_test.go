@@ -4,7 +4,7 @@ import (
 	"regexp"
 	"testing"
 
-	"github.com/joyent/triton-kubernetes/test_pkg"
+	"github.com/mesoform/triton-kubernetes/test_pkg"
 )
 
 func TestVersion(t *testing.T) {
@@ -15,7 +15,7 @@ func TestVersion(t *testing.T) {
 		versionCmd.Run(versionCmd, []string{})
 	})
 
-	expected := "triton-kubernetes 0.9.1-pre2 (beta)\n"
+	expected := "triton-kubernetes 0.9.1-mf (beta)\n"
 
 	select {
 	case err := <-errch:

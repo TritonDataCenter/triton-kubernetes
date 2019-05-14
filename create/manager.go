@@ -5,9 +5,9 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/shell"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/shell"
+	"github.com/mesoform/triton-kubernetes/util"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
@@ -167,7 +167,7 @@ func getBaseManagerTerraformConfig(terraformModulePath, name string) (baseManage
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
+	// Module Source location e.g. github.com/mesoform/triton-kubernetes//terraform/modules/triton-rancher?ref=master
 	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	cfg.Name = name

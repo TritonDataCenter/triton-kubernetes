@@ -1,6 +1,6 @@
 package main
 
-import "github.com/joyent/triton-kubernetes/cmd"
+import "github.com/mesoform/triton-kubernetes/cmd"
 
 func main() {
 	cmd.Execute()

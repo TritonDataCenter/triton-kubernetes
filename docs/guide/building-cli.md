@@ -51,7 +51,7 @@ make build
 
 ### Install and Run
 
-- Clone this repository into `$GOPATH/src/github.com/joyent/triton-kubernetes`
+- Clone this repository into `$GOPATH/src/github.com/mesoform/triton-kubernetes`
 - Run `go get` and `go install` from that directory
 
 This will build the `triton-kubernetes` binary into `$GOBIN`.

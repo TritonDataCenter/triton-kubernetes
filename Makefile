@@ -1,5 +1,5 @@
-VERSION=0.9.1-pre2
-LDFLAGS=-X github.com/joyent/triton-kubernetes/cmd.cliVersion=$(shell git rev-list -1 HEAD)
+VERSION=0.9.1-mf
+LDFLAGS=-X github.com/mesoform/triton-kubernetes/cmd.cliVersion=$(shell git rev-list -1 HEAD)
 BUILD_PATH=build
 
 OSX_ARCHIVE_PATH=$(BUILD_PATH)/triton-kubernetes_$(VERSION)_osx-amd64.zip

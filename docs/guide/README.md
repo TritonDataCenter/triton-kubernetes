@@ -40,8 +40,8 @@ mv terraform /usr/local/bin/
 [Install from source](/docs/guide/building-cli.md):
 
 ```bash
-go get -u github.com/joyent/triton-kubernetes
-go install github.com/joyent/triton-kubernetes
+go get -u github.com/mesoform/triton-kubernetes
+go install github.com/mesoform/triton-kubernetes
 triton-kubernetes --help
 ```
 
@@ -108,7 +108,7 @@ _Note: The cluster-admin role is created by default in a Kubernetes cluster, so 
 
 ### Testing terraform module changes
 
-The `SOURCE_URL` flag will override the default terraform module source. Default is `github.com/joyent/triton-kubernetes`.
+The `SOURCE_URL` flag will override the default terraform module source. Default is `github.com/mesoform/triton-kubernetes`.
 
 The `SOURCE_REF` flag will override the default branch/tag/commit reference for the terraform module source. Default is `master`
 

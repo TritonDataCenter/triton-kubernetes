@@ -9,8 +9,8 @@ import (
 	"strconv"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"
 	"github.com/Azure/azure-sdk-for-go/services/containerservice/mgmt/2017-09-30/containerservice"
@@ -72,7 +72,7 @@ func newAKSCluster(remoteBackend backend.Backend, currentState state.State) (str
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
+	// Module Source location e.g. github.com/mesoform/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
 	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, aksRancherKubernetesTerraformModulePath, baseSourceRef)
 
 	// Name

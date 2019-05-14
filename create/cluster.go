@@ -6,18 +6,18 @@ import (
 	"regexp"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/shell"
-	"github.com/joyent/triton-kubernetes/state"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/mesoform/triton-kubernetes/shell"
+	"github.com/mesoform/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/util"
 
-	"github.com/joyent/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/backend"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"
 )
 
 const (
-	defaultSourceURL = "github.com/joyent/triton-kubernetes"
+	defaultSourceURL = "github.com/mesoform/triton-kubernetes"
 	defaultSourceRef = "master"
 )
 
@@ -311,7 +311,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
+	// Module Source location e.g. github.com/mesoform/triton-kubernetes//terraform/modules/azure-rancher-k8s?ref=master
 	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
 
 	// Name

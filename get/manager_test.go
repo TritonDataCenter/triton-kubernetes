@@ -3,7 +3,7 @@ package get
 import (
 	"testing"
 
-	"github.com/joyent/triton-kubernetes/backend/mocks"
+	"github.com/mesoform/triton-kubernetes/backend/mocks"
 	"github.com/spf13/viper"
 )
 

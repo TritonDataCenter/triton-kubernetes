@@ -67,7 +67,7 @@ curl -X POST \
 # Update graphics
 printf 'Updating UI ...\n'
 # logos
-curl -sLO https://github.com/joyent/triton-kubernetes/raw/master/static/logos.tar.gz -o ~/logos.tar.gz
+curl -sLO https://github.com/mesoform/triton-kubernetes/raw/master/static/logos.tar.gz -o ~/logos.tar.gz
 tar -zxf ~/logos.tar.gz
 sudo docker cp ~/logos/ $(sudo docker ps -q):/usr/share/rancher/ui/assets/images/
 sudo docker exec -i $(sudo docker ps -q) bash <<EOF

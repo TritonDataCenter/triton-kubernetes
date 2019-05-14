@@ -9,8 +9,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/state"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/mesoform/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/util"
 
 	triton "github.com/joyent/triton-go"
 	"github.com/joyent/triton-go/authentication"

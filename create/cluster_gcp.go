@@ -9,8 +9,8 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"

@@ -8,8 +8,8 @@ import (
 	"sort"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
 
 	"github.com/manifoldco/promptui"
 	"github.com/spf13/viper"

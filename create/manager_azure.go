@@ -7,7 +7,7 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/state"
 	homedir "github.com/mitchellh/go-homedir"
 
 	"github.com/Azure/azure-sdk-for-go/services/compute/mgmt/2018-04-01/compute"

@@ -4,9 +4,9 @@ import (
 	"errors"
 	"os"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/state"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/util"
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
 	"github.com/spf13/viper"

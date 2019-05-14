@@ -42,4 +42,4 @@ To get cluster manager, run the following:
 $ triton-kubernetes get manager
 ```
 
-`triton-kubernetes` cli can takes a configuration file (yaml) with `--config` option to run in silent mode. To read about the yaml arguments, look at the [silent-install documentation](https://github.com/joyent/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).
+`triton-kubernetes` cli can takes a configuration file (yaml) with `--config` option to run in silent mode. To read about the yaml arguments, look at the [silent-install documentation](https://github.com/mesoform/triton-kubernetes/tree/master/docs/guide/silent-install-yaml.md).

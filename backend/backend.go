@@ -1,7 +1,7 @@
 package backend
 
 import (
-	"github.com/joyent/triton-kubernetes/state"
+	"github.com/mesoform/triton-kubernetes/state"
 )
 
 type Backend interface {

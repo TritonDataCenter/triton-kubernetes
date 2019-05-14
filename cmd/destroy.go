@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/joyent/triton-kubernetes/destroy"
-	"github.com/joyent/triton-kubernetes/util"
+	"github.com/mesoform/triton-kubernetes/destroy"
+	"github.com/mesoform/triton-kubernetes/util"
 
 	"github.com/spf13/cobra"
 )

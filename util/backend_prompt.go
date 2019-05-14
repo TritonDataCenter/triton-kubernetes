@@ -6,9 +6,9 @@ import (
 	"os"
 	"strings"
 
-	"github.com/joyent/triton-kubernetes/backend"
-	"github.com/joyent/triton-kubernetes/backend/local"
-	"github.com/joyent/triton-kubernetes/backend/manta"
+	"github.com/mesoform/triton-kubernetes/backend"
+	"github.com/mesoform/triton-kubernetes/backend/local"
+	"github.com/mesoform/triton-kubernetes/backend/manta"
 
 	"github.com/manifoldco/promptui"
 	homedir "github.com/mitchellh/go-homedir"
