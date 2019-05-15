@@ -78,70 +78,70 @@ resource "aws_security_group" "rke_ports" {
     from_port = "22"  # SSH
     to_port   = "22"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "80"  # Canal
     to_port   = "80"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "443" # Canal
     to_port   = "443"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "6443" # Canal
     to_port   = "6443"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "2379" # etcd server client API
     to_port   = "2380"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "10250" # kubelet API
     to_port   = "10250"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "10251" # scheduler
     to_port   = "10251"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "10252" # controller
     to_port   = "10252"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "10256" # kubeproxy
     to_port   = "10256"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   ingress {
     from_port = "30000" # NodePort Services
     to_port   = "32767"
     protocol  = "tcp"
-    self      = true
+    cidr_blocks = ["0.0.0.0/0"]
   }
 
   egress {
