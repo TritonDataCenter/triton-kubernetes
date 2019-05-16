@@ -24,20 +24,20 @@ fi
 
 # Mounting the Volume
 MOUNT_PATH='${disk_mount_path}'
-if [ $$MOUNT_PATH != '' ]; then
+if [ "${MOUNT_PATH}" != '' ]; then
 	# For GCP Ubuntu instances, the device name for the GCP disk starts with 'sdb'.
 	if [ -b /dev/sdb ]; then
 		INSTANCE_STORE_BLOCK_DEVICE=/dev/sdb
 	fi
 
-	echo $${INSTANCE_STORE_BLOCK_DEVICE}
+	echo ${INSTANCE_STORE_BLOCK_DEVICE}
 
-	if [ -b $${INSTANCE_STORE_BLOCK_DEVICE} ]; then
-		sudo mke2fs -F -E nodiscard -L $$MOUNT_PATH -j $${INSTANCE_STORE_BLOCK_DEVICE} &&
-		sudo tune2fs -r 0 $${INSTANCE_STORE_BLOCK_DEVICE} &&
-		echo "LABEL=$$MOUNT_PATH     $$MOUNT_PATH           ext4    defaults,noatime  1   1" | sudo tee /etc/fstab > /dev/null &&
-		sudo mkdir $$MOUNT_PATH &&
-		sudo mount $$MOUNT_PATH
+	if [ -b ${INSTANCE_STORE_BLOCK_DEVICE} ]; then
+		sudo mke2fs -F -E nodiscard -L ${MOUNT_PATH} -j ${INSTANCE_STORE_BLOCK_DEVICE} &&
+		sudo tune2fs -r 0 ${INSTANCE_STORE_BLOCK_DEVICE} &&
+		echo "LABEL=${MOUNT_PATH}     ${MOUNT_PATH}           ext4    defaults,noatime  1   1" | sudo tee /etc/fstab > /dev/null &&
+		sudo mkdir ${MOUNT_PATH} &&
+		sudo mount ${MOUNT_PATH}
 	fi
 fi
 
