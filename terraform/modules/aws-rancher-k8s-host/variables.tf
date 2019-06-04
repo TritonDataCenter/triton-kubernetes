@@ -79,7 +79,7 @@ variable "ebs_volume_device_name" {
 }
 
 variable "ebs_volume_mount_path" {
-  default     = ""
+  default     = "/mnt/tk8s"
   description = "The EBS volume mount path"
 }
 
