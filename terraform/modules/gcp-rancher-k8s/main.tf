@@ -30,7 +30,8 @@ resource "google_compute_network" "default" {
 resource "google_compute_firewall" "rke_ports" {
   name        = "${var.name}-rke-ports"
   network     = "${google_compute_network.default.name}"
-  source_tags = ["${var.name}-nodes"]
+  source_ranges = ["0.0.0.0/0"]
+#  source_tags = ["${var.name}-nodes"]
 
   allow {
     protocol = "tcp"

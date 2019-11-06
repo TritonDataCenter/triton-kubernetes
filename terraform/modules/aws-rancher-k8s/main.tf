@@ -110,6 +110,13 @@ resource "aws_security_group" "rke_ports" {
   }
 
   ingress {
+    from_port = "10050" # Zabbix Agent
+    to_port   = "10050"
+    protocol  = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  ingress {
     from_port = "10250" # kubelet API
     to_port   = "10250"
     protocol  = "tcp"
