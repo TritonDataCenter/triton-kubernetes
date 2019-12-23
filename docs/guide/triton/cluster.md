@@ -18,7 +18,7 @@ create cluster called
 ✔ Cluster Manager: dev-manager
 ✔ Cloud Provider: Triton
 ✔ Cluster Name: dev-cluster
-✔ Kubernetes Version: v1.13.4
+✔ Kubernetes Version: v1.16.3
 ✔ Kubernetes Network Provider: calico
 ✔ Private Registry: None
 ✔ k8s Registry: None
