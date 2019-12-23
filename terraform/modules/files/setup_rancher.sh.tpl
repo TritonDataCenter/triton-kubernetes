@@ -16,6 +16,15 @@ while [ $? -ne 1 ]; do
 	sudo fuser /var/lib/dpkg/lock >/dev/null 2>&1;
 done
 
+# Wait for apt-get frontend to be unlocked
+printf 'Waiting for apt-get frontend to unlock'
+sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1;
+while [ $? -ne 1 ]; do
+	printf '.';
+	sleep 5;
+	sudo fuser /var/lib/dpkg/lock-frontend >/dev/null 2>&1;
+done
+
 sudo apt-get install jq -y
 
 # Login as default admin user

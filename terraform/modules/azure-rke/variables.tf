@@ -21,7 +21,7 @@ variable "rancher_server_image" {
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.1.7"
+  default     = "rancher/rancher-agent:v2.3.3"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
