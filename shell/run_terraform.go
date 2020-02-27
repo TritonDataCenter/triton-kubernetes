@@ -20,7 +20,7 @@ type thirdPartyPlugin struct {
 
 var thirdPartyPlugins = []thirdPartyPlugin{
 	thirdPartyPlugin{
-		BaseURL: "https://github.com/yamamoto-febc/terraform-provider-rke/releases/download/0.4.0/terraform-provider-rke_0.4.0_%s-%s.zip",
+		BaseURL: "https://github.com/rancher/terraform-provider-rke/releases/download/0.4.0/terraform-provider-rke_0.4.0_%s-%s.zip",
 		SHA256Sums: map[string]string{
 			"terraform-provider-rke_0.4.0_darwin-386.zip":    "b8b3085b06307619a98b83dd9901f8504169e83948843dc1af79aa058dfc03ee",
 			"terraform-provider-rke_0.4.0_darwin-amd64.zip":  "c6abfdee7c4db0bd8d068172c9c97beee4f382e1578ad0588f0347a725fd5562",

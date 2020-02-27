@@ -1,4 +1,4 @@
-VERSION=0.9.1-mf
+VERSION=0.9.2-mf
 LDFLAGS=-X github.com/mesoform/triton-kubernetes/cmd.cliVersion=$(shell git rev-list -1 HEAD)
 BUILD_PATH=build
 
