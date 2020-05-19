@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -167,8 +168,14 @@ func getBaseManagerTerraformConfig(terraformModulePath, name string) (baseManage
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
-	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
+	_, err := os.Stat(baseSource)
+	if err != nil {
+		// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
+		cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
+	} else {
+		// This is a local file, ignore ref
+		cfg.Source = fmt.Sprintf("%s//%s", baseSource, terraformModulePath)
+	}
 
 	cfg.Name = name
 

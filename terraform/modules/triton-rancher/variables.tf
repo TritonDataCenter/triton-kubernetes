@@ -53,7 +53,7 @@ variable "triton_url" {
 }
 
 variable "triton_network_names" {
-  type        = "list"
+  type        = list
   description = "List of Triton network names that the node(s) should be attached to."
 }
 
