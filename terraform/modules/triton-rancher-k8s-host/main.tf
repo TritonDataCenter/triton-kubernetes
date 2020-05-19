@@ -1,5 +1,5 @@
 provider "triton" {
-  version = "~> 0.4.2"
+  version = "~> 0.7.0"
 
   account      = "${var.triton_account}"
   key_material = "${file(var.triton_key_path)}"
