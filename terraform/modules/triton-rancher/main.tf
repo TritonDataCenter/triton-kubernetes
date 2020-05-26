@@ -24,7 +24,7 @@ resource "triton_machine" "rancher_master" {
 
   user_script = data.template_file.install_docker.rendered
 
-  networks = [data.triton_network.networks.0.id]
+  networks = data.triton_network.networks[*].id
 
   cns {
     services = [var.name]
