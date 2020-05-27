@@ -27,7 +27,8 @@ resource "triton_machine" "rancher_master" {
   networks = data.triton_network.networks[*].id
 
   cns {
-    services = [var.name]
+  #  services = [var.name]
+    disable = true
   }
 
   affinity = ["role!=~gcm"]
