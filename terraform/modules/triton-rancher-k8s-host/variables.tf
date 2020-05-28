@@ -11,7 +11,7 @@ variable "rancher_cluster_registration_token" {}
 variable "rancher_cluster_ca_checksum" {}
 
 variable "rancher_host_labels" {
-  type        = "map"
+  type        = map
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
@@ -61,7 +61,7 @@ variable "triton_url" {
 }
 
 variable "triton_network_names" {
-  type        = "list"
+  type        = list
   description = "List of Triton network names that the node(s) should be attached to."
 
   default = [
