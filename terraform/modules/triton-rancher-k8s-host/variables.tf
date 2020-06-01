@@ -36,7 +36,7 @@ variable "rancher_registry_password" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/kusor/scripts/docker/19.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 
@@ -65,17 +65,17 @@ variable "triton_network_names" {
   description = "List of Triton network names that the node(s) should be attached to."
 
   default = [
-    "Joyent-SDC-Public",
+    "sdc_nat",
   ]
 }
 
 variable "triton_image_name" {
-  default     = "ubuntu-certified-16.04"
+  default     = "ubuntu-certified-18.04"
   description = "The name of the Triton image to use."
 }
 
 variable "triton_image_version" {
-  default     = "20170619.1"
+  default     = "20190627.1.1"
   description = "The version/tag of the Triton image to use."
 }
 
@@ -85,6 +85,6 @@ variable "triton_ssh_user" {
 }
 
 variable "triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for this host. Defaults to k4-highcpu-kvm-1.75G."
+  default     = "sample-bhyve-flexible-1G"
+  description = "The Triton machine package to use for this host. Defaults to sample-bhyve-flexible-1G."
 }
