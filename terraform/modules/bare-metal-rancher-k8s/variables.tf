@@ -15,7 +15,7 @@ variable "rancher_secret_key" {
 }
 
 variable k8s_version {
-  default = "v1.16.3-rancher1-1"
+  default = "v1.17.6-rancher2-1"
 }
 
 variable k8s_network_provider {

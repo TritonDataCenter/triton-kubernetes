@@ -356,7 +356,7 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 	} else if nonInteractiveMode {
 		return baseClusterTerraformConfig{}, errors.New("k8s_version must be specified")
 	} else {
-
+		// https://github.com/rancher/kontainer-driver-metadata/blob/master/rke/k8s_rke_system_images.go
 		var kubernetesVersions = []struct {
 			DisplayName string
 			Name        string
@@ -368,8 +368,9 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			{"v1.12.6", "v1.12.6-rancher1-1"},
 			{"v1.13.4", "v1.13.4-rancher1-1"},
 			{"v1.14.9", "v1.14.9-rancher1-1"},
-			{"v1.15.6", "v1.15.6-rancher1-2"},
-			{"v1.16.3", "v1.16.3-rancher1-1"},
+			{"v1.15.12", "v1.15.12-rancher1-1"},
+			{"v1.16.10", "v1.16.10-rancher2-1"},
+			{"v1.17.6", "v1.17.6-rancher2-1"},
 		}
 		prompt := promptui.Select{
 			Label: "Kubernetes Version",

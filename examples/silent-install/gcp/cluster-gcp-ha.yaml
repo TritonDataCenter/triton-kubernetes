@@ -3,7 +3,7 @@ cluster_manager: manager-on-triton
 backend_provider: local
 name: gcp-ha
 cluster_cloud_provider: gcp
-k8s_version: v1.16.3-rancher1-1
+k8s_version: v1.17.6-rancher2-1
 k8s_network_provider: calico
 private_registry: ""
 private_registry_username: ""
