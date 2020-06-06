@@ -27,6 +27,8 @@ type baseClusterTerraformConfig struct {
 
 	Name string `json:"name"`
 
+	DockerEngineInstallURL string `json:"docker_engine_install_url,omitempty"`
+
 	RancherAPIURL    string `json:"rancher_api_url"`
 	RancherAccessKey string `json:"rancher_access_key"`
 	RancherSecretKey string `json:"rancher_secret_key"`
@@ -182,6 +184,7 @@ func NewCluster(remoteBackend backend.Backend) error {
 			viper.Set("rancher_host_label", nodeToAdd["rancher_host_label"])
 			viper.Set("node_count", nodeToAdd["node_count"])
 			viper.Set("hostname", nodeToAdd["hostname"])
+			viper.Set("docker_engine_install_url", nodeToAdd["docker_engine_install_url"])
 
 			// Figure out cloud provider
 			if selectedCloudProvider == "aws" {
@@ -528,6 +531,10 @@ func getBaseClusterTerraformConfig(terraformModulePath string) (baseClusterTerra
 			}
 			cfg.KubernetesRegistryPassword = result
 		}
+	}
+
+	if viper.IsSet("docker_engine_install_url") {
+		cfg.DockerEngineInstallURL = viper.GetString("docker_engine_install_url")
 	}
 
 	return cfg, nil

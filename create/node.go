@@ -23,6 +23,8 @@ type baseNodeTerraformConfig struct {
 	Hostname  string `json:"hostname,omitempty"`
 	NodeCount int    `json:"-"`
 
+	DockerEngineInstallURL string `json:"docker_engine_install_url,omitempty"`
+
 	RancherAPIURL                   string                  `json:"rancher_api_url"`
 	RancherClusterRegistrationToken string                  `json:"rancher_cluster_registration_token"`
 	RancherClusterCAChecksum        string                  `json:"rancher_cluster_ca_checksum"`
@@ -207,6 +209,8 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 		RancherRegistry:         currentState.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
 		RancherRegistryUsername: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
 		RancherRegistryPassword: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
+
+		DockerEngineInstallURL: currentState.Get(fmt.Sprintf("module.%s.docker_engine_install_url", selectedCluster)),
 	}
 
 	baseSource := defaultSourceURL
