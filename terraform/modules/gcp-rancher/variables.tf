@@ -48,7 +48,7 @@ variable "gcp_project_id" {
   description = "GCP project ID that will be running the instances and managing the network"
 }
 
-variable gcp_machine_type {
+variable "gcp_machine_type" {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the instance with"
 }
@@ -76,3 +76,4 @@ variable "gcp_private_key_path" {
   description = "Path to a private key."
   default     = "~/.ssh/id_rsa"
 }
+

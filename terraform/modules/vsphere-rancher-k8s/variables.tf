@@ -79,3 +79,4 @@ variable "vsphere_resource_pool_name" {
 variable "vsphere_network_name" {
   description = "Name of the network to use."
 }
+

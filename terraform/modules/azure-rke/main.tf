@@ -1,40 +1,41 @@
 provider "azurerm" {
-  subscription_id = "${var.azure_subscription_id}"
-  client_id       = "${var.azure_client_id}"
-  client_secret   = "${var.azure_client_secret}"
-  tenant_id       = "${var.azure_tenant_id}"
-  environment     = "${var.azure_environment}"
+  version         = "=2.0.0"
+  subscription_id = var.azure_subscription_id
+  client_id       = var.azure_client_id
+  client_secret   = var.azure_client_secret
+  tenant_id       = var.azure_tenant_id
+  environment     = var.azure_environment
 }
 
 resource "azurerm_resource_group" "resource_group" {
   name     = "${var.name}-resource_group"
-  location = "${var.azure_location}"
+  location = var.azure_location
 }
 
 resource "azurerm_virtual_network" "vnet" {
-  name                = "${var.azure_virtual_network_name}"
-  address_space       = ["${var.azure_virtual_network_address_space}"]
-  location            = "${var.azure_location}"
-  resource_group_name = "${azurerm_resource_group.resource_group.name}"
+  name                = var.azure_virtual_network_name
+  address_space       = [var.azure_virtual_network_address_space]
+  location            = var.azure_location
+  resource_group_name = azurerm_resource_group.resource_group.name
 }
 
 resource "azurerm_subnet" "subnet" {
-  name                 = "${var.azure_subnet_name}"
-  resource_group_name  = "${azurerm_resource_group.resource_group.name}"
-  virtual_network_name = "${azurerm_virtual_network.vnet.name}"
-  address_prefix       = "${var.azure_subnet_address_prefix}"
+  name                 = var.azure_subnet_name
+  resource_group_name  = azurerm_resource_group.resource_group.name
+  virtual_network_name = azurerm_virtual_network.vnet.name
+  address_prefix       = var.azure_subnet_address_prefix
 }
 
 resource "azurerm_network_security_group" "firewall" {
-  name                = "${var.azurerm_network_security_group_name}"
-  location            = "${var.azure_location}"
-  resource_group_name = "${azurerm_resource_group.resource_group.name}"
+  name                = var.azurerm_network_security_group_name
+  location            = var.azure_location
+  resource_group_name = azurerm_resource_group.resource_group.name
 }
 
 resource "azurerm_application_security_group" "asg" {
   name                = "${var.name}-asg"
-  location            = "${var.azure_location}"
-  resource_group_name = "${azurerm_resource_group.resource_group.name}"
+  location            = var.azure_location
+  resource_group_name = azurerm_resource_group.resource_group.name
 }
 
 # Firewall requirements taken from:
@@ -58,8 +59,8 @@ resource "azurerm_network_security_rule" "public_rancher_ports" {
   source_port_range     = "*"
   source_address_prefix = "Internet"
 
-  resource_group_name         = "${azurerm_resource_group.resource_group.name}"
-  network_security_group_name = "${azurerm_network_security_group.firewall.name}"
+  resource_group_name         = azurerm_resource_group.resource_group.name
+  network_security_group_name = azurerm_network_security_group.firewall.name
 }
 
 resource "azurerm_network_security_rule" "internal_rancher_ports_tcp" {
@@ -82,11 +83,11 @@ resource "azurerm_network_security_rule" "internal_rancher_ports_tcp" {
   source_port_range = "*"
 
   source_application_security_group_ids = [
-    "${azurerm_application_security_group.asg.id}",
+    azurerm_application_security_group.asg.id,
   ]
 
-  resource_group_name         = "${azurerm_resource_group.resource_group.name}"
-  network_security_group_name = "${azurerm_network_security_group.firewall.name}"
+  resource_group_name         = azurerm_resource_group.resource_group.name
+  network_security_group_name = azurerm_network_security_group.firewall.name
 }
 
 resource "azurerm_network_security_rule" "internal_rancher_ports_udp" {
@@ -105,72 +106,74 @@ resource "azurerm_network_security_rule" "internal_rancher_ports_udp" {
   source_port_range = "*"
 
   source_application_security_group_ids = [
-    "${azurerm_application_security_group.asg.id}",
+    azurerm_application_security_group.asg.id,
   ]
 
-  resource_group_name         = "${azurerm_resource_group.resource_group.name}"
-  network_security_group_name = "${azurerm_network_security_group.firewall.name}"
+  resource_group_name         = azurerm_resource_group.resource_group.name
+  network_security_group_name = azurerm_network_security_group.firewall.name
 }
 
 resource "azurerm_public_ip" "public_ip" {
-  count = "${var.node_count}"
+  count = var.node_count
 
-  name                         = "${var.name}-${count.index}"
-  location                     = "${var.azure_location}"
-  resource_group_name          = "${azurerm_resource_group.resource_group.name}"
-  public_ip_address_allocation = "static"
+  name                = "${var.name}-${count.index}"
+  location            = var.azure_location
+  resource_group_name = azurerm_resource_group.resource_group.name
+  allocation_method   = "Static"
 }
 
 resource "azurerm_network_interface" "nic" {
-  count = "${var.node_count}"
+  count = var.node_count
 
   name                = "${var.name}-${count.index}"
-  location            = "${var.azure_location}"
-  resource_group_name = "${azurerm_resource_group.resource_group.name}"
-
-  network_security_group_id = "${azurerm_network_security_group.firewall.id}"
+  location            = var.azure_location
+  resource_group_name = azurerm_resource_group.resource_group.name
 
   ip_configuration {
-    name                          = "${var.name}-${count.index}-ip"
-    subnet_id                     = "${azurerm_subnet.subnet.id}"
-    private_ip_address_allocation = "dynamic"
-    public_ip_address_id          = "${element(azurerm_public_ip.public_ip.*.id, count.index)}"
-
-    application_security_group_ids = [
-      "${azurerm_application_security_group.asg.id}",
-    ]
+    name                 = "${var.name}-${count.index}-ip"
+    subnet_id            = azurerm_subnet.subnet.id
+    public_ip_address_id = element(azurerm_public_ip.public_ip.*.id, count.index)
   }
 }
 
+resource "azurerm_network_interface_security_group_association" "nic" {
+  network_interface_id      = azurerm_network_interface.nic[0].id
+  network_security_group_id = azurerm_network_security_group.firewall.id
+}
+
+resource "azurerm_network_interface_application_security_group_association" "nic" {
+  application_security_group_id = azurerm_application_security_group.asg.id
+  network_interface_id          = azurerm_network_interface.nic[0].id
+}
+
 data "template_file" "install_docker" {
-  template = "${file("${path.module}/files/install_docker_rancher.sh.tpl")}"
+  template = file("${path.module}/files/install_docker_rancher.sh.tpl")
 
-  vars {
-    docker_engine_install_url = "${var.docker_engine_install_url}"
-
-    rancher_server_image      = "${var.rancher_server_image}"
-    rancher_registry          = "${var.rancher_registry}"
-    rancher_registry_username = "${var.rancher_registry_username}"
-    rancher_registry_password = "${var.rancher_registry_password}"
+  vars = {
+    docker_engine_install_url = var.docker_engine_install_url
+    rancher_server_image      = var.rancher_server_image
+    rancher_registry          = var.rancher_registry
+    rancher_registry_username = var.rancher_registry_username
+    rancher_registry_password = var.rancher_registry_password
   }
 }
 
 resource "azurerm_virtual_machine" "host" {
-  count = "${var.node_count}"
+  count = var.node_count
 
   name                  = "${var.name}-${count.index}"
-  location              = "${var.azure_location}"
-  resource_group_name   = "${azurerm_resource_group.resource_group.name}"
-  network_interface_ids = ["${element(azurerm_network_interface.nic.*.id, count.index)}"]
-  vm_size               = "${var.azure_size}"
+  location              = var.azure_location
+  resource_group_name   = azurerm_resource_group.resource_group.name
+  network_interface_ids = [element(azurerm_network_interface.nic.*.id, count.index)]
+  vm_size               = var.azure_size
 
   delete_os_disk_on_termination = true
 
   storage_image_reference {
-    publisher = "${var.azure_image_publisher}"
-    offer     = "${var.azure_image_offer}"
-    sku       = "${var.azure_image_sku}"
-    version   = "${var.azure_image_version}"
+    publisher = var.azure_image_publisher
+    offer     = var.azure_image_offer
+    sku       = var.azure_image_sku
+    version   = var.azure_image_version
   }
 
   storage_os_disk {
@@ -182,8 +185,8 @@ resource "azurerm_virtual_machine" "host" {
 
   os_profile {
     computer_name  = "${var.name}-${count.index}"
-    admin_username = "${var.azure_ssh_user}"
-    custom_data    = "${data.template_file.install_docker.rendered}"
+    admin_username = var.azure_ssh_user
+    custom_data    = data.template_file.install_docker.rendered
   }
 
   os_profile_linux_config {
@@ -191,62 +194,75 @@ resource "azurerm_virtual_machine" "host" {
 
     ssh_keys {
       path     = "/home/${var.azure_ssh_user}/.ssh/authorized_keys"
-      key_data = "${file(var.azure_public_key_path)}"
+      key_data = file(var.azure_public_key_path)
     }
   }
 }
 
 data "azurerm_public_ip" "public_ip" {
-  depends_on = ["azurerm_public_ip.public_ip"]
+  depends_on = [azurerm_public_ip.public_ip]
 
-  count = "${var.node_count}"
+  count = var.node_count
 
-  name                = "${element(azurerm_public_ip.public_ip.*.name, count.index)}"
-  resource_group_name = "${azurerm_resource_group.resource_group.name}"
+  name                = element(azurerm_public_ip.public_ip.*.name, count.index)
+  resource_group_name = azurerm_resource_group.resource_group.name
 }
 
 data "template_file" "wait_for_docker_install" {
-  template = "${file("${path.module}/files/wait_for_docker_install.sh")}"
+  template = file("${path.module}/files/wait_for_docker_install.sh")
 }
 
 resource "null_resource" "wait_for_docker_install" {
   # Changes to any instance of the cluster requires re-provisioning
-  triggers {
-    node_ids = "${join(",", azurerm_virtual_machine.host.*.id)}"
+  triggers = {
+    node_ids = join(",", azurerm_virtual_machine.host.*.id)
   }
 
-  count = "${var.node_count}"
+  count = var.node_count
 
   connection {
     type        = "ssh"
-    user        = "${var.azure_ssh_user}"
-    host        = "${element(data.azurerm_public_ip.public_ip.*.ip_address, count.index)}"
-    private_key = "${file(var.azure_private_key_path)}"
+    user        = var.azure_ssh_user
+    host        = element(data.azurerm_public_ip.public_ip.*.ip_address, count.index)
+    private_key = file(var.azure_private_key_path)
   }
 
   provisioner "remote-exec" {
     inline = <<EOF
       ${data.template_file.wait_for_docker_install.rendered}
-      EOF
+      
+EOF
+
   }
 }
 
-data rke_node_parameter "nodes" {
-  count = "${var.node_count}"
+resource "rke_cluster" "cluster" {
+  count = var.node_count
 
-  internal_address = "${element(azurerm_network_interface.nic.*.private_ip_address, count.index)}"
-  address          = "${element(data.azurerm_public_ip.public_ip.*.ip_address, count.index)}"
-  user             = "${var.azure_ssh_user}"
-  role             = ["controlplane", "etcd", "worker"]
-  ssh_key          = "${file(var.azure_private_key_path)}"
-}
+  nodes {
+    internal_address = element(
+      azurerm_network_interface.nic.*.private_ip_address,
+      count.index,
+    )
+    address = element(data.azurerm_public_ip.public_ip.*.ip_address, count.index)
+    user    = var.azure_ssh_user
+    role    = ["controlplane", "etcd", "worker"]
+    ssh_key = file(var.azure_private_key_path)
+  }
 
-resource rke_cluster "cluster" {
-  depends_on = ["null_resource.wait_for_docker_install"]
+  depends_on = [null_resource.wait_for_docker_install]
 
-  nodes_conf = ["${data.rke_node_parameter.nodes.*.json}"]
+  # TF-UPGRADE-TODO: In Terraform v0.10 and earlier, it was sometimes necessary to
+  # force an interpolation expression to be interpreted as a list by wrapping it
+  # in an extra set of list brackets. That form was supported for compatibility in
+  # v0.11, but is no longer supported in Terraform v0.12.
+  #
+  # If the expression in the following list itself returns a list, remove the
+  # brackets to avoid interpretation as a list of lists. If the expression
+  # returns a single list item then leave it as-is and remove this TODO comment.
+  nodes_conf = [data.rke_node_parameter.nodes.*.json]
 
-  ingress = {
+  ingress {
     provider = "nginx"
 
     extra_args = {
@@ -358,38 +374,40 @@ spec:
         - containerPort: 443
           protocol: TCP
 EOL
+
 }
 
 data "template_file" "setup_rancher_k8s" {
-  template = "${file("${path.module}/files/setup_rancher.sh.tpl")}"
+  template = file("${path.module}/files/setup_rancher.sh.tpl")
 
-  vars {
-    name         = "${var.name}"
-    fqdn         = "${var.fqdn}"
-    rancher_host = "https://${var.fqdn}"
-
-    rancher_admin_password = "${var.rancher_admin_password}"
+  vars = {
+    name                   = var.name
+    fqdn                   = var.fqdn
+    rancher_host           = "https://${var.fqdn}"
+    rancher_admin_password = var.rancher_admin_password
   }
 }
 
 resource "null_resource" "setup_rancher_k8s" {
-  depends_on = ["rke_cluster.cluster"]
+  depends_on = [rke_cluster.cluster]
 
-  triggers {
-    node_id = "${azurerm_virtual_machine.host.0.id}"
+  triggers = {
+    node_id = azurerm_virtual_machine.host[0].id
   }
 
   connection {
     type        = "ssh"
-    user        = "${var.azure_ssh_user}"
-    host        = "${data.azurerm_public_ip.public_ip.0.ip_address}"
-    private_key = "${file(var.azure_private_key_path)}"
+    user        = var.azure_ssh_user
+    host        = data.azurerm_public_ip.public_ip[0].ip_address
+    private_key = file(var.azure_private_key_path)
   }
 
   provisioner "remote-exec" {
     inline = <<EOF
       ${data.template_file.setup_rancher_k8s.rendered}
-      EOF
+      
+EOF
+
   }
 }
 
@@ -400,10 +418,11 @@ data "external" "rancher_server" {
   program = ["bash", "${path.module}/files/rancher_server.sh"]
 
   query = {
-    id        = "${null_resource.setup_rancher_k8s.id}"            // used to create an implicit dependency
-    ssh_host  = "${data.azurerm_public_ip.public_ip.0.ip_address}"
-    ssh_user  = "${var.azure_ssh_user}"
-    key_path  = "${var.azure_private_key_path}"
+    id        = null_resource.setup_rancher_k8s.id // used to create an implicit dependency
+    ssh_host  = data.azurerm_public_ip.public_ip[0].ip_address
+    ssh_user  = var.azure_ssh_user
+    key_path  = var.azure_private_key_path
     file_path = "~/rancher_api_key"
   }
 }
+

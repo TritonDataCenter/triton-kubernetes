@@ -14,11 +14,11 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable k8s_version {
+variable "k8s_version" {
   default = "v1.17.6-rancher2-1"
 }
 
-variable k8s_network_provider {
+variable "k8s_network_provider" {
   default = "flannel"
 }
 
@@ -87,3 +87,4 @@ variable "aws_public_key_path" {
 variable "aws_key_name" {
   description = "Name of the public key to be used for provisioning"
 }
+

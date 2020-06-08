@@ -6,12 +6,14 @@ variable "rancher_api_url" {
   description = ""
 }
 
-variable "rancher_cluster_registration_token" {}
+variable "rancher_cluster_registration_token" {
+}
 
-variable "rancher_cluster_ca_checksum" {}
+variable "rancher_cluster_ca_checksum" {
+}
 
 variable "rancher_host_labels" {
-  type        = "map"
+  type        = map(string)
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
@@ -92,3 +94,4 @@ variable "ebs_volume_size" {
   default     = ""
   description = "The size of the volume, in GiBs."
 }
+

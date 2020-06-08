@@ -100,7 +100,8 @@ variable "azurerm_network_security_group_name" {
   default = "rancher-firewall"
 }
 
-variable "azure_resource_group_name" {}
+variable "azure_resource_group_name" {
+}
 
 variable "azure_size" {
   default = "Standard_A0"
@@ -118,8 +119,12 @@ variable "azure_private_key_path" {
   default = "~/.ssh/id_rsa"
 }
 
-variable "fqdn" {}
+variable "fqdn" {
+}
 
-variable "tls_cert_path" {}
+variable "tls_cert_path" {
+}
 
-variable "tls_private_key_path" {}
+variable "tls_private_key_path" {
+}
+

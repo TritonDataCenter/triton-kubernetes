@@ -6,12 +6,14 @@ variable "rancher_api_url" {
   description = ""
 }
 
-variable "rancher_cluster_registration_token" {}
+variable "rancher_cluster_registration_token" {
+}
 
-variable "rancher_cluster_ca_checksum" {}
+variable "rancher_cluster_ca_checksum" {
+}
 
 variable "rancher_host_labels" {
-  type        = "map"
+  type        = map(string)
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
@@ -52,7 +54,7 @@ variable "gcp_project_id" {
   description = "GCP project ID that will be running the instances and managing the network"
 }
 
-variable gcp_machine_type {
+variable "gcp_machine_type" {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the instance with"
 }
@@ -88,3 +90,4 @@ variable "gcp_disk_mount_path" {
   default     = ""
   description = "The mount path"
 }
+

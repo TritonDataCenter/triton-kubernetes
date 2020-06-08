@@ -3,9 +3,10 @@ output "rancher_url" {
 }
 
 output "rancher_access_key" {
-  value = "${lookup(data.external.rancher_server.result, "name")}"
+  value = data.external.rancher_server.result["name"]
 }
 
 output "rancher_secret_key" {
-  value = "${lookup(data.external.rancher_server.result, "token")}"
+  value = data.external.rancher_server.result["token"]
 }
+

@@ -14,21 +14,27 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable "azure_subscription_id" {}
+variable "azure_subscription_id" {
+}
 
-variable "azure_client_id" {}
+variable "azure_client_id" {
+}
 
-variable "azure_client_secret" {}
+variable "azure_client_secret" {
+}
 
-variable "azure_tenant_id" {}
+variable "azure_tenant_id" {
+}
 
 variable "azure_environment" {
   default = "public"
 }
 
-variable "azure_location" {}
+variable "azure_location" {
+}
 
-variable "azure_size" {}
+variable "azure_size" {
+}
 
 variable "azure_ssh_user" {
   default = "root"
@@ -42,4 +48,6 @@ variable "k8s_version" {
   default = "1.9.6"
 }
 
-variable "node_count" {}
+variable "node_count" {
+}
+

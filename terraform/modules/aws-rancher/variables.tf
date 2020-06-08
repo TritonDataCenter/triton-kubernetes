@@ -85,3 +85,4 @@ variable "aws_ssh_user" {
   default     = "ubuntu"
   description = "The ssh user to use."
 }
+

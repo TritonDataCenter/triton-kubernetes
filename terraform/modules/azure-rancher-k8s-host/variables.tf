@@ -6,12 +6,14 @@ variable "rancher_api_url" {
   description = ""
 }
 
-variable "rancher_cluster_registration_token" {}
+variable "rancher_cluster_registration_token" {
+}
 
-variable "rancher_cluster_ca_checksum" {}
+variable "rancher_cluster_ca_checksum" {
+}
 
 variable "rancher_host_labels" {
-  type        = "map"
+  type        = map(string)
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
@@ -40,25 +42,33 @@ variable "docker_engine_install_url" {
   description = "The URL to the shell script to install the docker engine."
 }
 
-variable "azure_subscription_id" {}
+variable "azure_subscription_id" {
+}
 
-variable "azure_client_id" {}
+variable "azure_client_id" {
+}
 
-variable "azure_client_secret" {}
+variable "azure_client_secret" {
+}
 
-variable "azure_tenant_id" {}
+variable "azure_tenant_id" {
+}
 
 variable "azure_environment" {
   default = "public"
 }
 
-variable "azure_location" {}
+variable "azure_location" {
+}
 
-variable "azure_resource_group_name" {}
+variable "azure_resource_group_name" {
+}
 
-variable "azure_network_security_group_id" {}
+variable "azure_network_security_group_id" {
+}
 
-variable "azure_subnet_id" {}
+variable "azure_subnet_id" {
+}
 
 variable "azure_size" {
   default = "Standard_A0"
@@ -95,3 +105,4 @@ variable "azure_disk_mount_path" {
 variable "azure_disk_size" {
   default = ""
 }
+
