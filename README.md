@@ -34,10 +34,11 @@ Available Commands:
   version     Print the version number of triton-kubernetes
 
 Flags:
-      --config string     config file (default is $HOME/.triton-kubernetes.yaml)
-  -h, --help              help for triton-kubernetes
-      --non-interactive   Prevent interactive prompts
-  -t, --toggle            Help message for toggle
+      --config string             config file (default is $HOME/.triton-kubernetes.yaml)
+  -h, --help                      help for triton-kubernetes
+      --non-interactive           Prevent interactive prompts
+      --terraform-configuration   Create terraform configuration only
+  -t, --toggle                    Help message for toggle
 
 Use "triton-kubernetes [command] --help" for more information about a command.
 ```

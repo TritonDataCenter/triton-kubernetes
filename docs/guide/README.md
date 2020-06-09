@@ -51,6 +51,10 @@ triton-kubernetes --help
 
 `triton-kubernetes` can run as an interactive cli, or in [silent mode](silent-install-yaml.md) (`--non-interactive`) using yaml configuration files.
 
+When creating/modifying infrastructure, `--terraform-configuration` flag can be used to create/modify existing terraform configuration without changing the actual infrastructure. For where to find the state files, look at [Backend State](#backend-state) section.
+
+> <sub>WARN: `triton-kubernetes` can not handle manually modified configuration files.</sub>
+
 The `triton-kubernetes` cli can:
 
 - create a cluster manager
