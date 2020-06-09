@@ -22,10 +22,11 @@ Save and exit your editor. Then, source your `~/.bash_profile`.
 source ~/.bash_profile
 ```
 
-> Note: Set the GOBIN path to generate a binary file when `go install` is run.
-> ```bash
-> export GOBIN=$HOME/go/bin
-> ```
+Note: Set the GOBIN path to generate a binary file when `go install` is run.
+
+```bash
+export GOBIN=$HOME/go/bin
+```
 
 ### Zsh
 
