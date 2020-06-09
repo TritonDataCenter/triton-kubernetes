@@ -60,7 +60,7 @@ resource "google_compute_instance" "rancher_master" {
 
 locals {
   rancher_master_id = "${google_compute_instance.rancher_master.instance_id}"
-  rancher_master_ip = "${google_compute_instance.rancher_master.network_interface.0.access_config.0.assigned_nat_ip}"
+  rancher_master_ip = "${google_compute_instance.rancher_master.network_interface.0.access_config.0.nat_ip}"
   ssh_user          = "${var.gcp_ssh_user}"
   key_path          = "${var.gcp_private_key_path}"
 }
