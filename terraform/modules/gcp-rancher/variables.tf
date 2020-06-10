@@ -7,17 +7,17 @@ variable "rancher_admin_password" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 
 variable "rancher_server_image" {
-  default     = "rancher/rancher:v2.3.3"
+  default     = "rancher/rancher:v2.4.4"
   description = "The Rancher Server image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.3.3"
+  default     = "rancher/rancher-agent:v2.4.4"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
@@ -48,7 +48,7 @@ variable "gcp_project_id" {
   description = "GCP project ID that will be running the instances and managing the network"
 }
 
-variable gcp_machine_type {
+variable "gcp_machine_type" {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the instance with"
 }
@@ -76,3 +76,4 @@ variable "gcp_private_key_path" {
   description = "Path to a private key."
   default     = "~/.ssh/id_rsa"
 }
+

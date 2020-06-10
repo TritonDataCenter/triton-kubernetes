@@ -8,6 +8,6 @@ builders:
 provisioners:
 - type: shell
   inline:
-    - sudo curl "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh" | sh
+    - sudo curl "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh" | sh
     - sudo apt-get install jq -y
     - sudo docker pull rancher/server:v1.6.14

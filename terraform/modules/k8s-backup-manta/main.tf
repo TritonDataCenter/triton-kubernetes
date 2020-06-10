@@ -1,11 +1,11 @@
 data "template_file" "minio_manta_deployment" {
-  template = "${file("${path.module}/files/minio-manta-deployment.yaml")}"
+  template = file("${path.module}/files/minio-manta-deployment.yaml")
 
-  vars {
-    triton_account      = "${var.triton_account}"
-    triton_key_id       = "${var.triton_key_id}"
-    triton_key_material = "${indent(12, file("${var.triton_key_path}"))}" // indent to keep yaml multi line compliance
-    manta_subuser       = "${var.manta_subuser}"
+  vars = {
+    triton_account      = var.triton_account
+    triton_key_id       = var.triton_key_id
+    triton_key_material = indent(12, file(var.triton_key_path)) // indent to keep yaml multi line compliance
+    manta_subuser       = var.manta_subuser
   }
 }
 
@@ -36,12 +36,17 @@ resource "null_resource" "setup_ark_backup" {
         -H 'Content-Type: application/json' \
         -d '' \
         '${var.rancher_api_url}/v3/clusters/${var.rancher_cluster_id}?action=generateKubeconfig' | jq -r '.config' > kubeconfig.yaml
-    EOT
+    
+EOT
+
   }
 
   provisioner "local-exec" {
     # Write minio_manta_deployment.yaml to disk
-    command = "${format("cat << EOF > minio_manta_deployment.yaml \n%s\nEOF", data.template_file.minio_manta_deployment.rendered)}"
+    command = format(
+      "cat << EOF > minio_manta_deployment.yaml \n%s\nEOF",
+      data.template_file.minio_manta_deployment.rendered,
+    )
   }
 
   provisioner "local-exec" {
@@ -60,3 +65,4 @@ resource "null_resource" "setup_ark_backup" {
     command = "rm -rf ark ark-* minio_manta_deployment.yaml kubeconfig.yaml v0.7.1.tar.gz"
   }
 }
+

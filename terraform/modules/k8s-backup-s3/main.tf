@@ -25,7 +25,9 @@ resource "null_resource" "setup_ark_backup" {
         -H 'Content-Type: application/json' \
         -d '' \
         '${var.rancher_api_url}/v3/clusters/${var.rancher_cluster_id}?action=generateKubeconfig' | jq -r '.config' > kubeconfig.yaml
-    EOT
+    
+EOT
+
   }
 
   provisioner "local-exec" {
@@ -35,7 +37,9 @@ resource "null_resource" "setup_ark_backup" {
         aws_access_key_id=${var.aws_access_key}
         aws_secret_access_key=${var.aws_secret_key}
       EOF
-    EOT
+    
+EOT
+
   }
 
   provisioner "local-exec" {
@@ -45,7 +49,7 @@ resource "null_resource" "setup_ark_backup" {
   provisioner "local-exec" {
     command = "kubectl create secret generic cloud-credentials --namespace $ARK_SERVER_NAMESPACE --from-file cloud=credentials-ark --kubeconfig=kubeconfig.yaml --dry-run -o yaml | kubectl apply --kubeconfig=kubeconfig.yaml -f -"
 
-    environment {
+    environment = {
       ARK_SERVER_NAMESPACE = "heptio-ark-server"
     }
   }
@@ -54,7 +58,9 @@ resource "null_resource" "setup_ark_backup" {
     command = <<EOT
       sed -i '.original' 's/<YOUR_BUCKET>/${var.aws_s3_bucket}/g' ark-0.7.1/examples/aws/00-ark-config.yaml
       sed -i '.original' 's/<YOUR_REGION>/${var.aws_region}/g' ark-0.7.1/examples/aws/00-ark-config.yaml
-    EOT
+    
+EOT
+
   }
 
   provisioner "local-exec" {
@@ -69,3 +75,4 @@ resource "null_resource" "setup_ark_backup" {
     command = "rm -rf ark ark-* credentials-ark kubeconfig.yaml v0.7.1.tar.gz"
   }
 }
+

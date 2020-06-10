@@ -11,12 +11,12 @@ variable "rancher_cluster_registration_token" {}
 variable "rancher_cluster_ca_checksum" {}
 
 variable "rancher_host_labels" {
-  type        = "map"
+  type        = map
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.3.3"
+  default     = "rancher/rancher-agent:v2.4.4"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
@@ -36,7 +36,7 @@ variable "rancher_registry_password" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 
@@ -61,21 +61,21 @@ variable "triton_url" {
 }
 
 variable "triton_network_names" {
-  type        = "list"
+  type        = list
   description = "List of Triton network names that the node(s) should be attached to."
 
   default = [
-    "Joyent-SDC-Public",
+    "sdc_nat",
   ]
 }
 
 variable "triton_image_name" {
-  default     = "ubuntu-certified-16.04"
+  default     = "ubuntu-certified-18.04"
   description = "The name of the Triton image to use."
 }
 
 variable "triton_image_version" {
-  default     = "20170619.1"
+  default     = "20190627.1.1"
   description = "The version/tag of the Triton image to use."
 }
 
@@ -85,6 +85,6 @@ variable "triton_ssh_user" {
 }
 
 variable "triton_machine_package" {
-  default     = "k4-highcpu-kvm-1.75G"
-  description = "The Triton machine package to use for this host. Defaults to k4-highcpu-kvm-1.75G."
+  default     = "sample-bhyve-flexible-1G"
+  description = "The Triton machine package to use for this host. Defaults to sample-bhyve-flexible-1G."
 }

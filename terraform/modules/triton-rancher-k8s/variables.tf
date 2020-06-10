@@ -3,19 +3,19 @@ variable "name" {
 }
 
 variable "rancher_api_url" {
-  description = ""
+  description = "Rancher API url"
 }
 
 variable "rancher_access_key" {
-  description = ""
+  description = "Rancher API access key"
 }
 
 variable "rancher_secret_key" {
-  description = ""
+  description = "Rancher API access key."
 }
 
 variable k8s_version {
-  default = "v1.16.3-rancher1-1"
+  default = "v1.17.6-rancher2-1"
 }
 
 variable k8s_network_provider {
@@ -70,4 +70,9 @@ variable "triton_key_id" {
 variable "triton_url" {
   default     = ""
   description = "The CloudAPI endpoint URL. e.g. https://us-west-1.api.joyent.com"
+}
+
+variable "docker_engine_install_url" {
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh"
+  description = "The URL to the shell script to install the docker engine."
 }

@@ -7,7 +7,7 @@ variable "name" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 
@@ -21,7 +21,7 @@ variable "rancher_server_image" {
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.3.3"
+  default     = "rancher/rancher-agent:v2.4.4"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
@@ -100,7 +100,8 @@ variable "azurerm_network_security_group_name" {
   default = "rancher-firewall"
 }
 
-variable "azure_resource_group_name" {}
+variable "azure_resource_group_name" {
+}
 
 variable "azure_size" {
   default = "Standard_A0"
@@ -118,8 +119,12 @@ variable "azure_private_key_path" {
   default = "~/.ssh/id_rsa"
 }
 
-variable "fqdn" {}
+variable "fqdn" {
+}
 
-variable "tls_cert_path" {}
+variable "tls_cert_path" {
+}
 
-variable "tls_private_key_path" {}
+variable "tls_private_key_path" {
+}
+

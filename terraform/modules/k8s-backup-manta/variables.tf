@@ -1,10 +1,14 @@
-variable "rancher_api_url" {}
+variable "rancher_api_url" {
+}
 
-variable "rancher_access_key" {}
+variable "rancher_access_key" {
+}
 
-variable "rancher_secret_key" {}
+variable "rancher_secret_key" {
+}
 
-variable "rancher_cluster_id" {}
+variable "rancher_cluster_id" {
+}
 
 variable "triton_key_path" {
   default     = ""
@@ -23,3 +27,4 @@ variable "manta_subuser" {
   default     = ""
   description = "The Manta subuser"
 }
+

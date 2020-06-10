@@ -6,17 +6,19 @@ variable "rancher_api_url" {
   description = ""
 }
 
-variable "rancher_cluster_registration_token" {}
+variable "rancher_cluster_registration_token" {
+}
 
-variable "rancher_cluster_ca_checksum" {}
+variable "rancher_cluster_ca_checksum" {
+}
 
 variable "rancher_host_labels" {
-  type        = "map"
+  type        = map(string)
   description = "A map of key/value pairs that get passed to the rancher agent on the host."
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.3.3"
+  default     = "rancher/rancher-agent:v2.4.4"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
@@ -36,7 +38,7 @@ variable "rancher_registry_password" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 
@@ -58,3 +60,4 @@ variable "key_path" {
   default     = "~/.ssh/id_rsa"
   description = ""
 }
+

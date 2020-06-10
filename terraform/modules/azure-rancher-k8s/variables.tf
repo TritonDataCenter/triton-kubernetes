@@ -14,11 +14,11 @@ variable "rancher_secret_key" {
   description = ""
 }
 
-variable k8s_version {
-  default = "v1.16.3-rancher1-1"
+variable "k8s_version" {
+  default = "v1.17.6-rancher2-1"
 }
 
-variable k8s_network_provider {
+variable "k8s_network_provider" {
   default = "flannel"
 }
 
@@ -111,3 +111,4 @@ variable "azure_subnet_address_prefix" {
 variable "azurerm_network_security_group_name" {
   default = "k8s-firewall"
 }
+

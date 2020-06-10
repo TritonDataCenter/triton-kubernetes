@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"sort"
 	"strconv"
 	"strings"
@@ -21,6 +22,8 @@ type baseNodeTerraformConfig struct {
 
 	Hostname  string `json:"hostname,omitempty"`
 	NodeCount int    `json:"-"`
+
+	DockerEngineInstallURL string `json:"docker_engine_install_url,omitempty"`
 
 	RancherAPIURL                   string                  `json:"rancher_api_url"`
 	RancherClusterRegistrationToken string                  `json:"rancher_cluster_registration_token"`
@@ -206,6 +209,8 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 		RancherRegistry:         currentState.Get(fmt.Sprintf("module.%s.rancher_registry", selectedCluster)),
 		RancherRegistryUsername: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_username", selectedCluster)),
 		RancherRegistryPassword: currentState.Get(fmt.Sprintf("module.%s.rancher_registry_password", selectedCluster)),
+
+		DockerEngineInstallURL: currentState.Get(fmt.Sprintf("module.%s.docker_engine_install_url", selectedCluster)),
 	}
 
 	baseSource := defaultSourceURL
@@ -218,7 +223,14 @@ func getBaseNodeTerraformConfig(terraformModulePath, selectedCluster string, cur
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
+	_, err := os.Stat(baseSource)
+	if err != nil {
+		// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
+		cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
+	} else {
+		// This is a local file, ignore ref
+		cfg.Source = fmt.Sprintf("%s//%s", baseSource, terraformModulePath)
+	}
 
 	// Rancher Host Label
 	selectedHostLabel := ""

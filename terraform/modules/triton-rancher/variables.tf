@@ -7,17 +7,17 @@ variable "rancher_admin_password" {
 }
 
 variable "docker_engine_install_url" {
-  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/17.03.sh"
+  default     = "https://raw.githubusercontent.com/joyent/triton-kubernetes/master/scripts/docker/19.03.sh"
   description = "The URL to the shell script to install the docker engine."
 }
 
 variable "rancher_server_image" {
-  default     = "rancher/rancher:v2.3.3"
+  default     = "rancher/rancher:v2.4.4"
   description = "The Rancher Server image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.3.3"
+  default     = "rancher/rancher-agent:v2.4.4"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 
@@ -53,7 +53,7 @@ variable "triton_url" {
 }
 
 variable "triton_network_names" {
-  type        = "list"
+  type        = list
   description = "List of Triton network names that the node(s) should be attached to."
 }
 

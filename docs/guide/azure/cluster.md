@@ -18,7 +18,7 @@ create cluster called
 ✔ Cluster Manager: dev-manager
 ✔ Cloud Provider: Azure
 ✔ Cluster Name: azure-cluster
-✔ Kubernetes Version: v1.16.3
+✔ Kubernetes Version: v1.17.6
 ✔ Kubernetes Network Provider: calico
 ✔ Private Registry: None
 ✔ k8s Registry: None

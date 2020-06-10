@@ -3,6 +3,7 @@ package create
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strings"
 
 	"github.com/joyent/triton-kubernetes/backend"
@@ -17,6 +18,8 @@ type baseManagerTerraformConfig struct {
 	Source string `json:"source"`
 
 	Name string `json:"name"`
+
+	DockerEngineInstallURL string `json:"docker_engine_install_url,omitempty"`
 
 	RancherAdminPassword    string `json:"rancher_admin_password,omitempty"`
 	RancherServerImage      string `json:"rancher_server_image,omitempty"`
@@ -167,8 +170,14 @@ func getBaseManagerTerraformConfig(terraformModulePath, name string) (baseManage
 		baseSourceRef = viper.GetString("source_ref")
 	}
 
-	// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
-	cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
+	_, err := os.Stat(baseSource)
+	if err != nil {
+		// Module Source location e.g. github.com/joyent/triton-kubernetes//terraform/modules/triton-rancher?ref=master
+		cfg.Source = fmt.Sprintf("%s//%s?ref=%s", baseSource, terraformModulePath, baseSourceRef)
+	} else {
+		// This is a local file, ignore ref
+		cfg.Source = fmt.Sprintf("%s//%s", baseSource, terraformModulePath)
+	}
 
 	cfg.Name = name
 
@@ -294,6 +303,10 @@ func getBaseManagerTerraformConfig(terraformModulePath, name string) (baseManage
 
 	if cfg.RancherAdminPassword == "" {
 		return baseManagerTerraformConfig{}, errors.New("Invalid UI Admin password")
+	}
+
+	if viper.IsSet("docker_engine_install_url") {
+		cfg.DockerEngineInstallURL = viper.GetString("docker_engine_install_url")
 	}
 
 	return cfg, nil

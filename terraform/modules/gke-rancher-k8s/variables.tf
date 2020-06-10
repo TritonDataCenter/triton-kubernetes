@@ -31,11 +31,11 @@ variable "gcp_zone" {
 }
 
 variable "gcp_additional_zones" {
-  type        = "list"
+  type        = list(string)
   description = "Zones to deploy GKE cluster nodes in"
 }
 
-variable gcp_machine_type {
+variable "gcp_machine_type" {
   default     = "n1-standard-1"
   description = "GCP machine type to launch the instance with"
 }
@@ -44,6 +44,9 @@ variable "k8s_version" {
   default = "1.8.8-gke.0"
 }
 
-variable "node_count" {}
+variable "node_count" {
+}
 
-variable "password" {}
+variable "password" {
+}
+
