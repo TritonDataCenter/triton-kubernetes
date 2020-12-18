@@ -56,6 +56,7 @@ variable "aws_region" {
 
 variable "aws_ami_id" {
   description = "Base AMI to launch the instances with"
+  # default="ami-08a099fcfc36dff3f"
 }
 
 variable "aws_instance_type" {
