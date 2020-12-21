@@ -77,6 +77,7 @@ variable "aws_subnet_cidr" {
 variable "aws_ami_id" {
   description = "Base AMI to launch the instances with"
   # default="ami-08a099fcfc36dff3f"
+  default = ""
 }
 
 variable "aws_public_key_path" {
