@@ -3,7 +3,7 @@ cluster_manager: manager-on-triton
 backend_provider: local
 name: triton-ha
 cluster_cloud_provider: triton
-k8s_version: v1.17.6-rancher2-1
+k8s_version: v1.18.12-rancher1-1
 k8s_network_provider: flannel
 private_registry: ""
 private_registry_username: ""
