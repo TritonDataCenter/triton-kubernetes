@@ -18,7 +18,7 @@ variable "rancher_host_labels" {
 }
 
 variable "rancher_agent_image" {
-  default     = "rancher/rancher-agent:v2.4.4"
+  default     = "rancher/rancher-agent:v2.4.11"
   description = "The Rancher Agent image to use, can be a url to a private registry leverage docker_login_* variables to authenticate to registry."
 }
 

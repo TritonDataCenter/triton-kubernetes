@@ -1,6 +1,4 @@
 provider "triton" {
-  version = "~> 0.7.0"
-
   account      = var.triton_account
   key_material = file(var.triton_key_path)
   key_id       = var.triton_key_id
@@ -8,8 +6,8 @@ provider "triton" {
 }
 
 data "triton_network" "networks" {
-  count = "${length(var.triton_network_names)}"
-  name  = "${element(var.triton_network_names, count.index)}"
+  count = length(var.triton_network_names)
+  name  = element(var.triton_network_names, count.index)
 }
 
 data "triton_image" "image" {
@@ -83,7 +81,7 @@ resource "null_resource" "install_rancher_master" {
   }
 
   provisioner "remote-exec" {
-    inline = ["${data.template_file.install_rancher_master.rendered}"]
+    inline = [data.template_file.install_rancher_master.rendered]
   }
 }
 
@@ -115,7 +113,7 @@ resource "null_resource" "setup_rancher_k8s" {
   }
 
   provisioner "remote-exec" {
-    inline = ["${data.template_file.setup_rancher_k8s.rendered}"]
+    inline = [data.template_file.setup_rancher_k8s.rendered]
   }
 }
 

@@ -1,6 +1,4 @@
 provider "triton" {
-  version = "~> 0.7.0"
-
   account      = var.triton_account
   key_material = file(var.triton_key_path)
   key_id       = var.triton_key_id
@@ -57,6 +55,6 @@ resource "triton_machine" "host" {
   affinity = ["role!=~${element(keys(var.rancher_host_labels), 0)}"]
 
   tags = {
-    role = "${element(keys(var.rancher_host_labels), 0)}"
+    role = element(keys(var.rancher_host_labels), 0)
   }
 }

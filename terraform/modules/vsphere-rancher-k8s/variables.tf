@@ -45,7 +45,7 @@ variable "k8s_registry_password" {
 }
 
 variable "k8s_version" {
-  default = "v1.17.6-rancher2-1"
+  default = "v1.18.12-rancher1-1"
 }
 
 variable "k8s_network_provider" {
