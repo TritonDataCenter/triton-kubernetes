@@ -1,12 +1,6 @@
-<a>
-  <img src="https://www.joyent.com/assets/img/external/triton-kubernetes.svg" width="100%" height="144">
-</a>
-
 Triton Kubernetes is a multi-cloud Kubernetes solution. It has a global cluster manager (control plane) which can run and manage Kubernetes environments on any cloud - Public, Private or Bare Metal.
 
 The cluster manager manages environments running on any region. AWS, Azure, Google and Triton (public and private) are supported. If you don't want to use a cloud, environments on bare metal servers and VMWare are supported as well.
-
-![Triton-Kubernetes](docs/imgs/Triton-Kubernetes.png)
 
 View the [Quick Start Guide](docs/guide/) for installation instructions.
 
