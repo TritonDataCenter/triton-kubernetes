@@ -42,6 +42,10 @@ type tritonManagerTerraformConfig struct {
 	MasterTritonMachinePackage string   `json:"master_triton_machine_package,omitempty"`
 }
 
+type typeManagerOutput struct {
+	Value string `json:"value"`
+}
+
 func newTritonManager(currentState state.State, name string) error {
 	nonInteractiveMode := viper.GetBool("non-interactive")
 
@@ -52,6 +56,18 @@ func newTritonManager(currentState state.State, name string) error {
 
 	cfg := tritonManagerTerraformConfig{
 		baseManagerTerraformConfig: baseConfig,
+	}
+
+	rancherAccessKeyOtpt := typeManagerOutput{
+		Value: "${module.cluster-manager.rancher_access_key}",
+	}
+
+	rancherSecretKeyOtpt := typeManagerOutput{
+		Value: "${module.cluster-manager.rancher_secret_key}",
+	}
+
+	rancherUrlKeyOtpt := typeManagerOutput{
+		Value: "${module.cluster-manager.rancher_url}",
 	}
 
 	// Triton Account
@@ -394,6 +410,9 @@ func newTritonManager(currentState state.State, name string) error {
 	}
 
 	currentState.SetManager(&cfg)
+	currentState.SetOutput(&rancherUrlKeyOtpt, "rancher_url")
+	currentState.SetOutput(&rancherAccessKeyOtpt, "rancher_access_key")
+	currentState.SetOutput(&rancherSecretKeyOtpt, "rancher_secret_key")
 
 	return nil
 }
