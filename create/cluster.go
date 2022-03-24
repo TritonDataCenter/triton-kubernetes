@@ -18,7 +18,7 @@ import (
 )
 
 const (
-	defaultSourceURL = "github.com/joyent/triton-kubernetes"
+	defaultSourceURL = "gitlab.com/hydrahost-developers/kubernetes-triton"
 	defaultSourceRef = "master"
 )
 

@@ -31,11 +31,9 @@ resource "null_resource" "install_docker" {
   }
 
   provisioner "remote-exec" {
-    inline = <<EOF
-      ${data.template_file.install_docker.rendered}
-      
-EOF
-
+    inline = [
+      "${data.template_file.install_docker.rendered}"
+    ]
   }
 }
 
@@ -66,11 +64,9 @@ resource "null_resource" "install_rancher_master" {
   }
 
   provisioner "remote-exec" {
-    inline = <<EOF
-      ${data.template_file.install_rancher_master.rendered}
-      
-EOF
-
+    inline = [
+      "${data.template_file.install_rancher_master.rendered}"
+    ]
   }
 }
 
@@ -101,10 +97,9 @@ resource "null_resource" "setup_rancher_k8s" {
   }
 
   provisioner "remote-exec" {
-    inline = <<EOF
-      ${data.template_file.setup_rancher_k8s.rendered}
-      
-EOF
+    inline = [
+      "${data.template_file.setup_rancher_k8s.rendered}"
+      ]
 
   }
 }
