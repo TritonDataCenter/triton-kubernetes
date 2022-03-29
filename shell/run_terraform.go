@@ -140,7 +140,7 @@ func RunTerraformDestroyWithState(currentState state.State, args []string) error
 	}
 
 	// Run terraform destroy
-	allArgs := append([]string{"destroy", "-force"}, args...)
+	allArgs := append([]string{"destroy", "-auto-approve"}, args...)
 	err = runShellCommand(&shellOptions, "terraform", allArgs...)
 	if err != nil {
 		return err
