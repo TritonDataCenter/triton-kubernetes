@@ -2,7 +2,6 @@ package state
 
 import (
 	"fmt"
-	"io/ioutil"
 	"strings"
 
 	"github.com/Jeffail/gabs"
@@ -48,7 +47,6 @@ func (state *State) SetOutput(obj interface{}, outputName string) error {
 	if err != nil {
 		return err
 	}
-	ioutil.WriteFile("/tmp/main.tf.json", state.configJSON.Bytes(), 0777)
 
 	return nil
 }
