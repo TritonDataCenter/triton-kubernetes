@@ -182,7 +182,7 @@ func RunTerraformOutputWithState(state state.State, moduleName string) error {
 	}
 
 	// Run terraform output
-	err = runShellCommand(&shellOptions, "terraform", "output", "-module", moduleName)
+	err = runShellCommand(&shellOptions, "terraform", "output")
 	if err != nil {
 		return err
 	}

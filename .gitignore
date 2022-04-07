@@ -1,3 +1,4 @@
+**/.vscode
 bin/terraform*
 */terraform.tfstate*
 terraform/.terraform*

@@ -42,6 +42,15 @@ func (state *State) SetManager(obj interface{}) error {
 	return nil
 }
 
+func (state *State) SetOutput(obj interface{}, outputName string) error {
+	_, err := state.configJSON.SetP(obj, fmt.Sprintf("output.%s", outputName))
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
 func (state *State) SetTerraformBackendConfig(tfBackendPath string, tfBackendObj interface{}) error {
 	_, err := state.configJSON.SetP(tfBackendObj, tfBackendPath)
 	if err != nil {
